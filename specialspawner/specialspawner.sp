@@ -1099,18 +1099,12 @@ static void vGenerateAndExecuteSpawnQueue(int iCurrentSI)
 	g_hSpawnRange.IntValue = 1000;
 	g_hDiscardRange.IntValue = 1250;
 
-	bSuccess = false;
 	static float vPos[3];
 	for(i = 0; i < iSize; i++)
 	{
 		iIndex = aSpawnQueue.Get(i);
 		if(L4D_GetRandomPZSpawnPosition(iAhead, iIndex + 1, 5, vPos))
-			bSuccess = true;
-
-		if(!bSuccess)
-			continue;
-
-		L4D2_SpawnSpecial(iIndex + 1, vPos, NULL_VECTOR);
+			L4D2_SpawnSpecial(iIndex + 1, vPos, NULL_VECTOR);
 	}
 
 	g_iPreferredDirection = SPAWN_ANYWHERE;
