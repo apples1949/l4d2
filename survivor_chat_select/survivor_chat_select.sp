@@ -121,7 +121,7 @@ public void OnPluginStart()
 	HookEvent("round_start", Event_RoundStart, EventHookMode_PostNoCopy);
 	HookEvent("bot_player_replace", Event_BotPlayerReplace, EventHookMode_Pre);
 	HookEvent("player_bot_replace", Event_PlayerBotReplace, EventHookMode_Pre);
-	HookEvent("player_spawn", Event_PlayerSpawn, EventHookMode_Pre);
+	HookEvent("player_spawn", Event_PlayerSpawn);
 	
 	g_hCookie = CreateConVar("l4d_scs_cookie", "0","保存玩家的模型角色喜好?", FCVAR_NOTIFY);
 	g_hAutoModel = CreateConVar("l4d_scs_auto_model", "1","开关8人独立模型?", FCVAR_NOTIFY);
@@ -563,7 +563,7 @@ static int iGetIdlePlayerOfBot(int client)
 {
 	static char sNetClass[64];
 	GetEntityNetClass(client, sNetClass, sizeof sNetClass);
-	if(FindSendPropInfo(sNetClass, "m_humanSpectatorUserID") < 1)
+	if(FindSendPropInfo(sNetClass, "m_humanSpectatorUserID") == -1)
 		return 0;
 
 	return GetClientOfUserId(GetEntProp(client, Prop_Send, "m_humanSpectatorUserID"));
@@ -571,7 +571,7 @@ static int iGetIdlePlayerOfBot(int client)
 
 void OnNextFrame_PlayerSpawn(int client)
 {
-	if(!g_bAutoModel || !(client = GetClientOfUserId(client)) || g_bShouldIgnoreOnce[client] || !IsClientInGame(client) || IsFakeClient(client) || GetClientTeam(client) != 2)
+	if(!g_bAutoModel || !(client = GetClientOfUserId(client)) || g_bShouldIgnoreOnce[client] || !IsClientInGame(client) || GetClientTeam(client) != 2)
 		return;
 
 	vSetLeastUsedCharacter(client);
@@ -579,7 +579,7 @@ void OnNextFrame_PlayerSpawn(int client)
 
 Action tmrLoadCookie(Handle timer, int client)
 {
-	if(!(client = GetClientOfUserId(client)) || !IsClientInGame(client) || IsFakeClient(client) || GetClientTeam(client) != 2)
+	if(!(client = GetClientOfUserId(client)) || !IsClientInGame(client) || GetClientTeam(client) != 2)
 		return Plugin_Stop;
 
 	if(!AreClientCookiesCached(client))
@@ -723,13 +723,13 @@ public void OnEntityCreated(int entity, const char[] classname)
 
 void OnSpawnPost(int client)
 {
+	SDKUnhook(client, SDKHook_SpawnPost, OnSpawnPost);
+
 	if(!g_bAutoModel)
 		return;
 
 	if(!IsValidEntity(client) || GetClientTeam(client) == 4)
 		return;
-
-	SDKUnhook(client, SDKHook_SpawnPost, OnSpawnPost);
 
 	if(!iGetIdlePlayerOfBot(client))
 		RequestFrame(OnNextFrame_SpawnPost, GetClientUserId(client));
@@ -851,10 +851,6 @@ int iCheckLeastUsedSurvivor(int client)
 			}
 		}
 	}
-
-	i = GetEntProp(client, Prop_Send, "m_survivorCharacter");
-	if(0 <= i <= 7 && iLeastChar[i] <= iLeastChar[iCharBuffer])
-		return 8;
 
 	return iCharBuffer;
 }
@@ -1003,7 +999,6 @@ int iGetOrSetPlayerAmmo(int client, int iWeapon, int iAmmo = -1)
 		else
 			return GetEntProp(client, Prop_Send, "m_iAmmo", _, m_iPrimaryAmmoType);
 	}
-
 	return 0;
 }
 
