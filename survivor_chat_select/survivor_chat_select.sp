@@ -136,7 +136,7 @@ public void OnPluginStart()
 	g_hFixDialogue.AddChangeHook(vConVarChanged);
 	g_hInTransition.AddChangeHook(vConVarChanged);
 
-	AutoExecConfig(true, "survivor_chat_select");
+	//AutoExecConfig(true, "survivor_chat_select");
 
 	TopMenu topmenu;
 	if(LibraryExists("adminmenu") && ((topmenu = GetAdminTopMenu()) != null))
@@ -712,7 +712,7 @@ public void OnEntityCreated(int entity, const char[] classname)
 	if(entity < 1 || entity > MaxClients)
 		return;
 
-	if((classname[0] == 'p' && strcmp(classname, "player", false) == 0) || (classname[0] == 's' && strcmp(classname, "survivor_bot", false) == 0))
+	if((classname[0] == 'p' && strcmp(classname[1], "layer", false) == 0) || (classname[0] == 's' && strcmp(classname[1], "urvivor_bot", false) == 0))
 	{
 		if(g_bInTransition && SDKCall(g_hSDK_CDirector_IsInTransition, g_pDirector) && !SDKCall(g_hSDK_CTerrorPlayer_IsTransitioned, entity))
 			return;
@@ -723,15 +723,16 @@ public void OnEntityCreated(int entity, const char[] classname)
 
 void OnSpawnPost(int client)
 {
-	SDKUnhook(client, SDKHook_SpawnPost, OnSpawnPost);
-
 	if(!g_bAutoModel)
 		return;
 
-	if(!IsValidEntity(client) || GetClientTeam(client) == 4 || iGetIdlePlayerOfBot(client))
+	if(!IsValidEntity(client) || GetClientTeam(client) == 4)
 		return;
 
-	RequestFrame(OnNextFrame_SpawnPost, GetClientUserId(client));
+	SDKUnhook(client, SDKHook_SpawnPost, OnSpawnPost);
+
+	if(!iGetIdlePlayerOfBot(client))
+		RequestFrame(OnNextFrame_SpawnPost, GetClientUserId(client));
 }
 /**
 bool bIsLeastCharacter(int client)
@@ -850,6 +851,10 @@ int iCheckLeastUsedSurvivor(int client)
 			}
 		}
 	}
+
+	i = GetEntProp(client, Prop_Send, "m_survivorCharacter");
+	if(0 <= i <= 7 && iLeastChar[i] <= iLeastChar[iCharBuffer])
+		return 8;
 
 	return iCharBuffer;
 }
