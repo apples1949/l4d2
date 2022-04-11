@@ -655,7 +655,7 @@ void vRespawnSurvivor(int client)
 	if(!IsFakeClient(client))
 	{
 		if(bCanIdle(client))
-			vGoAFKTimer(client, 1.5);//SDKCall(g_hSDK_CTerrorPlayer_GoAwayFromKeyboard, client);
+			vGoAFKTimer(client, 0.1);	//SDKCall(g_hSDK_CTerrorPlayer_GoAwayFromKeyboard, client);
 
 		CPrintToChat(client, "{olive}剩余复活次数 {default}-> {blue}%d", g_iRespawnLimit - g_esPlayer[client].iRespawned);
 	}
