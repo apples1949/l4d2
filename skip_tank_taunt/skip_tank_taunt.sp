@@ -2,12 +2,7 @@
 #pragma newdecls required
 #include <sourcemod>
 #include <sdkhooks>
-#include <dhooks>
-
-#define GAMEDATA "skip_tank_taunt"
-
-DynamicHook
-	g_dHooksSelectWeightedSequence;
+#include <left4dhooks>
 
 ConVar
 	g_hAnimationPlaybackRate;
@@ -23,7 +18,7 @@ public Plugin myinfo =
 	name = "Skip Tank Taunt",
 	author = "sorallll",
 	description = "",
-	version = "1.0.4",
+	version = "1.0.5",
 	url = "https://forums.alliedmods.net/showthread.php?t=336707"
 }
 
@@ -35,8 +30,6 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 
 public void OnPluginStart()
 {
-	vInitGameData();
-
 	g_hAnimationPlaybackRate = CreateConVar("tank_animation_playbackrate", "5.0", "Obstacle animation playback rate", _, true, 0.0);
 	g_hAnimationPlaybackRate.AddChangeHook(vConVarChanged);
 	AutoExecConfig(true);
@@ -77,7 +70,7 @@ void vGetCvars()
 
 public void OnClientPutInServer(int client)
 {
-	g_dHooksSelectWeightedSequence.HookEntity(Hook_Pre, client, DH_CTerrorPlayer_SelectWeightedSequence_Pre);
+	AnimHookEnable(client, OnTankAnimPre);
 }
 
 void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
@@ -156,28 +149,6 @@ void OnPreThink(int client)
 			SDKUnhook(client, SDKHook_PreThink, OnPreThink);
 	}
 }
-void vInitGameData()
-{
-	char sPath[PLATFORM_MAX_PATH];
-	BuildPath(Path_SM, sPath, sizeof sPath, "gamedata/%s.txt", GAMEDATA);
-	if(!FileExists(sPath))
-		SetFailState("\n==========\nMissing required file: \"%s\".\n==========", sPath);
-
-	GameData hGameData = new GameData(GAMEDATA);
-	if(!hGameData)
-		SetFailState("Failed to load \"%s.txt\" gamedata.", GAMEDATA);
-
-	vSetupHooks(hGameData);
-
-	delete hGameData;
-}
-
-void vSetupHooks(GameData hGameData = null)
-{
-	g_dHooksSelectWeightedSequence = DynamicHook.FromConf(hGameData, "DH_CTerrorPlayer::SelectWeightedSequence");
-	if(!g_dHooksSelectWeightedSequence)
-		SetFailState("Failed to create DynamicHook: DH_CTerrorPlayer::SelectWeightedSequence");
-}
 
 /**
 * From left4dhooks.l4d2.cfg
@@ -186,17 +157,17 @@ void vSetupHooks(GameData hGameData = null)
 * ACT_TERROR_RAGE_AT_ENEMY 		794
 * ACT_TERROR_RAGE_AT_KNOCKDOWN	795
 **/
-MRESReturn DH_CTerrorPlayer_SelectWeightedSequence_Pre(int pThis, DHookReturn hReturn, DHookParam hParams)
+Action OnTankAnimPre(int client, int &anim)
 {
-	if(!IsClientInGame(pThis) || GetClientTeam(pThis) != 3 || !IsPlayerAlive(pThis) || GetEntProp(pThis, Prop_Send, "m_zombieClass") != 8 || GetEntProp(pThis, Prop_Send, "m_isGhost") == 1)
-		return MRES_Ignored;
+	if(GetClientTeam(client) != 3 || !IsPlayerAlive(client) || GetEntProp(client, Prop_Send, "m_zombieClass") != 8 || GetEntProp(client, Prop_Send, "m_isGhost") == 1)
+		return Plugin_Continue;
 
-	if(792 <= hParams.Get(1) <= 795)
+	if(792 <= anim <= 795)
 	{
-		hReturn.Value = 0;
-		SetEntPropFloat(pThis, Prop_Send, "m_flCycle", 1000.0);
-		return MRES_ChangedOverride;
+		anim = 0;
+		SetEntPropFloat(client, Prop_Send, "m_flCycle", 1000.0);
+		return Plugin_Changed;
 	}
 
-	return MRES_Ignored;
+	return Plugin_Continue;
 }
