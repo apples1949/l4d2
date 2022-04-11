@@ -223,8 +223,6 @@ public void OnPluginEnd()
 	FindConVar("z_spawn_flow_limit").RestoreDefault();
 	FindConVar("z_attack_flow_range").RestoreDefault();
 
-	FindConVar("director_spectate_specials").RestoreDefault();
-
 	FindConVar("z_safe_spawn_range").RestoreDefault();
 	FindConVar("z_spawn_safety_range").RestoreDefault();
 
@@ -250,8 +248,6 @@ public Action L4D_OnGetScriptValueInt(const char[] key, int &retVal)
 	iValue = retVal;
 	if(strcmp(key, "MaxSpecials", false) == 0)
 		iValue = g_iSILimit;
-	else if(strcmp(key, "SpecialInfectedAssault", false) == 0)
-		iValue = 1;
 	else if(strcmp(key, "PreferredSpecialDirection", false) == 0)
 		iValue = g_iPreferredDirection;
 
@@ -438,10 +434,8 @@ void vSetDirectorConvars()
 	//g_hSpawnRange.IntValue = 1000;
 	//g_hDiscardRange.IntValue = 1250;
 
-	FindConVar("z_spawn_flow_limit").IntValue = 50000;
-	FindConVar("z_attack_flow_range").IntValue = 50000;
-
-	FindConVar("director_spectate_specials").IntValue = 1;
+	FindConVar("z_spawn_flow_limit").IntValue = 999999;
+	FindConVar("z_attack_flow_range").IntValue = 999999;
 
 	FindConVar("z_safe_spawn_range").IntValue = 1;
 	FindConVar("z_spawn_safety_range").IntValue = 1;
