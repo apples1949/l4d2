@@ -192,7 +192,10 @@ MRESReturn DD_CSurvivorDeathModel_Create_Post(int pThis, DHookReturn hReturn)
 	int iDeathModel = hReturn.Value;
 	if(!iDeathModel)
 		return MRES_Ignored;
-	
+
+	if(!IsClientInGame(g_iTempClient))
+		return MRES_Ignored;
+
 	float vPos[3];
 	GetClientAbsOrigin(g_iTempClient, vPos);
 	TeleportEntity(iDeathModel, vPos, NULL_VECTOR, NULL_VECTOR);
