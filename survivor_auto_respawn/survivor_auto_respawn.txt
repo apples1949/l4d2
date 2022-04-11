@@ -6,14 +6,7 @@
 		{
 			"CTerrorPlayer::RoundRespawn"
 			{
-				"linux"
-				{
-					"signature"	"CTerrorPlayer::RoundRespawn"
-				}
-				"windows"
-				{
-					"signature"	"CTerrorPlayer::RoundRespawn"			
-				}
+				"signature"	"CTerrorPlayer::RoundRespawn"
 			}
 		}
 
@@ -24,6 +17,7 @@
 				"linux"		"25" // 0x19
 				"windows"	"15" // 0xF
 			}
+
 			"RoundRespawn_Byte" // JNZ => JNS
 			{
 				"linux"		"117" // 0x75
@@ -41,6 +35,7 @@
 				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\xE8\x2A\x2A\x2A\x2A\x84\x2A\x75\x2A\x8B\x2A\xE8\x2A\x2A\x2A\x2A\xC6\x86"
 				/* ? ? ? ? ? ? ? ? E8 ? ? ? ? 84 ? 75 ? 8B ? E8 ? ? ? ? C6 86 */
 			}
+
 			/* CTerrorPlayer::GoAwayFromKeyboard(void) */
 			"CTerrorPlayer::GoAwayFromKeyboard"
 			{

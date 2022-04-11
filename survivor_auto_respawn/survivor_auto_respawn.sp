@@ -157,8 +157,8 @@ stock void CSayText2(int client, int author, const char[] szMessage)
 #define MAX_SLOTS	5
 
 Handle
-	g_hSDK_CTerrorPlayer_RoundRespawn,
-	g_hSDK_CTerrorPlayer_GoAwayFromKeyboard;
+	g_hSDK_CTerrorPlayer_RoundRespawn;
+	//g_hSDK_CTerrorPlayer_GoAwayFromKeyboard;
 
 ArrayList
 	g_aMeleeScripts;
@@ -209,50 +209,50 @@ esPlayer
 	g_esPlayer[MAXPLAYERS + 1];
 
 static const char
-	g_sWeaponName[5][17][] =
+	g_sWeaponName[MAX_SLOTS][17][] =
 	{
 		{//slot 0(主武器)
-			"smg",						//1 UZI微冲
-			"smg_mp5",					//2 MP5
-			"smg_silenced",				//4 MAC微冲
-			"pumpshotgun",				//8 木喷
-			"shotgun_chrome",			//16 铁喷
-			"rifle",					//32 M16步枪
-			"rifle_desert",				//64 三连步枪
-			"rifle_ak47",				//128 AK47
-			"rifle_sg552",				//256 SG552
-			"autoshotgun",				//512 一代连喷
-			"shotgun_spas",				//1024 二代连喷
-			"hunting_rifle",			//2048 木狙
-			"sniper_military",			//4096 军狙
-			"sniper_scout",				//8192 鸟狙
-			"sniper_awp",				//16384 AWP
-			"rifle_m60",				//32768 M60
-			"grenade_launcher"			//65536 榴弹发射器
+			"weapon_smg",						//1 UZI微冲
+			"weapon_smg_mp5",					//2 MP5
+			"weapon_smg_silenced",				//4 MAC微冲
+			"weapon_pumpshotgun",				//8 木喷
+			"weapon_shotgun_chrome",			//16 铁喷
+			"weapon_rifle",						//32 M16步枪
+			"weapon_rifle_desert",				//64 三连步枪
+			"weapon_rifle_ak47",				//128 AK47
+			"weapon_rifle_sg552",				//256 SG552
+			"weapon_autoshotgun",				//512 一代连喷
+			"weapon_shotgun_spas",				//1024 二代连喷
+			"weapon_hunting_rifle",				//2048 木狙
+			"weapon_sniper_military",			//4096 军狙
+			"weapon_sniper_scout",				//8192 鸟狙
+			"weapon_sniper_awp",				//16384 AWP
+			"weapon_rifle_m60",					//32768 M60
+			"weapon_grenade_launcher"			//65536 榴弹发射器
 		},
 		{//slot 1(副武器)
-			"pistol",					//1 小手枪
-			"pistol_magnum",			//2 马格南
-			"chainsaw",					//4 电锯
-			"fireaxe",					//8 斧头
-			"frying_pan",				//16 平底锅
-			"machete",					//32 砍刀
-			"baseball_bat",				//64 棒球棒
-			"crowbar",					//128 撬棍
-			"cricket_bat",				//256 球拍
-			"tonfa",					//512 警棍
-			"katana",					//1024 武士刀
-			"electric_guitar",			//2048 电吉他
-			"knife",					//4096 小刀
-			"golfclub",					//8192 高尔夫球棍
-			"shovel",					//16384 铁铲
-			"pitchfork",				//32768 草叉
-			"riotshield",				//65536 盾牌
+			"weapon_pistol",					//1 小手枪
+			"weapon_pistol_magnum",				//2 马格南
+			"weapon_chainsaw",					//4 电锯
+			"fireaxe",							//8 斧头
+			"frying_pan",						//16 平底锅
+			"machete",							//32 砍刀
+			"baseball_bat",						//64 棒球棒
+			"crowbar",							//128 撬棍
+			"cricket_bat",						//256 球拍
+			"tonfa",							//512 警棍
+			"katana",							//1024 武士刀
+			"electric_guitar",					//2048 电吉他
+			"knife",							//4096 小刀
+			"golfclub",							//8192 高尔夫球棍
+			"shovel",							//16384 铁铲
+			"pitchfork",						//32768 草叉
+			"riotshield",						//65536 盾牌
 		},
 		{//slot 2(投掷物)
-			"molotov",					//1 燃烧瓶
-			"pipe_bomb",				//2 管制炸弹
-			"vomitjar",					//4 胆汁瓶
+			"weapon_molotov",					//1 燃烧瓶
+			"weapon_pipe_bomb",					//2 管制炸弹
+			"weapon_vomitjar",					//4 胆汁瓶
 			"",
 			"",
 			"",
@@ -269,10 +269,10 @@ static const char
 			""
 		},
 		{//slot 3
-			"first_aid_kit",			//1 医疗包
-			"defibrillator",			//2 电击器
-			"upgradepack_incendiary",	//4 燃烧弹药包
-			"upgradepack_explosive",	//8 高爆弹药包
+			"weapon_first_aid_kit",				//1 医疗包
+			"weapon_defibrillator",				//2 电击器
+			"weapon_upgradepack_incendiary",	//4 燃烧弹药包
+			"weapon_upgradepack_explosive",		//8 高爆弹药包
 			"",
 			"",
 			"",
@@ -288,8 +288,8 @@ static const char
 			""
 		},
 		{//slot 4
-			"pain_pills",				//1 止痛药
-			"adrenaline",				//2 肾上腺素
+			"weapon_pain_pills",				//1 止痛药
+			"weapon_adrenaline",				//2 肾上腺素
 			"",
 			"",
 			"",
@@ -377,7 +377,7 @@ public Plugin myinfo =
 	name = "Survivor Auto Respawn",
 	author = "sorallll",
 	description = "",
-	version = "1.3.4",
+	version = "1.3.5",
 	url = "https://steamcommunity.com/id/sorallll"
 }
 
@@ -655,7 +655,7 @@ void vRespawnSurvivor(int client)
 	if(!IsFakeClient(client))
 	{
 		if(bCanIdle(client))
-			SDKCall(g_hSDK_CTerrorPlayer_GoAwayFromKeyboard, client);
+			vGoAFKTimer(client, 1.5);//SDKCall(g_hSDK_CTerrorPlayer_GoAwayFromKeyboard, client);
 
 		CPrintToChat(client, "{olive}剩余复活次数 {default}-> {blue}%d", g_iRespawnLimit - g_esPlayer[client].iRespawned);
 	}
@@ -843,8 +843,7 @@ void vTeleportToSurvivor(int client, bool bRandom = true)
 public void OnMapStart()
 {
 	int i;
-	int iLength = sizeof g_sWeaponModels;
-	for(; i < iLength; i++)
+	for(; i < sizeof g_sWeaponModels; i++)
 	{
 		if(!IsModelPrecached(g_sWeaponModels[i]))
 			PrecacheModel(g_sWeaponModels[i], true);
@@ -902,18 +901,16 @@ void vLoadGameData()
 
 	StartPrepSDKCall(SDKCall_Player);
 	if(!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorPlayer::RoundRespawn"))
-		SetFailState("Failed to find signature: CTerrorPlayer::RoundRespawn");
-	g_hSDK_CTerrorPlayer_RoundRespawn = EndPrepSDKCall();
-	if(!g_hSDK_CTerrorPlayer_RoundRespawn)
-		SetFailState("Failed to create SDKCall: CTerrorPlayer::RoundRespawn");
+		SetFailState("Failed to find signature: \"CTerrorPlayer::RoundRespawn\"");
+	if(!(g_hSDK_CTerrorPlayer_RoundRespawn = EndPrepSDKCall()))
+		SetFailState("Failed to create SDKCall: \"CTerrorPlayer::RoundRespawn\"");
 
-	StartPrepSDKCall(SDKCall_Player);
+	/**StartPrepSDKCall(SDKCall_Player);
 	if(!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorPlayer::GoAwayFromKeyboard"))
-		SetFailState("Failed to find signature: CTerrorPlayer::GoAwayFromKeyboard");
+		SetFailState("Failed to find signature: \"CTerrorPlayer::GoAwayFromKeyboard\"");
 	PrepSDKCall_SetReturnInfo(SDKType_Bool, SDKPass_Plain);
-	g_hSDK_CTerrorPlayer_GoAwayFromKeyboard = EndPrepSDKCall();
-	if(!g_hSDK_CTerrorPlayer_GoAwayFromKeyboard)
-		SetFailState("Failed to create SDKCall: CTerrorPlayer::GoAwayFromKeyboard");
+	if(!(g_hSDK_CTerrorPlayer_GoAwayFromKeyboard = EndPrepSDKCall()))
+		SetFailState("Failed to create SDKCall: \"CTerrorPlayer::GoAwayFromKeyboard\"");*/
 
 	vInitPatchs(hGameData);
 
@@ -924,21 +921,21 @@ void vInitPatchs(GameData hGameData = null)
 {
 	int iOffset = hGameData.GetOffset("RoundRespawn_Offset");
 	if(iOffset == -1)
-		SetFailState("Failed to find offset: RoundRespawn_Offset");
+		SetFailState("Failed to find offset: \"RoundRespawn_Offset\"");
 
 	int iByteMatch = hGameData.GetOffset("RoundRespawn_Byte");
 	if(iByteMatch == -1)
-		SetFailState("Failed to find byte: RoundRespawn_Byte");
+		SetFailState("Failed to find byte: \"RoundRespawn_Byte\"");
 
 	g_pStatsCondition = hGameData.GetAddress("CTerrorPlayer::RoundRespawn");
 	if(!g_pStatsCondition)
-		SetFailState("Failed to find address: CTerrorPlayer::RoundRespawn");
+		SetFailState("Failed to find address: \"CTerrorPlayer::RoundRespawn\"");
 	
 	g_pStatsCondition += view_as<Address>(iOffset);
 	
 	int iByteOrigin = LoadFromAddress(g_pStatsCondition, NumberType_Int8);
 	if(iByteOrigin != iByteMatch)
-		SetFailState("Failed to load 'CTerrorPlayer::RoundRespawn', byte mis-match @ %d (0x%02X != 0x%02X)", iOffset, iByteOrigin, iByteMatch);
+		SetFailState("Failed to load \"CTerrorPlayer::RoundRespawn\", byte mis-match @ %d (0x%02X != 0x%02X)", iOffset, iByteOrigin, iByteMatch);
 }
 
 // [L4D1 & L4D2] SM Respawn Improved (https://forums.alliedmods.net/showthread.php?t=323220)
@@ -948,7 +945,7 @@ void vStatsConditionPatch(bool bPatch)
 	if(!bPatched && bPatch)
 	{
 		bPatched = true;
-		StoreToAddress(g_pStatsCondition, 0x79, NumberType_Int8);
+		StoreToAddress(g_pStatsCondition, 0xEB, NumberType_Int8);
 	}
 	else if(bPatched && !bPatch)
 	{
@@ -962,4 +959,14 @@ void vRoundRespawn(int client)
 	vStatsConditionPatch(true);
 	SDKCall(g_hSDK_CTerrorPlayer_RoundRespawn, client);
 	vStatsConditionPatch(false);
+}
+
+void vGoAFKTimer(int client, float flDuration)
+{
+	static int m_GoAFKTimer = -1;
+	if(m_GoAFKTimer == -1)
+		m_GoAFKTimer = FindSendPropInfo("CTerrorPlayer", "m_lookatPlayer") - 12;
+
+	SetEntDataFloat(client, m_GoAFKTimer + 4, flDuration);
+	SetEntDataFloat(client, m_GoAFKTimer + 8, GetGameTime() + flDuration);
 }
