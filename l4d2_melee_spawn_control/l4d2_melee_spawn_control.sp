@@ -46,7 +46,7 @@ MRESReturn DD_CMeleeWeaponInfoStore_LoadScripts_Pre(Address pThis, DHookReturn h
 		return MRES_Ignored;
 
 	char sMissionFirstMap[64];
-	int iKeyValue = SDKCall(g_hSDK_CTerrorGameRules_GetMissionFirstMap, 0);\
+	int iKeyValue = SDKCall(g_hSDK_CTerrorGameRules_GetMissionFirstMap, 0);
 	if(!iKeyValue)
 		return MRES_Ignored;
 
