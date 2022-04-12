@@ -44,7 +44,6 @@ ConVar
 	g_hPrecacheAllSur;
 
 int
-	g_iOrignalMapSet,
 	g_iSelectedClient[MAXPLAYERS + 1];
 
 bool
@@ -136,7 +135,7 @@ public void OnPluginStart()
 	g_hFixDialogue.AddChangeHook(vConVarChanged);
 	g_hInTransition.AddChangeHook(vConVarChanged);
 
-	//AutoExecConfig(true, "survivor_chat_select");
+	AutoExecConfig(true, "survivor_chat_select");
 
 	TopMenu topmenu;
 	if(LibraryExists("adminmenu") && ((topmenu = GetAdminTopMenu()) != null))
@@ -550,8 +549,7 @@ void OnNextFrame_ResetVar(int iBot)
 
 static int iGetBotOfIdlePlayer(int client)
 {
-	static int i;
-	for(i = 1; i <= MaxClients; i++)
+	for(int i = 1; i <= MaxClients; i++)
 	{
 		if(IsClientInGame(i) && IsFakeClient(i) && iGetIdlePlayerOfBot(i) == client)
 			return i;
@@ -562,7 +560,9 @@ static int iGetBotOfIdlePlayer(int client)
 static int iGetIdlePlayerOfBot(int client)
 {
 	static char sNetClass[64];
-	GetEntityNetClass(client, sNetClass, sizeof sNetClass);
+	if(!GetEntityNetClass(client, sNetClass, sizeof sNetClass))
+		return 0;
+
 	if(FindSendPropInfo(sNetClass, "m_humanSpectatorUserID") == -1)
 		return 0;
 
@@ -821,7 +821,7 @@ int iCheckLeastUsedSurvivor(int client)
 		iLeastChar[iCharBuffer]++;
 	}
 
-	switch(g_iOrignalMapSet)
+	switch(L4D2_GetSurvivorSetMap())
 	{
 		case 1:
 		{
@@ -1033,27 +1033,23 @@ void vInitGameData()
 
 	StartPrepSDKCall(SDKCall_Raw);
 	if(!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CDirector::IsInTransition"))
-		SetFailState("Failed to find signature: CDirector::IsInTransition");
+		SetFailState("Failed to find signature: \"CDirector::IsInTransition\"");
 	PrepSDKCall_SetReturnInfo(SDKType_Bool, SDKPass_Plain);
-	g_hSDK_CDirector_IsInTransition = EndPrepSDKCall();
-	if(!g_hSDK_CDirector_IsInTransition)
-		SetFailState("Failed to create SDKCall: CDirector::IsInTransition");
+	if(!(g_hSDK_CDirector_IsInTransition = EndPrepSDKCall()))
+		SetFailState("Failed to create SDKCall: \"CDirector::IsInTransition\"");
 
 	StartPrepSDKCall(SDKCall_Player);
 	if(!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorPlayer::IsTransitioned"))
-		SetFailState("Failed to find signature: CTerrorPlayer::IsTransitioned");
+		SetFailState("Failed to find signature: \"CTerrorPlayer::IsTransitioned\"");
 	PrepSDKCall_SetReturnInfo(SDKType_Bool, SDKPass_Plain);
-	g_hSDK_CTerrorPlayer_IsTransitioned = EndPrepSDKCall();
-	if(!g_hSDK_CTerrorPlayer_IsTransitioned)
-		SetFailState("Failed to create SDKCall: CTerrorPlayer::IsTransitioned");
+	if(!(g_hSDK_CTerrorPlayer_IsTransitioned = EndPrepSDKCall()))
+		SetFailState("Failed to create SDKCall: \"CTerrorPlayer::IsTransitioned\"");
 
 	delete hGameData;
 }
 
 public Action L4D_OnGetSurvivorSet(int &retVal)
 {
-	g_iOrignalMapSet = retVal;
-
 	if(!g_bFixDialogue)
 		return Plugin_Continue;
 
