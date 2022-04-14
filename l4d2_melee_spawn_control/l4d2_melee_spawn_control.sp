@@ -240,10 +240,10 @@ void ParseMeleeString(const char[] source, ArrayList array)
 		if (!buffer[0])
 			continue;
 
+		StringToLowerCase(buffer);
 		if (array.FindString(buffer) != -1)
 			continue;
 			
-		StringToLowerCase(buffer);
 		FormatEx(path, sizeof path, "scripts/melee/%s.txt", buffer);
 		if (!FileExists(path, true))
 			continue;
@@ -256,12 +256,15 @@ void ParseMeleeString(const char[] source, ArrayList array)
 		strcopy(buffer, sizeof buffer, source[reloc_idx]);
 
 		TrimString(buffer);
-		if (buffer[0] && array.FindString(buffer) == -1)
+		if (buffer[0])
 		{
 			StringToLowerCase(buffer);
-			FormatEx(path, sizeof path, "scripts/melee/%s.txt", buffer);
-			if (FileExists(path, true))
-				array.PushString(buffer);
+			if (array.FindString(buffer) == -1)
+			{
+				FormatEx(path, sizeof path, "scripts/melee/%s.txt", buffer);
+				if (FileExists(path, true))
+					array.PushString(buffer);
+			}
 		}
 	}
 }
