@@ -1592,7 +1592,7 @@ Action tmrPlayerStatus(Handle timer)
 
 	static int i;
 	static int iModelIndex;
-	static char sModelName[128];
+	static char sModelName[PLATFORM_MAX_PATH];
 	static float fTime;
 	static float fInterval;
 	static float fLastQueryTime[MAXPLAYERS + 1];
@@ -2073,7 +2073,7 @@ void vCreateSurvivorModelGlow(int client)
 	g_esPlayer[client].iModelEntRef = EntIndexToEntRef(entity);
 	g_esPlayer[client].iModelIndex = GetEntProp(client, Prop_Data, "m_nModelIndex");
 
-	static char sModelName[128];
+	static char sModelName[PLATFORM_MAX_PATH];
 	GetEntPropString(client, Prop_Data, "m_ModelName", sModelName, sizeof sModelName);
 	DispatchKeyValue(entity, "model", sModelName);
 	DispatchKeyValue(entity, "solid", "0");
@@ -2208,7 +2208,7 @@ enum struct esData
 	int iThirdStrike;
 	int iGoingToDie;
 	
-	char sModel[128];
+	char sModel[PLATFORM_MAX_PATH];
 
 	int iClip0;
 	int iAmmo;
