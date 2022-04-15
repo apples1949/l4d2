@@ -459,7 +459,7 @@ int iGetClosestSurvivor(int client, int iExclude = -1, int entity, float fDistan
 		}
 	}
 
-	if(aClients.Length == 0)
+	if(!aClients.Length)
 	{
 		delete aClients;
 		return -1;
@@ -468,7 +468,7 @@ int iGetClosestSurvivor(int client, int iExclude = -1, int entity, float fDistan
 	aClients.Sort(Sort_Ascending, Sort_Float);
 
 	iIndex = aClients.FindValue(0, 2);
-	i = aClients.Get(iIndex != -1 && aClients.Get(iIndex, 0) < 0.8 * g_fTankThrowForce ? iIndex : 0, 1);
+	i = aClients.Get(iIndex != -1 && aClients.Get(iIndex, 0) < g_fTankThrowForce ? iIndex : GetRandomInt(0, RoundToCeil((aClients.Length - 1) * 0.8)), 1);
 	delete aClients;
 	return i;
 }
