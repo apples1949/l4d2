@@ -83,7 +83,7 @@ enum struct esPlayer
 
 	bool bSpecNotify;
 
-	char sModel[128];
+	char sModel[PLATFORM_MAX_PATH];
 	char sSteamID[32];
 }
 
@@ -534,7 +534,7 @@ int iClientTeamTakeOver(int client)
 
 void vDisplayBotList(int client)
 {
-	char sID[16];
+	char sID[12];
 	char sName[MAX_NAME_LENGTH];
 	Menu menu = new Menu(iDisplayBotListMenuHandler);
 	menu.SetTitle("- 请选择接管目标 - [!tkbot]");
@@ -1028,7 +1028,7 @@ void Event_BotPlayerReplace(Event event, const char[] name, bool dontBroadcast)
 	int bot = GetClientOfUserId(event.GetInt("bot"));
 	SetEntProp(player, Prop_Send, "m_survivorCharacter", GetEntProp(bot, Prop_Send, "m_survivorCharacter"));
 
-	char sModel[128];
+	char sModel[PLATFORM_MAX_PATH];
 	GetClientModel(bot, sModel, sizeof sModel);
 	SetEntityModel(player, sModel);
 }
@@ -1712,7 +1712,7 @@ MRESReturn DD_CBasePlayer_SetModel_Post(int pThis, DHookParam hParams)
 		return MRES_Ignored;
 	}
 	
-	char sModel[128];
+	char sModel[PLATFORM_MAX_PATH];
 	hParams.GetString(1, sModel, sizeof sModel);
 	if(StrContains(sModel, "models/survivors/survivor_", false) == 0)
 		strcopy(g_esPlayer[pThis].sModel, sizeof esPlayer::sModel, sModel);
