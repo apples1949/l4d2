@@ -320,7 +320,7 @@ public Plugin myinfo =
 	name = "Control Zombies In Co-op",
 	author = "sorallll",
 	description = "",
-	version = "3.3.6",
+	version = "3.3.7",
 	url = "https://steamcommunity.com/id/sorallll"
 }
 
@@ -706,7 +706,7 @@ void vGetImmunityLevels()
 
 static bool bCheckClientAccess(int client, int iIndex)
 {
-	if(g_iUserFlagBits[iIndex] == 0)
+	if(!g_iUserFlagBits[iIndex])
 		return true;
 
 	static int iFlagBits;
@@ -770,7 +770,7 @@ Action cmdTeam2(int client, int args)
 	if(!client || !IsClientInGame(client) || IsFakeClient(client))
 		return Plugin_Handled;
 
-	if(bCheckClientAccess(client, 0) == false)
+	if(!bCheckClientAccess(client, 0))
 	{
 		// ReplyToCommand(client, "无权使用该指令");
 		// return Plugin_Handled;
@@ -805,7 +805,7 @@ Action cmdTeam3(int client, int args)
 	if(!client || !IsClientInGame(client) || IsFakeClient(client) || GetClientTeam(client) == 3)
 		return Plugin_Handled;
 
-	if(bCheckClientAccess(client, 1) == false)
+	if(!bCheckClientAccess(client, 1))
 	{
 		// ReplyToCommand(client, "无权使用该指令");
 		// return Plugin_Handled;
@@ -851,7 +851,7 @@ Action cmdPB(int client, int args)
 	if(!client || !IsClientInGame(client) || IsFakeClient(client))
 		return Plugin_Handled;
 
-	if(bCheckClientAccess(client, 2) == false)
+	if(!bCheckClientAccess(client, 2))
 	{
 		ReplyToCommand(client, "无权使用该指令");
 		return Plugin_Handled;
@@ -898,7 +898,7 @@ Action cmdTakeTank(int client, int args)
 		return Plugin_Handled;
 
 	int iTeam = GetClientTeam(client);
-	if(bCheckClientAccess(client, 3) == false)
+	if(!bCheckClientAccess(client, 3))
 	{
 		// ReplyToCommand(client, "无权使用该指令");
 		// return Plugin_Handled;
@@ -1006,7 +1006,7 @@ Action cmdChangeClass(int client, int args)
 	if(!client || !IsClientInGame(client) || IsFakeClient(client))
 		return Plugin_Handled;
 	
-	if(bCheckClientAccess(client, 4) == false)
+	if(!bCheckClientAccess(client, 4))
 	{
 		ReplyToCommand(client, "无权使用该指令");
 		return Plugin_Handled;
@@ -1170,10 +1170,10 @@ Action CommandListener_CallVote(int client, const char[] command, int argc)
 // TOO_CLOSE          256  "Can't spawn here" "You are too close to the Survivors"
 // RESTRICTED_AREA    512  "Can't spawn here" "This is a restricted area"
 // INSIDE_ENTITY     1024  "Can't spawn here" "Something is blocking this spot"
-public Action OnPlayerRunCmd(int client, int &buttons)
+public void OnPlayerRunCmdPost(int client)
 {
 	if(g_iControlled == 1 || IsFakeClient(client) || GetClientTeam(client) != 3 || !IsPlayerAlive(client))
-		return Plugin_Continue;
+		return;
 
 	static int iFlags;
 	iFlags = GetEntProp(client, Prop_Data, "m_afButtonPressed");
@@ -1181,7 +1181,7 @@ public Action OnPlayerRunCmd(int client, int &buttons)
 	{
 		if(iFlags & IN_ZOOM)
 		{
-			if(g_esPlayer[client].iMaterialized == 0 && bCheckClientAccess(client, 4) == true)
+			if(g_esPlayer[client].iMaterialized == 0 && bCheckClientAccess(client, 4))
 				vSelectAscendingZombieClass(client);
 		}
 		else if(iFlags & IN_ATTACK)
@@ -1192,11 +1192,9 @@ public Action OnPlayerRunCmd(int client, int &buttons)
 	}
 	else
 	{
-		if(iFlags & IN_ZOOM && bCheckClientAccess(client, 5) == true)
+		if(iFlags & IN_ZOOM && bCheckClientAccess(client, 5))
 			vResetInfectedAbility(client, 0.1); // 管理员鼠标中键重置技能冷却
 	}
-
-	return Plugin_Continue;
 }
 
 void vSelectAscendingZombieClass(int client)
@@ -1212,10 +1210,7 @@ void vResetInfectedAbility(int client, float fTime)
 {
 	int iAbility = GetEntPropEnt(client, Prop_Send, "m_customAbility");
 	if(iAbility != -1)
-	{
-		//SetEntPropFloat(iAbility, Prop_Send, "m_duration", fTime);
 		SetEntPropFloat(iAbility, Prop_Send, "m_timestamp", GetGameTime() + fTime);
-	}
 }
 
 public void OnMapStart()
@@ -1890,7 +1885,7 @@ void vSetGodMode(int client, float fDuration)
 
 Action tmrMortal(Handle timer, int client)
 {
-	if(!(client = GetClientOfUserId(client)) || !IsClientInGame(client))
+	if(!(client = GetClientOfUserId(client)) || !IsClientInGame(client) || GetEntProp(client, Prop_Data, "m_takedamage") != 0)
 		return Plugin_Stop;
 
 	SetEntProp(client, Prop_Data, "m_takedamage", 2);
@@ -1941,9 +1936,7 @@ int iGetBotOfIdlePlayer(int client)
 
 int iGetIdlePlayerOfBot(int client)
 {
-	static char sNetClass[64];
-	GetEntityNetClass(client, sNetClass, sizeof sNetClass);
-	if(FindSendPropInfo(sNetClass, "m_humanSpectatorUserID") < 1)
+	if(!HasEntProp(client, Prop_Send, "m_humanSpectatorUserID"))
 		return 0;
 
 	return GetClientOfUserId(GetEntProp(client, Prop_Send, "m_humanSpectatorUserID"));
@@ -1980,7 +1973,7 @@ int iTakeOverTank(int tank)
 		client = 0;
 	else
 	{
-		SetRandomSeed(GetTime());
+		SetRandomSeed(GetGameTickCount());
 		if(aClients.FindValue(0) != -1)
 		{
 			aClients.Sort(Sort_Descending, Sort_Integer);
@@ -2577,7 +2570,6 @@ int iGetOrSetPlayerAmmo(int client, int iWeapon, int iAmmo = -1)
 		else
 			return GetEntProp(client, Prop_Send, "m_iAmmo", _, m_iPrimaryAmmoType);
 	}
-
 	return 0;
 }
 
@@ -2597,7 +2589,7 @@ bool bAttemptRespawnPZ(int client)
 		}
 	}
 
-	SetRandomSeed(GetTime());
+	SetRandomSeed(GetGameTickCount());
 
 	if(iCount >= g_iSILimit)
 	{
@@ -2676,133 +2668,133 @@ void vInitGameData()
 
 	g_iOff_m_hHiddenWeapon = hGameData.GetOffset("CTerrorPlayer::OnIncapacitatedAsSurvivor::m_hHiddenWeapon");
 	if(g_iOff_m_hHiddenWeapon == -1)
-		SetFailState("Failed to find offset: CTerrorPlayer::OnIncapacitatedAsSurvivor::m_hHiddenWeapon");
+		SetFailState("Failed to find offset: \"CTerrorPlayer::OnIncapacitatedAsSurvivor::m_hHiddenWeapon\"");
 
 	g_iOff_m_preHangingHealth = hGameData.GetOffset("CTerrorPlayer::OnRevived::m_preHangingHealth");
 	if(g_iOff_m_preHangingHealth == -1)
-		SetFailState("Failed to find offset: CTerrorPlayer::OnRevived::m_preHangingHealth");
+		SetFailState("Failed to find offset: \"CTerrorPlayer::OnRevived::m_preHangingHealth\"");
 
 	g_iOff_m_preHangingHealthBuffer = hGameData.GetOffset("CTerrorPlayer::OnRevived::m_preHangingHealthBuffer");
 	if(g_iOff_m_preHangingHealthBuffer == -1)
-		SetFailState("Failed to find offset: CTerrorPlayer::OnRevived::m_preHangingHealthBuffer");
+		SetFailState("Failed to find offset: \"CTerrorPlayer::OnRevived::m_preHangingHealthBuffer\"");
 
 	StartPrepSDKCall(SDKCall_Player);
 	if(!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorPlayer::OnRevived"))
-		SetFailState("Failed to find signature: CTerrorPlayer::OnRevived");
+		SetFailState("Failed to find signature: \"CTerrorPlayer::OnRevived\"");
 	g_hSDK_CTerrorPlayer_OnRevived = EndPrepSDKCall();
 	if(!g_hSDK_CTerrorPlayer_OnRevived)
-		SetFailState("Failed to create SDKCall: CTerrorPlayer::OnRevived");
+		SetFailState("Failed to create SDKCall: \"CTerrorPlayer::OnRevived\"");
 
 	StartPrepSDKCall(SDKCall_Player);
 	if(!PrepSDKCall_SetFromConf(hGameData, SDKConf_Virtual, "CBaseEntity::IsInStasis")) // https://forums.alliedmods.net/showthread.php?t=302140
-		SetFailState("Failed to find offset: CBaseEntity::IsInStasis");
+		SetFailState("Failed to find offset: \"CBaseEntity::IsInStasis\"");
 	PrepSDKCall_SetReturnInfo(SDKType_Bool, SDKPass_Plain);
 	g_hSDK_CBaseEntity_IsInStasis = EndPrepSDKCall();
 	if(!g_hSDK_CBaseEntity_IsInStasis)
-		SetFailState("Failed to create SDKCall: CBaseEntity::IsInStasis");
+		SetFailState("Failed to create SDKCall: \"CBaseEntity::IsInStasis\"");
 	
 	StartPrepSDKCall(SDKCall_Player);
 	if(!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "Tank::LeaveStasis")) // https://forums.alliedmods.net/showthread.php?t=319342
-		SetFailState("Failed to find signature: Tank::LeaveStasis");
+		SetFailState("Failed to find signature: \"Tank::LeaveStasis\"");
 	PrepSDKCall_SetReturnInfo(SDKType_PlainOldData, SDKPass_Plain);
 	g_hSDK_Tank_LeaveStasis = EndPrepSDKCall();
 	if(!g_hSDK_Tank_LeaveStasis)
-		SetFailState("Failed to create SDKCall: Tank::LeaveStasis");
+		SetFailState("Failed to create SDKCall: \"Tank::LeaveStasis\"");
 
 	StartPrepSDKCall(SDKCall_Player);
 	if(!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CCSPlayer::State_Transition"))
-		SetFailState("Failed to find signature: CCSPlayer::State_Transition");
+		SetFailState("Failed to find signature: \"CCSPlayer::State_Transition\"");
 	PrepSDKCall_AddParameter(SDKType_PlainOldData, SDKPass_Plain);
 	g_hSDK_CCSPlayer_State_Transition = EndPrepSDKCall();
 	if(!g_hSDK_CCSPlayer_State_Transition)
-		SetFailState("Failed to create SDKCall: CCSPlayer::State_Transition");
+		SetFailState("Failed to create SDKCall: \"CCSPlayer::State_Transition\"");
 		
 	StartPrepSDKCall(SDKCall_Player);
 	if(!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorPlayer::MaterializeFromGhost"))
-		SetFailState("Failed to find signature: CTerrorPlayer::MaterializeFromGhost");
+		SetFailState("Failed to find signature: \"CTerrorPlayer::MaterializeFromGhost\"");
 	PrepSDKCall_SetReturnInfo(SDKType_PlainOldData, SDKPass_Plain);
 	g_hSDK_CTerrorPlayer_MaterializeFromGhost = EndPrepSDKCall();
 	if(!g_hSDK_CTerrorPlayer_MaterializeFromGhost)
-		SetFailState("Failed to create SDKCall: CTerrorPlayer::MaterializeFromGhost");
+		SetFailState("Failed to create SDKCall: \"CTerrorPlayer::MaterializeFromGhost\"");
 
 	StartPrepSDKCall(SDKCall_Player);
 	if(!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorPlayer::SetClass"))
-		SetFailState("Failed to find signature: CTerrorPlayer::SetClass");
+		SetFailState("Failed to find signature: \"CTerrorPlayer::SetClass\"");
 	PrepSDKCall_AddParameter(SDKType_PlainOldData, SDKPass_Plain);
 	g_hSDK_CTerrorPlayer_SetClass = EndPrepSDKCall();
 	if(!g_hSDK_CTerrorPlayer_SetClass)
-		SetFailState("Failed to create SDKCall: CTerrorPlayer::SetClass");
+		SetFailState("Failed to create SDKCall: \"CTerrorPlayer::SetClass\"");
 	
 	StartPrepSDKCall(SDKCall_Static);
 	if(!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CBaseAbility::CreateForPlayer"))
-		SetFailState("Failed to find signature: CBaseAbility::CreateForPlayer");
+		SetFailState("Failed to find signature: \"CBaseAbility::CreateForPlayer\"");
 	PrepSDKCall_AddParameter(SDKType_CBasePlayer, SDKPass_Pointer);
 	PrepSDKCall_SetReturnInfo(SDKType_CBaseEntity, SDKPass_Pointer);
 	g_hSDK_CBaseAbility_CreateForPlayer = EndPrepSDKCall();
 	if(!g_hSDK_CBaseAbility_CreateForPlayer)
-		SetFailState("Failed to create SDKCall: CBaseAbility::CreateForPlayer");
+		SetFailState("Failed to create SDKCall: \"CBaseAbility::CreateForPlayer\"");
 	
 	StartPrepSDKCall(SDKCall_Player);
 	if(!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorPlayer::CleanupPlayerState"))
-		SetFailState("Failed to find signature: CTerrorPlayer::CleanupPlayerState");
+		SetFailState("Failed to find signature: \"CTerrorPlayer::CleanupPlayerState\"");
 	g_hSDK_CTerrorPlayer_CleanupPlayerState = EndPrepSDKCall();
 	if(!g_hSDK_CTerrorPlayer_CleanupPlayerState)
-		SetFailState("Failed to create SDKCall: CTerrorPlayer::CleanupPlayerState");
+		SetFailState("Failed to create SDKCall: \"CTerrorPlayer::CleanupPlayerState\"");
 
 	StartPrepSDKCall(SDKCall_Player);
 	if(!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorPlayer::TakeOverZombieBot"))
-		SetFailState("Failed to find signature: CTerrorPlayer::TakeOverZombieBot");
+		SetFailState("Failed to find signature: \"CTerrorPlayer::TakeOverZombieBot\"");
 	PrepSDKCall_AddParameter(SDKType_CBasePlayer, SDKPass_Pointer);
 	g_hSDK_CTerrorPlayer_TakeOverZombieBot = EndPrepSDKCall();
 	if(!g_hSDK_CTerrorPlayer_TakeOverZombieBot)
-		SetFailState("Failed to create SDKCall: CTerrorPlayer::TakeOverZombieBot");
+		SetFailState("Failed to create SDKCall: \"CTerrorPlayer::TakeOverZombieBot\"");
 
 	StartPrepSDKCall(SDKCall_Player);
 	if(!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorPlayer::ReplaceWithBot"))
-		SetFailState("Failed to find signature: CTerrorPlayer::ReplaceWithBot");
+		SetFailState("Failed to find signature: \"CTerrorPlayer::ReplaceWithBot\"");
 	PrepSDKCall_AddParameter(SDKType_Bool, SDKPass_Plain);
 	g_hSDK_CTerrorPlayer_ReplaceWithBot= EndPrepSDKCall();
-	if(g_hSDK_CTerrorPlayer_ReplaceWithBot== null)
-		SetFailState("Failed to create SDKCall: CTerrorPlayer::ReplaceWithBot");
+	if(!g_hSDK_CTerrorPlayer_ReplaceWithBot)
+		SetFailState("Failed to create SDKCall: \"CTerrorPlayer::ReplaceWithBot\"");
 
 	StartPrepSDKCall(SDKCall_Player);
 	if(!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorPlayer::SetPreSpawnClass"))
-		SetFailState("Failed to find signature: CTerrorPlayer::SetPreSpawnClass");
+		SetFailState("Failed to find signature: \"CTerrorPlayer::SetPreSpawnClass\"");
 	PrepSDKCall_AddParameter(SDKType_PlainOldData, SDKPass_Plain);
 	g_hSDK_CTerrorPlayer_SetPreSpawnClass = EndPrepSDKCall();
 	if(!g_hSDK_CTerrorPlayer_SetPreSpawnClass)
-		SetFailState("Failed to create SDKCall: CTerrorPlayer::SetPreSpawnClass");
+		SetFailState("Failed to create SDKCall: \"CTerrorPlayer::SetPreSpawnClass\"");
 	
 	StartPrepSDKCall(SDKCall_Player);
 	if(!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorPlayer::RoundRespawn"))
-		SetFailState("Failed to find signature: CTerrorPlayer::RoundRespawn");
+		SetFailState("Failed to find signature: \"CTerrorPlayer::RoundRespawn\"");
 	g_hSDK_CTerrorPlayer_RoundRespawn = EndPrepSDKCall();
 	if(!g_hSDK_CTerrorPlayer_RoundRespawn)
-		SetFailState("Failed to create SDKCall: CTerrorPlayer::RoundRespawn");
+		SetFailState("Failed to create SDKCall: \"CTerrorPlayer::RoundRespawn\"");
 
 	StartPrepSDKCall(SDKCall_Player);
 	if(!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "SurvivorBot::SetHumanSpectator"))
-		SetFailState("Failed to find signature: SurvivorBot::SetHumanSpectator");
+		SetFailState("Failed to find signature: \"SurvivorBot::SetHumanSpectator\"");
 	PrepSDKCall_AddParameter(SDKType_CBasePlayer, SDKPass_Pointer);
 	g_hSDK_SurvivorBot_SetHumanSpectator = EndPrepSDKCall();
 	if(!g_hSDK_SurvivorBot_SetHumanSpectator)
-		SetFailState("Failed to create SDKCall: SurvivorBot::SetHumanSpectator");
+		SetFailState("Failed to create SDKCall: \"SurvivorBot::SetHumanSpectator\"");
 
 	StartPrepSDKCall(SDKCall_Player);
 	if(!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorPlayer::TakeOverBot"))
-		SetFailState("Failed to find signature: CTerrorPlayer::TakeOverBot");
+		SetFailState("Failed to find signature: \"CTerrorPlayer::TakeOverBot\"");
 	PrepSDKCall_AddParameter(SDKType_Bool, SDKPass_Plain);
 	g_hSDK_CTerrorPlayer_TakeOverBot = EndPrepSDKCall();
 	if(!g_hSDK_CTerrorPlayer_TakeOverBot)
-		SetFailState("Failed to create SDKCall: CTerrorPlayer::TakeOverBot");
+		SetFailState("Failed to create SDKCall: \"CTerrorPlayer::TakeOverBot\"");
 
 	StartPrepSDKCall(SDKCall_Static);
 	if(!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorGameRules::HasPlayerControlledZombies"))
-		SetFailState("Failed to find signature: CTerrorGameRules::HasPlayerControlledZombies");
+		SetFailState("Failed to find signature: \"CTerrorGameRules::HasPlayerControlledZombies\"");
 	PrepSDKCall_SetReturnInfo(SDKType_Bool, SDKPass_Plain);
 	g_hSDK_CTerrorGameRules_HasPlayerControlledZombies = EndPrepSDKCall();
 	if(!g_hSDK_CTerrorGameRules_HasPlayerControlledZombies)
-		SetFailState("Failed to create SDKCall: CTerrorGameRules::HasPlayerControlledZombies");
+		SetFailState("Failed to create SDKCall: \"CTerrorGameRules::HasPlayerControlledZombies\"");
 
 	vInitPatchs(hGameData);
 	vSetupDetours(hGameData);
@@ -2814,60 +2806,60 @@ void vInitPatchs(GameData hGameData = null)
 {
 	int iOffset = hGameData.GetOffset("RoundRespawn_Offset");
 	if(iOffset == -1)
-		SetFailState("Failed to find offset: RoundRespawn_Offset");
+		SetFailState("Failed to find offset: \"RoundRespawn_Offset\"");
 
 	int iByteMatch = hGameData.GetOffset("RoundRespawn_Byte");
 	if(iByteMatch == -1)
-		SetFailState("Failed to find byte: RoundRespawn_Byte");
+		SetFailState("Failed to find byte: \"RoundRespawn_Byte\"");
 
 	g_pStatsCondition = hGameData.GetAddress("CTerrorPlayer::RoundRespawn");
 	if(!g_pStatsCondition)
-		SetFailState("Failed to find address: CTerrorPlayer::RoundRespawn");
+		SetFailState("Failed to find address: \"CTerrorPlayer::RoundRespawn\"");
 
 	g_pStatsCondition += view_as<Address>(iOffset);
 	
 	int iByteOrigin = LoadFromAddress(g_pStatsCondition, NumberType_Int8);
 	if(iByteOrigin != iByteMatch)
-		SetFailState("Failed to load 'CTerrorPlayer::RoundRespawn', byte mis-match @ %d (0x%02X != 0x%02X)", iOffset, iByteOrigin, iByteMatch);
+		SetFailState("Failed to load \"CTerrorPlayer::RoundRespawn\", byte mis-match @ %d (0x%02X != 0x%02X)", iOffset, iByteOrigin, iByteMatch);
 }
 
 void vSetupDetours(GameData hGameData = null)
 {
 	g_ddCTerrorPlayer_OnEnterGhostState = DynamicDetour.FromConf(hGameData, "DD::CTerrorPlayer::OnEnterGhostState");
 	if(!g_ddCTerrorPlayer_OnEnterGhostState)
-		SetFailState("Failed to create DynamicDetour: DD::CTerrorPlayer::OnEnterGhostState");
+		SetFailState("Failed to create DynamicDetour: \"DD::CTerrorPlayer::OnEnterGhostState\"");
 
 	g_ddCTerrorPlayer_MaterializeFromGhost = DynamicDetour.FromConf(hGameData, "DD::CTerrorPlayer::MaterializeFromGhost");
 	if(!g_ddCTerrorPlayer_MaterializeFromGhost)
-		SetFailState("Failed to create DynamicDetour: DD::CTerrorPlayer::MaterializeFromGhost");
+		SetFailState("Failed to create DynamicDetour: \"DD::CTerrorPlayer::MaterializeFromGhost\"");
 
 	g_ddCTerrorPlayer_PlayerZombieAbortControl = DynamicDetour.FromConf(hGameData, "DD::CTerrorPlayer::PlayerZombieAbortControl");
 	if(!g_ddCTerrorPlayer_PlayerZombieAbortControl)
-		SetFailState("Failed to create DynamicDetour: DD::CTerrorPlayer::PlayerZombieAbortControl");
+		SetFailState("Failed to create DynamicDetour: \"DD::CTerrorPlayer::PlayerZombieAbortControl\"");
 
 	//Method from MicroLeo (https://forums.alliedmods.net/showthread.php?t=329183)
 	Address pAddr = hGameData.GetAddress("ForEachTerrorPlayer<SpawnablePZScan>");
 	if(!pAddr)
-		SetFailState("Failed to find address: ForEachTerrorPlayer<SpawnablePZScan> in z_spawn_old(CCommand const&)");
+		SetFailState("Failed to find address: \"ForEachTerrorPlayer<SpawnablePZScan>\" in \"z_spawn_old(CCommand const&)\"");
 	if(!hGameData.GetOffset("OS")) // (addr+5) + *(addr+1) = call function addr
 	{
 		Address offset = view_as<Address>(LoadFromAddress(pAddr + view_as<Address>(1), NumberType_Int32));
 		if(!offset)
-			SetFailState("Failed to find address: ForEachTerrorPlayer<SpawnablePZScan>");
+			SetFailState("Failed to find address: \"ForEachTerrorPlayer<SpawnablePZScan>\"");
 
 		pAddr += offset + view_as<Address>(5); // sizeof(instruction)
 	}
 
 	g_ddForEachTerrorPlayer_SpawnablePZScan = new DynamicDetour(pAddr, CallConv_CDECL, ReturnType_Void, ThisPointer_Ignore);
 	if(!g_ddForEachTerrorPlayer_SpawnablePZScan)
-		SetFailState("Failed to create DynamicDetour: ForEachTerrorPlayer<SpawnablePZScan>");
+		SetFailState("Failed to create DynamicDetour: \"ForEachTerrorPlayer<SpawnablePZScan>\"");
 
 	g_ddForEachTerrorPlayer_SpawnablePZScan.AddParam(HookParamType_CBaseEntity, -1, DHookPass_ByRef, DHookRegister_Default);
 }
 
 void vSetInfectedGhost(int client, bool bSavePos = false)
 {
-	if(GetClientTeam(client) == 3 && GetEntProp(client, Prop_Send, "m_isGhost") == 0)
+	if(GetClientTeam(client) == 3 && !GetEntProp(client, Prop_Send, "m_isGhost"))
 	{
 		static float vPos[3];
 		static float vAng[3];
@@ -2928,7 +2920,7 @@ void vStatsConditionPatch(bool bPatch)
 	if(!bPatched && bPatch)
 	{
 		bPatched = true;
-		StoreToAddress(g_pStatsCondition, 0x79, NumberType_Int8);
+		StoreToAddress(g_pStatsCondition, 0xEB, NumberType_Int8);
 	}
 	else if(bPatched && !bPatch)
 	{
@@ -2945,25 +2937,25 @@ void vToggleDetours(bool bEnable)
 		bEnabled = true;
 
 		if(!g_ddCTerrorPlayer_OnEnterGhostState.Enable(Hook_Pre, DD_CTerrorPlayer_OnEnterGhostState_Pre))
-			SetFailState("Failed to detour pre: DD::CTerrorPlayer::OnEnterGhostState");
+			SetFailState("Failed to detour pre: \"DD::CTerrorPlayer::OnEnterGhostState\"");
 		
 		if(!g_ddCTerrorPlayer_OnEnterGhostState.Enable(Hook_Post, DD_CTerrorPlayer_OnEnterGhostState_Post))
-			SetFailState("Failed to detour post: DD::CTerrorPlayer::OnEnterGhostState");
+			SetFailState("Failed to detour post: \"DD::CTerrorPlayer::OnEnterGhostState\"");
 			
 		if(!g_ddCTerrorPlayer_MaterializeFromGhost.Enable(Hook_Pre, DD_CTerrorPlayer_MaterializeFromGhost_Pre))
-			SetFailState("Failed to detour pre: DD::CTerrorPlayer::MaterializeFromGhost");
+			SetFailState("Failed to detour pre: \"DD::CTerrorPlayer::MaterializeFromGhost\"");
 		
 		if(!g_ddCTerrorPlayer_MaterializeFromGhost.Enable(Hook_Post, DD_CTerrorPlayer_MaterializeFromGhost_Post))
-			SetFailState("Failed to detour post: DD::CTerrorPlayer::MaterializeFromGhost");
+			SetFailState("Failed to detour post: \"DD::CTerrorPlayer::MaterializeFromGhost\"");
 			
 		if(!g_ddCTerrorPlayer_PlayerZombieAbortControl.Enable(Hook_Pre, DD_CTerrorPlayer_PlayerZombieAbortControl_Pre))
-			SetFailState("Failed to detour pre: DD::CTerrorPlayer::PlayerZombieAbortControl");
+			SetFailState("Failed to detour pre: \"DD::CTerrorPlayer::PlayerZombieAbortControl\"");
 		
 		if(!g_ddCTerrorPlayer_PlayerZombieAbortControl.Enable(Hook_Post, DD_CTerrorPlayer_PlayerZombieAbortControl_Post))
-			SetFailState("Failed to detour post: DD::CTerrorPlayer::PlayerZombieAbortControl");
+			SetFailState("Failed to detour post: \"DD::CTerrorPlayer::PlayerZombieAbortControl\"");
 
 		if(!(g_bIsSpawnablePZSupported = g_ddForEachTerrorPlayer_SpawnablePZScan.Enable(Hook_Pre, DD_ForEachTerrorPlayer_SpawnablePZScan_Pre)))
-			SetFailState("Failed to detour pre: ForEachTerrorPlayer<SpawnablePZScan>");
+			SetFailState("Failed to detour pre: \"ForEachTerrorPlayer<SpawnablePZScan>\"");
 	}
 	else if(bEnabled && !bEnable)
 	{
@@ -2972,16 +2964,16 @@ void vToggleDetours(bool bEnable)
 		g_bIsSpawnablePZSupported = false;
 
 		if(!g_ddCTerrorPlayer_OnEnterGhostState.Disable(Hook_Pre, DD_CTerrorPlayer_OnEnterGhostState_Pre) || !g_ddCTerrorPlayer_OnEnterGhostState.Disable(Hook_Post, DD_CTerrorPlayer_OnEnterGhostState_Post))
-			SetFailState("Failed to disable detour: DD::CTerrorPlayer::OnEnterGhostState");
+			SetFailState("Failed to disable detour: \"DD::CTerrorPlayer::OnEnterGhostState\"");
 		
 		if(!g_ddCTerrorPlayer_MaterializeFromGhost.Disable(Hook_Pre, DD_CTerrorPlayer_MaterializeFromGhost_Pre) || !g_ddCTerrorPlayer_MaterializeFromGhost.Disable(Hook_Post, DD_CTerrorPlayer_MaterializeFromGhost_Post))
-			SetFailState("Failed to disable detour: DD::CTerrorPlayer::MaterializeFromGhost");
+			SetFailState("Failed to disable detour: \"DD::CTerrorPlayer::MaterializeFromGhost\"");
 		
 		if(!g_ddCTerrorPlayer_PlayerZombieAbortControl.Disable(Hook_Pre, DD_CTerrorPlayer_PlayerZombieAbortControl_Pre) || !g_ddCTerrorPlayer_PlayerZombieAbortControl.Disable(Hook_Post, DD_CTerrorPlayer_PlayerZombieAbortControl_Post))
-			SetFailState("Failed to disable detour: DD::CTerrorPlayer::PlayerZombieAbortControl");
+			SetFailState("Failed to disable detour: \"DD::CTerrorPlayer::PlayerZombieAbortControl\"");
 
 		if(!g_ddForEachTerrorPlayer_SpawnablePZScan.Disable(Hook_Pre, DD_ForEachTerrorPlayer_SpawnablePZScan_Pre))
-			SetFailState("Failed to disable detour: DD_ForEachTerrorPlayer<SpawnablePZScan>");
+			SetFailState("Failed to disable detour: \"DD_ForEachTerrorPlayer<SpawnablePZScan>\"");
 	}
 }
 
@@ -2995,6 +2987,9 @@ MRESReturn DD_CTerrorPlayer_OnEnterGhostState_Pre(int pThis)
 
 MRESReturn DD_CTerrorPlayer_OnEnterGhostState_Post(int pThis)
 {
+	if(!GetEntProp(pThis, Prop_Send, "m_isGhost"))
+		return MRES_Ignored;
+
 	if(g_esPlayer[pThis].iMaterialized == 0 && !IsFakeClient(pThis))
 		RequestFrame(OnNextFrame_EnterGhostState, GetClientUserId(pThis));
 	
@@ -3013,6 +3008,9 @@ MRESReturn DD_CTerrorPlayer_MaterializeFromGhost_Pre(int pThis)
 
 MRESReturn DD_CTerrorPlayer_MaterializeFromGhost_Post(int pThis)
 {
+	if(GetEntProp(pThis, Prop_Send, "m_isGhost"))
+		return MRES_Ignored;
+
 	g_esPlayer[pThis].iMaterialized++;
 	g_bOnMaterializeFromGhost = false;
 
@@ -3065,10 +3063,10 @@ void OnNextFrame_EnterGhostState(int client)
 	{
 		if(g_esPlayer[client].iEnteredGhost == 0)
 		{
-			if(bCheckClientAccess(client, 0) == true)
+			if(bCheckClientAccess(client, 0))
 				CPrintToChat(client, "{default}聊天栏输入 {olive}!team2 {default}可切换回{blue}生还者");
 				
-			if(bCheckClientAccess(client, 4) == true)
+			if(bCheckClientAccess(client, 4))
 				CPrintToChat(client, "{red}灵魂状态下{default} 按下 {red}[鼠标中键] {default}可以快速切换特感");
 		}
 
@@ -3082,7 +3080,7 @@ void OnNextFrame_EnterGhostState(int client)
 
 void vClassSelectionMenu(int client)
 {
-	if((g_iAutoDisplayMenu == -1 || g_esPlayer[client].iEnteredGhost < g_iAutoDisplayMenu) && bCheckClientAccess(client, 5) == true)
+	if((g_iAutoDisplayMenu == -1 || g_esPlayer[client].iEnteredGhost < g_iAutoDisplayMenu) && bCheckClientAccess(client, 5))
 	{
 		vDisplayClassMenu(client);
 		EmitSoundToClient(client, SOUND_CLASSMENU, SOUND_FROM_PLAYER, SNDCHAN_AUTO, SNDLEVEL_NORMAL, SND_NOFLAGS, SNDVOL_NORMAL, SNDPITCH_NORMAL, -1, NULL_VECTOR, NULL_VECTOR, true, 0.0);
