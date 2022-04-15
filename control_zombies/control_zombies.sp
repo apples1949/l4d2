@@ -2987,10 +2987,13 @@ MRESReturn DD_CTerrorPlayer_OnEnterGhostState_Pre(int pThis)
 
 MRESReturn DD_CTerrorPlayer_OnEnterGhostState_Post(int pThis)
 {
-	if(!GetEntProp(pThis, Prop_Send, "m_isGhost"))
+	if(IsFakeClient(pThis) || !GetEntProp(pThis, Prop_Send, "m_isGhost"))
 		return MRES_Ignored;
 
-	if(g_esPlayer[pThis].iMaterialized == 0 && !IsFakeClient(pThis))
+	if(GetEntProp(pThis, Prop_Send, "m_zombieClass") == 8)
+		g_esPlayer[pThis].fBugExploitTime[1] = GetGameTime() + 3.0;
+
+	if(g_esPlayer[pThis].iMaterialized == 0)
 		RequestFrame(OnNextFrame_EnterGhostState, GetClientUserId(pThis));
 	
 	return MRES_Ignored;
@@ -3034,9 +3037,10 @@ MRESReturn DD_CTerrorPlayer_PlayerZombieAbortControl_Pre(int pThis)
 
 MRESReturn DD_CTerrorPlayer_PlayerZombieAbortControl_Post(int pThis)
 {
-	if(!IsFakeClient(pThis))
-		g_esPlayer[pThis].fBugExploitTime[1] = GetGameTime() + 1.5;
+	if(IsFakeClient(pThis) || !GetEntProp(pThis, Prop_Send, "m_isGhost"))
+		return MRES_Ignored;
 
+	g_esPlayer[pThis].fBugExploitTime[1] = GetGameTime() + 1.5;
 	return MRES_Ignored;
 }
 
