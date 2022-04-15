@@ -44,7 +44,7 @@ int
 enum struct PlayerSaveData
 {
 	char character[4];
-	char modelName[128];
+	char modelName[PLATFORM_MAX_PATH];
 }
 
 PlayerSaveData
@@ -103,20 +103,20 @@ void vToggleDetours(bool bEnable)
 		bEnabled = true;
 
 		if(!g_ddCDirector_Restart.Enable(Hook_Pre, DD_CDirector_Restart_Pre))
-			SetFailState("Failed to detour pre: DD::CDirector::Restart");
+			SetFailState("Failed to detour pre: \"DD::CDirector::Restart\"");
 		
 		if(!g_ddCDirector_Restart.Enable(Hook_Post, DD_CDirector_Restart_Post))
-			SetFailState("Failed to detour post: DD::CDirector::Restart");
+			SetFailState("Failed to detour post: \"DD::CDirector::Restart\"");
 	}
 	else if(bEnabled && !bEnable)
 	{
 		bEnabled = false;
 
 		if(!g_ddCDirector_Restart.Disable(Hook_Pre, DD_CDirector_Restart_Pre))
-			SetFailState("Failed to disable detour pre: DD::CDirector::Restart");
+			SetFailState("Failed to disable detour pre: \"DD::CDirector::Restart\"");
 
 		if(!g_ddCDirector_Restart.Disable(Hook_Post, DD_CDirector_Restart_Post))
-			SetFailState("Failed to disable detour post: DD::CDirector::Restart");
+			SetFailState("Failed to disable detour post: \"DD::CDirector::Restart\"");
 	}
 }
 
@@ -133,54 +133,50 @@ void vInitGameData()
 
 	g_pDirector = hGameData.GetAddress("CDirector");
 	if(!g_pDirector)
-		SetFailState("Failed to find address: CDirector");
+		SetFailState("Failed to find address: \"CDirector\"");
 
 	g_pSavedPlayerCount = hGameData.GetAddress("SavedPlayerCount");
 	if(!g_pSavedPlayerCount)
-		SetFailState("Failed to find address: SavedPlayerCount");
+		SetFailState("Failed to find address: \"SavedPlayerCount\"");
 
 	g_pSavedSurvivorBotCount = hGameData.GetAddress("SavedSurvivorBotCount");
 	if(!g_pSavedSurvivorBotCount)
-		SetFailState("Failed to find address: SavedSurvivorBotCount");
+		SetFailState("Failed to find address: \"SavedSurvivorBotCount\"");
 
 	StartPrepSDKCall(SDKCall_Raw);
 	if(!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "KeyValues::GetString"))
-		SetFailState("Failed to find signature: KeyValues::GetString");
+		SetFailState("Failed to find signature: \"KeyValues::GetString\"");
 	PrepSDKCall_AddParameter(SDKType_String, SDKPass_Pointer);
 	PrepSDKCall_AddParameter(SDKType_String, SDKPass_Pointer);
 	PrepSDKCall_SetReturnInfo(SDKType_String, SDKPass_Pointer);
-	g_hSDK_KeyValues_GetString = EndPrepSDKCall();
-	if(!g_hSDK_KeyValues_GetString)
-		SetFailState("Failed to create SDKCall: KeyValues::GetString");
+	if(!(g_hSDK_KeyValues_GetString = EndPrepSDKCall()))
+		SetFailState("Failed to create SDKCall: \"KeyValues::GetString\"");
 
 	StartPrepSDKCall(SDKCall_Raw);
 	if(!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "KeyValues::SetString"))
-		SetFailState("Failed to find signature: KeyValues::SetString");
+		SetFailState("Failed to find signature: \"KeyValues::SetString\"");
 	PrepSDKCall_AddParameter(SDKType_String, SDKPass_Pointer);
 	PrepSDKCall_AddParameter(SDKType_String, SDKPass_Pointer);
-	g_hSDK_KeyValues_SetString = EndPrepSDKCall();
-	if(!g_hSDK_KeyValues_SetString)
-		SetFailState("Failed to create SDKCall: KeyValues::SetString");
+	if(!(g_hSDK_KeyValues_SetString = EndPrepSDKCall()))
+		SetFailState("Failed to create SDKCall: \"KeyValues::SetString\"");
 
 	StartPrepSDKCall(SDKCall_Raw);
 	if(!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CDirector::IsInTransition"))
-		SetFailState("Failed to find signature: CDirector::IsInTransition");
+		SetFailState("Failed to find signature: \"CDirector::IsInTransition\"");
 	PrepSDKCall_SetReturnInfo(SDKType_Bool, SDKPass_Plain);
-	g_hSDK_CDirector_IsInTransition = EndPrepSDKCall();
-	if(!g_hSDK_CDirector_IsInTransition)
-		SetFailState("Failed to create SDKCall: CDirector::IsInTransition");
+	if(!(g_hSDK_CDirector_IsInTransition = EndPrepSDKCall()))
+		SetFailState("Failed to create SDKCall: \"CDirector::IsInTransition\"");
 
 	#if DEBUG
 	g_iOff_m_isTransitioned = hGameData.GetOffset("CTerrorPlayer::IsTransitioned::m_isTransitioned");
 	if(g_iOff_m_isTransitioned == -1)
-		SetFailState("Failed to find offset: CTerrorPlayer::IsTransitioned::m_isTransitioned");
+		SetFailState("Failed to find offset: \"CTerrorPlayer::IsTransitioned::m_isTransitioned\"");
 
 	StartPrepSDKCall(SDKCall_Player);
 	if(!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorPlayer::TransitionRestore"))
-		SetFailState("Failed to find signature: CTerrorPlayer::TransitionRestore");
-	g_hSDK_CTerrorPlayer_TransitionRestore = EndPrepSDKCall();
-	if(!g_hSDK_CTerrorPlayer_TransitionRestore)
-		SetFailState("Failed to create SDKCall: CTerrorPlayer::TransitionRestore");
+		SetFailState("Failed to find signature: \"CTerrorPlayer::TransitionRestore\"");
+	if(!(g_hSDK_CTerrorPlayer_TransitionRestore = EndPrepSDKCall()))
+		SetFailState("Failed to create SDKCall: \"CTerrorPlayer::TransitionRestore\"");
 	#endif
 
 	vInitPatchs(hGameData);
@@ -193,14 +189,14 @@ void vInitPatchs(GameData hGameData = null)
 {
 	g_mpRestoreByUserId = MemoryPatch.CreateFromConf(hGameData, "CTerrorPlayer::TransitionRestore::RestoreByUserId");
 	if(!g_mpRestoreByUserId.Validate())
-		SetFailState("Failed to verify patch: CTerrorPlayer::TransitionRestore::RestoreByUserId");
+		SetFailState("Failed to verify patch: \"CTerrorPlayer::TransitionRestore::RestoreByUserId\"");
 
 	MemoryPatch patch = MemoryPatch.CreateFromConf(hGameData, "RestoreTransitionedSurvivorBots::MaxRestoreSurvivorBots");
 	if(!patch.Validate())
-		SetFailState("Failed to verify patch: RestoreTransitionedSurvivorBots::MaxRestoreSurvivorBots");
+		SetFailState("Failed to verify patch: \"RestoreTransitionedSurvivorBots::MaxRestoreSurvivorBots\"");
 	else if(patch.Enable())
 	{
-		PrintToServer("Enabled patch: RestoreTransitionedSurvivorBots::MaxRestoreSurvivorBots");
+		PrintToServer("[%s] Enabled patch: \"RestoreTransitionedSurvivorBots::MaxRestoreSurvivorBots\"", GAMEDATA);
 		StoreToAddress(patch.Address + view_as<Address>(2), MaxClients, NumberType_Int8);
 	}
 }
@@ -209,41 +205,41 @@ void vSetupDetours(GameData hGameData = null)
 {
 	g_ddCDirector_Restart = DynamicDetour.FromConf(hGameData, "DD::CDirector::Restart");
 	if(!g_ddCDirector_Restart)
-		SetFailState("Failed to create DynamicDetour: DD::CDirector::Restart");
+		SetFailState("Failed to create DynamicDetour: \"DD::CDirector::Restart\"");
 
 	DynamicDetour dDetour = DynamicDetour.FromConf(hGameData, "DD::CTerrorPlayer::TransitionRestore");
 	if(!dDetour)
-		SetFailState("Failed to create DynamicDetour: DD::CTerrorPlayer::TransitionRestore");
+		SetFailState("Failed to create DynamicDetour: \"DD::CTerrorPlayer::TransitionRestore\"");
 
 	if(!dDetour.Enable(Hook_Pre, DD_CTerrorPlayer_TransitionRestore_Pre))
-		SetFailState("Failed to detour pre: DD::CTerrorPlayer::TransitionRestore");
+		SetFailState("Failed to detour pre: \"DD::CTerrorPlayer::TransitionRestore\"");
 
 	if(!dDetour.Enable(Hook_Post, DD_CTerrorPlayer_TransitionRestore_Post))
-		SetFailState("Failed to detour post: DD::CTerrorPlayer::TransitionRestore");
+		SetFailState("Failed to detour post: \"DD::CTerrorPlayer::TransitionRestore\"");
 
 	dDetour = DynamicDetour.FromConf(hGameData, "DD::CDirector::IsHumanSpectatorValid");
 	if(!dDetour)
-		SetFailState("Failed to create DynamicDetour: DD::CDirector::IsHumanSpectatorValid");
+		SetFailState("Failed to create DynamicDetour: \"DD::CDirector::IsHumanSpectatorValid\"");
 
 	if(!dDetour.Enable(Hook_Pre, DD_CDirector_IsHumanSpectatorValid_Pre))
-		SetFailState("Failed to detour pre: DD::CDirector::IsHumanSpectatorValid");
+		SetFailState("Failed to detour pre: \"DD::CDirector::IsHumanSpectatorValid\"");
 
 	dDetour = DynamicDetour.FromConf(hGameData, "DD::CDirectorSessionManager::UpdateNewPlayers");
 	if(!dDetour)
-		SetFailState("Failed to create DynamicDetour: DD::CDirectorSessionManager::UpdateNewPlayers");
+		SetFailState("Failed to create DynamicDetour: \"DD::CDirectorSessionManager::UpdateNewPlayers\"");
 
 	if(!dDetour.Enable(Hook_Pre, DD_CDirectorSessionManager_UpdateNewPlayers_Pre))
-		SetFailState("Failed to detour pre: DD::CDirectorSessionManager::UpdateNewPlayers");
+		SetFailState("Failed to detour pre: \"DD::CDirectorSessionManager::UpdateNewPlayers\"");
 
 	if(!dDetour.Enable(Hook_Post, DD_CDirectorSessionManager_UpdateNewPlayers_Post))
-		SetFailState("Failed to detour post: DD::CDirectorSessionManager::UpdateNewPlayers");
+		SetFailState("Failed to detour post: \"DD::CDirectorSessionManager::UpdateNewPlayers\"");
 
 	dDetour = DynamicDetour.FromConf(hGameData, "DD::CDirectorSessionManager::FillRemainingSurvivorTeamSlotsWithBots");
 	if(!dDetour)
-		SetFailState("Failed to create DynamicDetour: DD::CDirectorSessionManager::FillRemainingSurvivorTeamSlotsWithBots");
+		SetFailState("Failed to create DynamicDetour: \"DD::CDirectorSessionManager::FillRemainingSurvivorTeamSlotsWithBots\"");
 
 	if(!dDetour.Enable(Hook_Pre, DD_CDirectorSessionManager_FillRemainingSurvivorTeamSlotsWithBots_Pre))
-		SetFailState("Failed to detour pre: DD::CDirectorSessionManager::FillRemainingSurvivorTeamSlotsWithBots");
+		SetFailState("Failed to detour pre: \"DD::CDirectorSessionManager::FillRemainingSurvivorTeamSlotsWithBots\"");
 }
 
 MRESReturn DD_CDirector_Restart_Pre(Address pThis)
@@ -280,11 +276,11 @@ MRESReturn DD_CTerrorPlayer_TransitionRestore_Pre(int pThis)
 	{
 		char character[4];
 		SDKCall(g_hSDK_KeyValues_GetString, pSavedData, character, sizeof character, "character", "");
-		if(character[0] != '\0')
+		if(character[0])
 		{
-			char modelName[128];
+			char modelName[PLATFORM_MAX_PATH];
 			SDKCall(g_hSDK_KeyValues_GetString, pSavedData, modelName, sizeof modelName, "modelName", "");
-			if(modelName[0] != '\0')
+			if(modelName[0])
 			{
 				strcopy(g_esSavedData.character, sizeof PlayerSaveData::character, character);
 				strcopy(g_esSavedData.modelName, sizeof PlayerSaveData::modelName, modelName);
@@ -304,7 +300,7 @@ MRESReturn DD_CTerrorPlayer_TransitionRestore_Pre(int pThis)
 
 MRESReturn DD_CTerrorPlayer_TransitionRestore_Post(int pThis)
 {
-	if(g_esSavedData.character[0] != '\0' && g_esSavedData.modelName[0] != '\0')
+	if(g_esSavedData.character[0] && g_esSavedData.modelName[0])
 	{
 		g_esSavedData.character[0] = '\0';
 		g_esSavedData.modelName[0] = '\0';
