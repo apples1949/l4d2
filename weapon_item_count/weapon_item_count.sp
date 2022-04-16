@@ -13,6 +13,12 @@ enum
 	UseCount
 };
 
+ConVar
+	g_hBypassAbsorbWeapon;
+
+bool
+	g_bBypassAbsorbWeapon;
+
 int
 	g_iSpawner[2048 + 1][2];
 
@@ -32,10 +38,28 @@ public void OnPluginStart()
 {
 	vInitGameData();
 
+	g_hBypassAbsorbWeapon = CreateConVar("bypass_absorb_weapon", "1", "Whether to bypass the absorb weapon count");
+	g_hBypassAbsorbWeapon.AddChangeHook(vConVarChanged);
+
 	RegServerCmd("setitemcount", cmdSetItemCount);
 	RegServerCmd("resetitemcount", cmdResetItemCount);
 
 	vResetWeaponRules();
+}
+
+public void OnConfigsExecuted()
+{
+	vGetCvars();
+}
+
+void vConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
+{
+	vGetCvars();
+}
+
+void vGetCvars()
+{
+	g_bBypassAbsorbWeapon = g_hBypassAbsorbWeapon.BoolValue;
 }
 
 Action cmdSetItemCount(int args)
@@ -89,9 +113,13 @@ void vInitGameData()
 	if (!dDetour.Enable(Hook_Pre, DD_CWeaponSpawn_GiveItem_Pre))
 		SetFailState("Failed to detour pre: \"DD::CWeaponSpawn::GiveItem\" (%s)", PLUGIN_VERSION);
 
+	if (!dDetour.Enable(Hook_Post, DD_CWeaponSpawn_GiveItem_Post))
+		SetFailState("Failed to detour post: \"DD::CWeaponSpawn::GiveItem\" (%s)", PLUGIN_VERSION);
+
 	delete hGameData;
 }
 
+bool g_bRemoveSpawner;
 MRESReturn DD_CWeaponSpawn_GiveItem_Pre(int pThis, DHookReturn hReturn, DHookParam hParams)
 {
 	if (pThis <= MaxClients || !IsValidEntity(pThis))
@@ -105,6 +133,7 @@ MRESReturn DD_CWeaponSpawn_GiveItem_Pre(int pThis, DHookReturn hReturn, DHookPar
 		return MRES_Ignored;
 
 	if (!GetEntProp(pThis, Prop_Data, "m_itemCount")) {
+		RemoveEntity(pThis);
 		hReturn.Value = 0;
 		return MRES_Supercede;
 	}
@@ -125,14 +154,26 @@ MRESReturn DD_CWeaponSpawn_GiveItem_Pre(int pThis, DHookReturn hReturn, DHookPar
 		g_iSpawner[pThis][UseCount] = 0;
 	}
 
-	if (g_iSpawner[pThis][UseCount] >= g_iItemCountRules[weaponId]) {
+	if(!g_bBypassAbsorbWeapon && g_iSpawner[pThis][UseCount] >= g_iItemCountRules[weaponId]) {
 		RemoveEntity(pThis);
 		hReturn.Value = 0;
 		return MRES_Supercede;
 	}
 
-	SetEntProp(pThis, Prop_Data, "m_itemCount", g_iItemCountRules[weaponId] - g_iSpawner[pThis][UseCount]);
+	if (!g_iSpawner[pThis][UseCount] || !g_bBypassAbsorbWeapon)
+		SetEntProp(pThis, Prop_Data, "m_itemCount", g_iItemCountRules[weaponId] - g_iSpawner[pThis][UseCount]);
+
+	g_bRemoveSpawner = GetEntProp(pThis, Prop_Data, "m_itemCount") <= 1;
 	g_iSpawner[pThis][UseCount]++;
+	return MRES_Ignored;
+}
+
+MRESReturn DD_CWeaponSpawn_GiveItem_Post(int pThis, DHookReturn hReturn, DHookParam hParams)
+{
+	if (g_bRemoveSpawner && IsValidEntity(pThis))
+		RemoveEntity(pThis);
+
+	g_bRemoveSpawner = false;
 	return MRES_Ignored;
 }
 
