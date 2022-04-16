@@ -1,0 +1,39 @@
+"Games"
+{
+	"left4dead2"
+	{
+		"Functions"
+		{
+			"DD::CWeaponSpawn::GiveItem"
+			{
+				"signature"		"CWeaponSpawn::GiveItem"
+				"callconv"		"thiscall"
+				"return"		"int"
+				"this"			"entity"
+				"arguments"
+				{
+					"recipient"
+					{
+						"type"	"cbaseentity"
+					}
+					"itemname"
+					{
+						"type"	"charptr"
+					}
+				}
+			}
+		}
+
+		"Signatures" 
+		{
+			/* CWeaponSpawn::GiveItem(CWeaponSpawn *__hidden this, CTerrorPlayer *, const char *) */
+			"CWeaponSpawn::GiveItem"
+			{
+				"library"	"server"
+				"linux"		"@_ZN12CWeaponSpawn8GiveItemEP13CTerrorPlayerPKc"
+				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x53\x57\x6A\x2A\x8B\x2A\x8B\x2A\x2A\x8B"
+				/* ? ? ? ? ? ? 53 57 6A ? 8B ? 8B ? ? 8B */
+			}
+		}
+	}
+}
