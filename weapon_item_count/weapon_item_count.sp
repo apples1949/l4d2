@@ -154,7 +154,7 @@ MRESReturn DD_CWeaponSpawn_GiveItem_Pre(int pThis, DHookReturn hReturn, DHookPar
 		g_iSpawner[pThis][UseCount] = 0;
 	}
 
-	if(!g_bBypassAbsorbWeapon && g_iSpawner[pThis][UseCount] >= g_iItemCountRules[weaponId]) {
+	if (!g_bBypassAbsorbWeapon && g_iSpawner[pThis][UseCount] >= g_iItemCountRules[weaponId]) {
 		RemoveEntity(pThis);
 		hReturn.Value = 0;
 		return MRES_Supercede;
