@@ -638,7 +638,7 @@ Action cmdBotSet(int client, int args)
 		return Plugin_Handled;
 	}
 
-	g_hSurvivorLimit.SetInt(iArgs);
+	g_hSurvivorLimitSet.SetInt(iArgs);
 
 	delete g_hBotsTimer;
 	g_hBotsTimer = CreateTimer(1.0, tmrBotsUpdate);
