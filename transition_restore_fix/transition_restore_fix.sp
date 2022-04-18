@@ -65,7 +65,7 @@ public void OnPluginStart()
 {
 	vInitGameData();
 
-	CreateConVar("transition_restore_fix_version", PLUGIN_VERSION,	"Transition Restore Fix plugin version.", FCVAR_NOTIFY|FCVAR_DONTRECORD);
+	CreateConVar("transition_restore_fix_version", PLUGIN_VERSION, "Transition Restore Fix plugin version.", FCVAR_NOTIFY|FCVAR_DONTRECORD);
 	g_hKeepIdentity = CreateConVar("restart_keep_identity", "1", "Whether to keep the current character and model after the mission lost and restarts? (0=restore to pre-transition identity, 1=game default)", FCVAR_NOTIFY);
 	g_hPrecacheAllSur = FindConVar("precache_all_survivors");
 
