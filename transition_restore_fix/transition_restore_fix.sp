@@ -4,7 +4,7 @@
 #include <dhooks>
 #include <sourcescramble>
 
-#define PLUGIN_VERSION		"1.1.9"
+#define PLUGIN_VERSION		"1.2.0"
 
 #define DEBUG 0
 
@@ -202,8 +202,10 @@ void vInitPatchs(GameData hGameData = null)
 	MemoryPatch patch = MemoryPatch.CreateFromConf(hGameData, "RestoreTransitionedSurvivorBots::MaxRestoreSurvivorBots");
 	if (!patch.Validate())
 		SetFailState("Failed to verify patch: \"RestoreTransitionedSurvivorBots::MaxRestoreSurvivorBots\"");
-	else if (patch.Enable())
+	else if (patch.Enable()) {
+		StoreToAddress(patch.Address + view_as<Address>(2), hGameData.GetOffset("OS") ? MaxClients : MaxClients + 1, NumberType_Int8);
 		PrintToServer("[%s] Enabled patch: \"RestoreTransitionedSurvivorBots::MaxRestoreSurvivorBots\"", GAMEDATA);
+	}
 }
 
 void vSetupDetours(GameData hGameData = null)
