@@ -308,7 +308,7 @@ public void OnPluginStart()
 	g_esWeapon[4].cFlags =	CreateConVar("bots_give_slot4", 		"3", 		"药品给什么. \n0=不给, 3=所有.", CVAR_FLAGS);
 	g_hGiveWeaponType = 	CreateConVar("bots_give_type", 			"2", 		"根据什么来给玩家装备. \n0=不给, 1=每个槽位的设置, 2=当前存活生还者的平均装备质量(仅主副武器).", CVAR_FLAGS);
 	g_hGiveWeaponTime = 	CreateConVar("bots_give_time", 			"0", 		"什么时候给玩家装备. \n0=每次出生时, 1=只在本插件创建Bot和复活玩家时.", CVAR_FLAGS);
-	CreateConVar("bots_version", PLUGIN_VERSION, "bots(coop)(给物品flags参考源码g_sWeaponName中的武器名处的数字, 多个武器里面随机则取数字和)", CVAR_FLAGS|FCVAR_DONTRECORD);
+	CreateConVar("bots_version", PLUGIN_VERSION, "bots(coop) plugin version.", FCVAR_NOTIFY|FCVAR_DONTRECORD);
 
 	g_hSurvivorLimit = FindConVar("survivor_limit");
 	g_hSurvivorLimit.Flags &= ~FCVAR_NOTIFY; // 移除ConVar变动提示
@@ -539,7 +539,7 @@ char[] sGetModelName(int client)
 {
 	int iIndex;
 	char sModel[31];
-	GetEntPropString(client, Prop_Data, "m_ModelName", sModel, sizeof sModel);
+	GetClientModel(client, sModel, sizeof sModel);
 	switch (sModel[29]) {
 		case 'b'://nick
 			iIndex = 0;
@@ -638,7 +638,7 @@ Action cmdBotSet(int client, int args)
 		return Plugin_Handled;
 	}
 
-	g_hSurvivorLimitSet.IntValue = iArgs;
+	g_hSurvivorLimit.SetInt(iArgs);
 
 	delete g_hBotsTimer;
 	g_hBotsTimer = CreateTimer(1.0, tmrBotsUpdate);
@@ -737,7 +737,7 @@ void vConVarChanged_Limit(ConVar convar, const char[] oldValue, const char[] new
 
 void vGetLimitCvars()
 {
-	g_hSurvivorLimit.IntValue = g_iSurvivorLimitSet = g_hSurvivorLimitSet.IntValue;
+	g_hSurvivorLimit.SetInt((g_iSurvivorLimitSet = g_hSurvivorLimitSet.IntValue));
 }
 
 void vConVarChanged_General(ConVar convar, const char[] oldValue, const char[] newValue)
