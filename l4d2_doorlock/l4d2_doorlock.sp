@@ -2,7 +2,6 @@
 #pragma newdecls required
 #include <sourcemod>
 #include <sdktools>
-#include <left4dhooks>
 
 #define PLUGIN_VERSION 	"2.6a"
 #define CVAR_FLAGS		FCVAR_NOTIFY
