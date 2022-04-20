@@ -131,7 +131,7 @@ public void OnPluginStart()
 	g_hCookie = CreateConVar("l4d_scs_cookie", "0","保存玩家的模型角色喜好?", FCVAR_NOTIFY);
 	g_hAutoModel = CreateConVar("l4d_scs_auto_model", "1","开关8人独立模型?", FCVAR_NOTIFY);
 	g_hAdminsOnly = CreateConVar("l4d_csm_admins_only", "1","只允许管理员使用csm命令?", FCVAR_NOTIFY);
-	g_hFixDialogue = CreateConVar("l4d_csm_fix_dialogue", "1","修复2代人物在1代图中的对话?", FCVAR_NOTIFY);
+	g_hFixDialogue = CreateConVar("l4d_csm_fix_dialogue", "0","修复2代人物在1代图中的对话?", FCVAR_NOTIFY);
 	g_hInTransition = CreateConVar("l4d_csm_in_transition", "1","启用8人独立模型后不对正在过渡的玩家设置?", FCVAR_NOTIFY);
 	g_hPrecacheAllSur = FindConVar("precache_all_survivors");
 
