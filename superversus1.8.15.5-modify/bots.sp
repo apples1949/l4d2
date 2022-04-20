@@ -1,9 +1,10 @@
+#pragma tabsize 1
 #pragma semicolon 1
 #pragma newdecls required
 #include <sourcemod>
 #include <dhooks>
 
-#define PLUGIN_VERSION "1.10.5"
+#define PLUGIN_VERSION "1.10.6"
 #define GAMEDATA 		"bots"
 #define CVAR_FLAGS 		FCVAR_NOTIFY
 #define MAX_SLOTS		5
@@ -45,7 +46,6 @@ ConVar
 
 int
 	g_iRoundStart,
-	g_iPlayerSpawn,
 	g_iSurvivorBot,
 	g_iSurvivorLimitSet,
 	g_iSpecCmdLimit,
@@ -91,7 +91,7 @@ esPlayer
 	g_esPlayer[MAXPLAYERS + 1];
 
 static const char
-	g_sSurvivorNames[8][] =
+	g_sSurvivorNames[][] =
 	{
 		"Nick",
 		"Rochelle",
@@ -102,7 +102,7 @@ static const char
 		"Francis",
 		"Louis"
 	},
-	g_sSurvivorModels[8][] =
+	g_sSurvivorModels[][] =
 	{
 		"models/survivors/survivor_gambler.mdl",
 		"models/survivors/survivor_producer.mdl",
@@ -113,7 +113,7 @@ static const char
 		"models/survivors/survivor_biker.mdl",
 		"models/survivors/survivor_manager.mdl"
 	},
-	g_sWeaponName[MAX_SLOTS][17][] =
+	g_sWeaponName[MAX_SLOTS][][] =
 	{
 		{//slot 0(主武器)
 			"weapon_smg",						//1 UZI微冲
@@ -354,11 +354,6 @@ public void OnPluginEnd()
 
 Action cmdTeamPanel(int client, int args)
 {
-	if (!g_iRoundStart || !g_iPlayerSpawn) {
-		ReplyToCommand(client, "回合尚未开始.");
-		return Plugin_Handled;
-	}
-
 	if (!client || !IsClientInGame(client) || IsFakeClient(client))
 		return Plugin_Handled;
 
@@ -368,22 +363,17 @@ Action cmdTeamPanel(int client, int args)
 
 Action cmdJoinSpectator(int client, int args)
 {
-	if (!g_iRoundStart || !g_iPlayerSpawn) {
-		ReplyToCommand(client, "回合尚未开始.");
-		return Plugin_Handled;
-	}
-
 	if (!client || !IsClientInGame(client) || IsFakeClient(client))
 		return Plugin_Handled;
 
 	bool bIdle = !!iGetBotOfIdlePlayer(client);
 	if (GetClientTeam(client) == TEAM_SPECTATOR && !bIdle) {
-		ReplyToCommand(client, "你当前已在旁观者队伍.");
+		PrintToChat(client, "你当前已在旁观者队伍.");
 		return Plugin_Handled;
 	}
 	
 	if (iGetTeamSpectator() >= g_iSpecCmdLimit) {
-		ReplyToCommand(client, "\x05当前旁观者数量已达到限制\x01-> \x04%d\x01.", g_iSpecCmdLimit);
+		PrintToChat(client, "\x05当前旁观者数量已达到限制\x01-> \x04%d\x01.", g_iSpecCmdLimit);
 		return Plugin_Handled;
 	}
 
@@ -406,7 +396,7 @@ int iGetTeamSpectator()
 
 Action cmdJoinSurvivor(int client, int args)
 {
-	if (!g_iRoundStart || !g_iPlayerSpawn) {
+	if (!g_iRoundStart) {
 		ReplyToCommand(client, "回合尚未开始.");
 		return Plugin_Handled;
 	}
@@ -475,21 +465,16 @@ Action cmdJoinSurvivor(int client, int args)
 
 Action cmdTakeOverBot(int client, int args)
 {
-	if (!g_iRoundStart || !g_iPlayerSpawn) {
-		ReplyToCommand(client, "回合尚未开始.");
-		return Plugin_Handled;
-	}
-
 	if (!client || !IsClientInGame(client) || IsFakeClient(client))
 		return Plugin_Handled;
 
 	if (!iClientTeamTakeOver(client)) {
-		ReplyToCommand(client, "不符合接管条件.");
+		PrintToChat(client, "不符合接管条件.");
 		return Plugin_Handled;
 	}
 
 	if (!iFindUselessSurvivorBot(true)) {
-		ReplyToCommand(client, "\x01没有 \x05空闲的电脑BOT \x01可以接管\x01.");
+		PrintToChat(client, "\x01没有 \x05空闲的电脑BOT \x01可以接管\x01.");
 		return Plugin_Handled;
 	}
 
@@ -606,11 +591,6 @@ int iDisplayBotListMenuHandler(Menu menu, MenuAction action, int param1, int par
 
 Action cmdGoAFK(int client, int args)
 {
-	if (!g_iRoundStart || !g_iPlayerSpawn) {
-		ReplyToCommand(client, "回合尚未开始.");
-		return Plugin_Handled;
-	}
-
 	if (!client || !IsClientInGame(client) || IsFakeClient(client) || GetClientTeam(client) != TEAM_SURVIVOR || !IsPlayerAlive(client))
 		return Plugin_Handled;
 
@@ -620,8 +600,8 @@ Action cmdGoAFK(int client, int args)
 
 Action cmdBotSet(int client, int args)
 {
-	if (!g_iRoundStart || !g_iPlayerSpawn) {
-		ReplyToCommand(client, "回合尚未开始.");
+	if (!IsServerProcessing()) {
+		ReplyToCommand(client, "服务器尚未进行帧处理.");
 		return Plugin_Handled;
 	}
 
@@ -630,20 +610,19 @@ Action cmdBotSet(int client, int args)
 		return Plugin_Handled;
 	}
 	
-	char sArgs[4];
-	GetCmdArg(1, sArgs, sizeof sArgs);
-	int iArgs = StringToInt(sArgs);
-	if (iArgs < 1 || iArgs > 31) {
+	char sArg[4];
+	GetCmdArg(1, sArg, sizeof sArg);
+	int iArg = StringToInt(sArg);
+	if (iArg < 1 || iArg > 31) {
 		ReplyToCommand(client, "\x01参数范围 \x051\x01~\x0531\x01.");
 		return Plugin_Handled;
 	}
 
-	g_hSurvivorLimitSet.SetInt(iArgs);
+	g_hSurvivorLimitSet.SetInt(iArg);
 
 	delete g_hBotsTimer;
 	g_hBotsTimer = CreateTimer(1.0, tmrBotsUpdate);
-	ReplyToCommand(client, "\x05开局BOT数量已设置为\x01-> \x04%d\x01.", iArgs);
-
+	ReplyToCommand(client, "\x05开局BOT数量已设置为\x01-> \x04%d\x01.", iArg);
 	return Plugin_Handled;
 }
 
@@ -774,7 +753,7 @@ void vGetWeaponCvars()
 int iGetSlotAllowed(int iSlot)
 {
 	for (int i; i < 17; i++) {
-		if (g_sWeaponName[iSlot][i][0] == '\0')
+		if (!g_sWeaponName[iSlot][i][0])
 			break;
 
 		if ((1 << i) & g_esWeapon[iSlot].cFlags.IntValue)
@@ -859,10 +838,8 @@ public void OnMapEnd()
 void vResetPlugin()
 {
 	g_iRoundStart = 0;
-	g_iPlayerSpawn = 0;
 
 	g_aSteamIDs.Clear();
-
 	delete g_hBotsTimer;
 }
 
@@ -888,8 +865,6 @@ void Event_RoundStart(Event event, const char[] name, bool dontBroadcast)
 
 void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
 {
-	g_iPlayerSpawn = 1;
-
 	int client = GetClientOfUserId(event.GetInt("userid"));
 	if (!client || !IsClientInGame(client) || GetClientTeam(client) != TEAM_SURVIVOR)
 		return;
@@ -958,7 +933,7 @@ void Event_PlayerBotReplace(Event event, char[] name, bool dontBroadcast)
 	g_esPlayer[bot].iBotPlayer = playerUID;
 	g_esPlayer[player].iPlayerBot = botUID;
 
-	if (g_esPlayer[player].sModel[0] == '\0')
+	if (!g_esPlayer[player].sModel[0])
 		return;
 
 	SetEntProp(bot, Prop_Send, "m_survivorCharacter", GetEntProp(player, Prop_Send, "m_survivorCharacter"));
@@ -1032,7 +1007,7 @@ void vRecordSteamID(int client)
 
 bool bCacheSteamID(int client)
 {
-	if (g_esPlayer[client].sSteamID[0] != '\0')
+	if (g_esPlayer[client].sSteamID[0])
 		return true;
 
 	if (GetClientAuthId(client, AuthId_Steam2, g_esPlayer[client].sSteamID, sizeof esPlayer::sSteamID))
@@ -1129,7 +1104,7 @@ int iFindUselessSurvivorBot(bool bAlive)
 	delete aClients;
 	return client;
 }
-
+/**
 void vSetGodMode(int client, float fDuration)
 {
 	SetEntProp(client, Prop_Data, "m_takedamage", 0);
@@ -1145,6 +1120,16 @@ Action tmrMortal(Handle timer, int client)
 
 	SetEntProp(client, Prop_Data, "m_takedamage", 2);
 	return Plugin_Continue;
+}*/
+
+void vSetInvincibilityTime(int client, float flDuration)
+{
+	static int m_invulnerabilityTimer = -1;
+	if (m_invulnerabilityTimer == -1)
+		m_invulnerabilityTimer = FindSendPropInfo("CTerrorPlayer", "m_noAvoidanceTimer") - 12;
+
+	SetEntDataFloat(client, m_invulnerabilityTimer + 4, flDuration);
+	SetEntDataFloat(client, m_invulnerabilityTimer + 8, GetGameTime() + flDuration);
 }
 
 void vTeleportToSurvivor(int client, bool bRandom = true)
@@ -1175,7 +1160,7 @@ void vTeleportToSurvivor(int client, bool bRandom = true)
 	delete aClients;
 
 	if (iSurvivor) {
-		vSetGodMode(client, 3.0);
+		vSetInvincibilityTime(client, 1.5);	//vSetGodMode(client, 1.5);
 		SetEntProp(client, Prop_Send, "m_bDucked", 1);
 		SetEntProp(client, Prop_Send, "m_fFlags", GetEntProp(client, Prop_Send, "m_fFlags")|FL_DUCKING);
 
@@ -1323,7 +1308,6 @@ void vDisplayTeamPanel(int client)
 	}
 
 	hPanel.DrawItem("刷新");
-
 	hPanel.Send(client, iTeamPanelHandler, 30);
 	delete hPanel;
 }
