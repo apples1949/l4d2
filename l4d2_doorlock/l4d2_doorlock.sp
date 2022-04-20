@@ -328,7 +328,6 @@ void vStartSequence()
 	}
 	else if (g_bFreezeNodoor) {
 		g_iCountDown = -1;
-
 		g_bFreezeAllowed = true;
 		ExecuteCheatCommand("nb_stop", "1"); // 没有安全门则连同僵尸特感一起定住
 		g_hTimer = CreateTimer(1.0, tmrLoading, _, TIMER_REPEAT);
@@ -496,37 +495,31 @@ void vInitPlugin()
 
 	g_iStartDoor = 0;
 
-	int entity = INVALID_ENT_REFERENCE;
-	if ((entity = FindEntityByClassname(MaxClients + 1, "info_changelevel")) == INVALID_ENT_REFERENCE)
-		entity = FindEntityByClassname(MaxClients + 1, "trigger_changelevel");
+	int m_spawnflags;
+	int entity = MaxClients + 1;
+	while ((entity = FindEntityByClassname(entity, "prop_door_rotating_checkpoint")) != INVALID_ENT_REFERENCE) {
+		if (GetEntProp(entity, Prop_Send, "m_bLocked") != 1)
+			continue;
 
-	if (entity != INVALID_ENT_REFERENCE) {
-		int m_spawnflags;
-		entity = MaxClients + 1;
-		while ((entity = FindEntityByClassname(entity, "prop_door_rotating_checkpoint")) != INVALID_ENT_REFERENCE) {
-			if (GetEntProp(entity, Prop_Send, "m_bLocked") != 1)
-				continue;
+		m_spawnflags = GetEntProp(entity, Prop_Data, "m_spawnflags");
+		if (m_spawnflags & 8192 == 0 || m_spawnflags & 32768 != 0)
+			continue;
 
-			m_spawnflags = GetEntProp(entity, Prop_Data, "m_spawnflags");
-			if (m_spawnflags & 8192 == 0 || m_spawnflags & 32768 != 0)
-				continue;
+		if (!SDKCall(g_hSDK_IsCheckpointDoor, entity))
+			continue;
 
-			if (!SDKCall(g_hSDK_IsCheckpointDoor, entity))
-				continue;
+		if (!SDKCall(g_hSDK_IsCheckpointExitDoor, entity))
+			continue;
 
-			if (!SDKCall(g_hSDK_IsCheckpointExitDoor, entity))
-				continue;
-
-			g_iStartDoor = EntIndexToEntRef(entity);
-			if (!g_bBreakTheDoor) {
-				SetVariantString("OnOpen !self:Lock::0.0:-1");
-				AcceptEntityInput(entity, "AddOutput");
-			}
-			else
-				HookSingleEntityOutput(entity, "OnOpen", OnOpen);
-
-			break;
+		g_iStartDoor = EntIndexToEntRef(entity);
+		if (!g_bBreakTheDoor) {
+			SetVariantString("OnOpen !self:Lock::0.0:-1");
+			AcceptEntityInput(entity, "AddOutput");
 		}
+		else
+			HookSingleEntityOutput(entity, "OnOpen", OnOpen);
+
+		break;
 	}
 
 	vStartSequence();
