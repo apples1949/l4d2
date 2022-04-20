@@ -2,11 +2,12 @@
 #pragma newdecls required
 #include <sourcemod>
 #include <sdktools>
+#include <sdkhooks>
 #include <clientprefs>
 #include <adminmenu>
-#include <left4dhooks>
+#include <dhooks>
 
-#define PLUGIN_VERSION "1.6.6"
+#define PLUGIN_VERSION "1.6.7"
 #define PLUGIN_NAME 	"Survivor Chat Select"
 #define PLUGIN_PREFIX	"\x01[\x04SCS\x01]"
 
@@ -24,6 +25,9 @@
 Handle
 	g_hSDK_CDirector_IsInTransition,
 	g_hSDK_CTerrorPlayer_IsTransitioned;
+
+StringMap
+	g_aSurvivorModels;
 
 Cookie
 	g_ckClientID,
@@ -44,6 +48,7 @@ ConVar
 	g_hPrecacheAllSur;
 
 int
+	g_iOrignalMapSet,
 	g_iSelectedClient[MAXPLAYERS + 1];
 
 bool
@@ -56,7 +61,7 @@ bool
 	g_bShouldIgnoreOnce[MAXPLAYERS + 1];
 
 static const char
-	g_sSurvivorNames[8][] =
+	g_sSurvivorNames[][] =
 	{
 		"Nick",
 		"Rochelle",
@@ -67,7 +72,7 @@ static const char
 		"Francis",
 		"Louis",
 	},
-	g_sSurvivorModels[8][] =
+	g_sSurvivorModels[][] =
 	{
 		"models/survivors/survivor_gambler.mdl",
 		"models/survivors/survivor_producer.mdl",
@@ -91,6 +96,7 @@ public Plugin myinfo =
 public void OnPluginStart()
 {
 	vInitGameData();
+	g_aSurvivorModels = new StringMap();
 	HookUserMessage(GetUserMessageId("SayText2"), umSayText2, true);
 
 	g_ckClientID = new Cookie("Player_Character", "Player's default character ID.", CookieAccess_Protected);
@@ -125,7 +131,7 @@ public void OnPluginStart()
 	g_hCookie = CreateConVar("l4d_scs_cookie", "0","保存玩家的模型角色喜好?", FCVAR_NOTIFY);
 	g_hAutoModel = CreateConVar("l4d_scs_auto_model", "1","开关8人独立模型?", FCVAR_NOTIFY);
 	g_hAdminsOnly = CreateConVar("l4d_csm_admins_only", "1","只允许管理员使用csm命令?", FCVAR_NOTIFY);
-	g_hFixDialogue = CreateConVar("l4d_csm_fix_dialogue", "0","修复2代人物在1代图中的对话?", FCVAR_NOTIFY);
+	g_hFixDialogue = CreateConVar("l4d_csm_fix_dialogue", "1","修复2代人物在1代图中的对话?", FCVAR_NOTIFY);
 	g_hInTransition = CreateConVar("l4d_csm_in_transition", "1","启用8人独立模型后不对正在过渡的玩家设置?", FCVAR_NOTIFY);
 	g_hPrecacheAllSur = FindConVar("precache_all_survivors");
 
@@ -140,11 +146,9 @@ public void OnPluginStart()
 	TopMenu topmenu;
 	if (LibraryExists("adminmenu") && ((topmenu = GetAdminTopMenu()) != null))
 		OnAdminMenuReady(topmenu);
-}
 
-public void OnAllPluginsLoaded()
-{
-	g_pDirector = L4D_GetPointer(POINTER_DIRECTOR);
+	for (int i; i < sizeof g_sSurvivorModels; i++)
+		g_aSurvivorModels.SetValue(g_sSurvivorModels[i], i);
 }
 
 public void OnAdminMenuReady(Handle aTopMenu)
@@ -349,6 +353,39 @@ bool bCanUse(int client, bool bCheckAdmin = true)
 	return true;
 }
 
+/**
+ * @brief Checks if a Survivor is currently staggering
+ *
+ * @param client			Client ID of the player to affect
+ *
+ * @return Returns true if player is staggering, false otherwise
+ */
+stock bool L4D_IsPlayerStaggering(int client)
+{
+	static int m_iQueuedStaggerType = -1;
+	if( m_iQueuedStaggerType == -1 )
+	m_iQueuedStaggerType = FindSendPropInfo("CTerrorPlayer", "m_staggerDist") + 4;
+
+	if( GetEntData(client, m_iQueuedStaggerType, 4) == -1 )
+	{
+		if( GetGameTime() >= GetEntPropFloat(client, Prop_Send, "m_staggerTimer", 1) )
+		{
+			return false;
+		}
+
+		static float vStgDist[3], vOrigin[3];
+		GetEntPropVector(client, Prop_Send, "m_staggerStart", vStgDist);
+		GetEntPropVector(client, Prop_Send, "m_vecOrigin", vOrigin);
+
+		static float fStgDist2;
+		fStgDist2 = GetEntPropFloat(client, Prop_Send, "m_staggerDist");
+
+		return GetVectorDistance(vStgDist, vOrigin) <= fStgDist2;
+	}
+
+	return true;
+}
+
 Action cmdZoeyUse(int client, int args)
 {
 	if (!bCanUse(client))
@@ -439,7 +476,7 @@ Action umSayText2(UserMsg msg_id, BfRead msg, const int[] players, int playersNu
 
 public void OnMapStart()
 {
-	g_hPrecacheAllSur.IntValue = 1;
+	g_hPrecacheAllSur.SetInt(1);
 
 	for (int i; i < 8; i++)
 		PrecacheModel(g_sSurvivorModels[i], true);
@@ -574,7 +611,7 @@ Action tmrLoadCookie(Handle timer, int client)
 	char sModel[128];
 	g_ckClientModel.Get(client, sModel, sizeof sModel);
 
-	if (sID[0] != '\0' && sModel[0] != '\0') {
+	if (sID[0] && sModel[0]) {
 		SetEntProp(client, Prop_Send, "m_survivorCharacter", StringToInt(sID));
 		SetEntityModel(client, sModel);
 	}
@@ -693,39 +730,6 @@ void OnSpawnPost(int client)
 	if (!iGetIdlePlayerOfBot(client))
 		RequestFrame(OnNextFrame_SpawnPost, GetClientUserId(client));
 }
-/**
-bool bIsLeastCharacter(int client)
-{
-	static int i;
-	static int iCharBuffer;
-	static int iSurvivorChar;
-	int iLeastChar[8];
-
-	for (i = 1; i <= MaxClients; i++) {
-		if (!IsClientInGame(i) || GetClientTeam(i) != 2)
-			continue;
-
-		if ((iCharBuffer = GetEntProp(i, Prop_Send, "m_survivorCharacter")) < 0 || iCharBuffer > 7)
-			continue;
-
-		iLeastChar[iCharBuffer]++;
-	}
-
-	iCharBuffer = 0;
-	iSurvivorChar = iLeastChar[0];
-	for (i = 0; i <= 7; i++) {
-		if (iLeastChar[i] < iSurvivorChar) {
-			iSurvivorChar = iLeastChar[i];
-			iCharBuffer = i;
-		}
-	}
-
-	i = GetEntProp(client, Prop_Send, "m_survivorCharacter");
-	if (i < 0 || i > 7)
-		return false;
-
-	return iLeastChar[i] <= iLeastChar[iCharBuffer];
-}*/
 
 void OnNextFrame_SpawnPost(int client)
 {
@@ -763,47 +767,71 @@ void vSetLeastUsedCharacter(int client)
 int iCheckLeastUsedSurvivor(int client)
 {
 	int i = 1;
-	int iCharBuffer;
+	int iCharBuff;
 	int iLeastChar[8];
+	char sModel[PLATFORM_MAX_PATH];
+	GetClientModel(client, sModel, sizeof sModel);
 	for (; i <= MaxClients; i++) {
 		if (i == client || !IsClientInGame(i) || GetClientTeam(i) != 2)
 			continue;
 
-		if ((iCharBuffer = GetEntProp(i, Prop_Send, "m_survivorCharacter")) < 0 || iCharBuffer > 7)
+		GetClientModel(i, sModel, sizeof sModel);
+		if(!g_aSurvivorModels.GetValue(sModel, iCharBuff))
 			continue;
+		
+		/**if ((iCharBuff = GetEntProp(i, Prop_Send, "m_survivorCharacter")) < 0 || iCharBuff > 7)
+			continue;*/
 
-		iLeastChar[iCharBuffer]++;
+		iLeastChar[iCharBuff]++;
 	}
 
-	switch (L4D2_GetSurvivorSetMap()) {
+	switch (g_iOrignalMapSet) {
 		case 1: {
-			iCharBuffer = 7;
+			iCharBuff = 7;
 			int iSurvivorChar = iLeastChar[7];
 			for (i = 7; i >= 0; i--) {
 				if (iLeastChar[i] < iSurvivorChar) {
 					iSurvivorChar = iLeastChar[i];
-					iCharBuffer = i;
+					iCharBuff = i;
 				}
 			}
 		}
 
 		case 2: {
-			iCharBuffer = 0;
+			iCharBuff = 0;
 			int iSurvivorChar = iLeastChar[0];
 			for (i = 0; i <= 7; i++) {
 				if (iLeastChar[i] < iSurvivorChar) {
 					iSurvivorChar = iLeastChar[i];
-					iCharBuffer = i;
+					iCharBuff = i;
 				}
 			}
 		}
 	}
 
-	return iCharBuffer;
+	return iCharBuff;
 }
 
 void vSetCharacterInfo(int client, int iCharacter, int iModelIndex)
 {
+	switch (g_iOrignalMapSet) {
+		case 1: {
+			switch (iCharacter) {
+				case 4:
+					iCharacter = 0;
+
+				case 5:
+					iCharacter = 1;
+
+				case 6:
+					iCharacter = 2;
+
+				case 7:
+					iCharacter = 3;
+			}
+		}
+	}
+
 	SetEntProp(client, Prop_Send, "m_survivorCharacter", iCharacter);
 	SetEntityModel(client, g_sSurvivorModels[iModelIndex]);
 
@@ -965,6 +993,10 @@ void vInitGameData()
 			SetFailState("Error: the 'ZoeyUnlock_Offset' is incorrect.");
 	}
 
+	g_pDirector = hGameData.GetAddress("CDirector");
+	if (!g_pDirector)
+		SetFailState("Failed to find address: \"CDirector\"");
+
 	StartPrepSDKCall(SDKCall_Raw);
 	if (!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CDirector::IsInTransition"))
 		SetFailState("Failed to find signature: \"CDirector::IsInTransition\"");
@@ -979,14 +1011,27 @@ void vInitGameData()
 	if (!(g_hSDK_CTerrorPlayer_IsTransitioned = EndPrepSDKCall()))
 		SetFailState("Failed to create SDKCall: \"CTerrorPlayer::IsTransitioned\"");
 
+	vSetupDetours(hGameData);
+
 	delete hGameData;
 }
 
-public Action L4D_OnGetSurvivorSet(int &retVal)
+void vSetupDetours(GameData hGameData = null)
 {
-	if (!g_bFixDialogue)
-		return Plugin_Continue;
+	DynamicDetour dDetour = DynamicDetour.FromConf(hGameData, "DD::CTerrorGameRules::GetSurvivorSet");
+	if (!dDetour)
+		SetFailState("Failed to create DynamicDetour: \"DD::CTerrorGameRules::GetSurvivorSet\"");
 
-	retVal = 2;
-	return Plugin_Handled;
+	if (!dDetour.Enable(Hook_Post, DD_CTerrorGameRules_GetSurvivorSet_Post))
+		SetFailState("Failed to detour post: \"DD::CTerrorGameRules::GetSurvivorSet\"");
+}
+
+MRESReturn DD_CTerrorGameRules_GetSurvivorSet_Post(Address pThis, DHookReturn hReturn)
+{
+	g_iOrignalMapSet = hReturn.Value;
+	if (!g_bFixDialogue)
+		return MRES_Ignored;
+
+	hReturn.Value = 2;
+	return MRES_Supercede;
 }
