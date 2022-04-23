@@ -17,6 +17,8 @@ Handle
 	g_hSDK_IsCheckpointExitDoor;
 
 ConVar
+	g_hSbStop,
+	g_hNbStop,
 	g_hAllow,
 	g_hGameMode,
 	g_hModes,
@@ -79,6 +81,8 @@ public void OnPluginStart()
 	g_hDisplayPanel = CreateConVar("l4d2_dlock_displaypanel", "2", "Display players state panel. 0-disabled, 1-hide failed, 2-full info", CVAR_FLAGS);
 	g_hDisplayMode = CreateConVar("l4d2_dlock_displaymode", "1", "Set the display mode for the countdown. (0-off,1-hint, 2-center, 3-chat. any other value to hide countdown)", CVAR_FLAGS);
 
+	g_hSbStop = FindConVar("sb_stop");
+	g_hNbStop = FindConVar("nb_stop");
 	g_hGameMode = FindConVar("mp_gamemode");
 	g_hGameMode.AddChangeHook(vConVarChanged_Allow);
 	g_hModes.AddChangeHook(vConVarChanged_Allow);
@@ -303,10 +307,7 @@ void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
 		return;
 
 	int client = GetClientOfUserId(event.GetInt("userid"));
-	if (!client || !IsClientInGame(client))
-		return;
-		
-	if (!IsFakeClient(client))
+	if (client && IsClientInGame(client) && !IsFakeClient(client))
 		vResetLoading(client);
 }
 
@@ -329,7 +330,7 @@ void vStartSequence()
 	else if (g_bFreezeNodoor) {
 		g_iCountDown = -1;
 		g_bFreezeAllowed = true;
-		ExecuteCheatCommand("nb_stop", "1"); // 没有安全门则连同僵尸特感一起定住
+		g_hNbStop.SetInt(1); // 没有安全门则连同僵尸特感一起定住
 		g_hTimer = CreateTimer(1.0, tmrLoading, _, TIMER_REPEAT);
 	}
 }
@@ -466,12 +467,12 @@ void vUnLockDoor()
 
 void vFreezeBots()
 {
-	ExecuteCheatCommand("sb_stop", "1");
+	g_hSbStop.SetInt(1);
 }
 
 void vUnFreezeBots()
 {
-	ExecuteCheatCommand("sb_stop", "0");
+	g_hSbStop.SetInt(0);
 }
 
 void vUnFreezePlayers()
@@ -482,7 +483,7 @@ void vUnFreezePlayers()
 		}
 	}
 
-	ExecuteCheatCommand("nb_stop", "0");
+	g_hNbStop.SetInt(0);
 }
 
 void vInitPlugin()
@@ -659,15 +660,6 @@ bool bIsValidEntRef(int entity)
 void vPlaySound(const char[] sSound)
 {
 	EmitSoundToAll(sSound, SOUND_FROM_PLAYER, SNDCHAN_STATIC, SNDLEVEL_NORMAL, SND_NOFLAGS, SNDVOL_NORMAL, SNDPITCH_NORMAL, -1, NULL_VECTOR, NULL_VECTOR, true, 0.0);
-}
-
-void ExecuteCheatCommand(const char[] command, const char[] value = "")
-{
-	int flags = GetCommandFlags(command);
-	SetCommandFlags(command, flags & ~FCVAR_CHEAT); // Remove cheat flag
-	ServerCommand("%s %s", command, value);
-	ServerExecute();
-	SetCommandFlags(command, flags);
 }
 
 void vInitGameData()
