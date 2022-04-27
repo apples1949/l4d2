@@ -7,7 +7,7 @@
 #include <adminmenu>
 #include <dhooks>
 
-#define PLUGIN_VERSION "1.6.7"
+#define PLUGIN_VERSION "1.6.8"
 #define PLUGIN_NAME 	"Survivor Chat Select"
 #define PLUGIN_PREFIX	"\x01[\x04SCS\x01]"
 
@@ -363,12 +363,12 @@ bool bCanUse(int client, bool bCheckAdmin = true)
 stock bool L4D_IsPlayerStaggering(int client)
 {
 	static int m_iQueuedStaggerType = -1;
-	if( m_iQueuedStaggerType == -1 )
+	if ( m_iQueuedStaggerType == -1 )
 	m_iQueuedStaggerType = FindSendPropInfo("CTerrorPlayer", "m_staggerDist") + 4;
 
-	if( GetEntData(client, m_iQueuedStaggerType, 4) == -1 )
+	if ( GetEntData(client, m_iQueuedStaggerType, 4) == -1 )
 	{
-		if( GetGameTime() >= GetEntPropFloat(client, Prop_Send, "m_staggerTimer", 1) )
+		if ( GetGameTime() >= GetEntPropFloat(client, Prop_Send, "m_staggerTimer", 1) )
 		{
 			return false;
 		}
@@ -776,7 +776,7 @@ int iCheckLeastUsedSurvivor(int client)
 			continue;
 
 		GetClientModel(i, sModel, sizeof sModel);
-		if(!g_aSurvivorModels.GetValue(sModel, iCharBuff))
+		if (!g_aSurvivorModels.GetValue(sModel, iCharBuff))
 			continue;
 		
 		/**if ((iCharBuff = GetEntProp(i, Prop_Send, "m_survivorCharacter")) < 0 || iCharBuff > 7)
@@ -824,10 +824,10 @@ void vSetCharacterInfo(int client, int iCharacter, int iModelIndex)
 					iCharacter = 1;
 
 				case 6:
-					iCharacter = 2;
+					iCharacter = 3;
 
 				case 7:
-					iCharacter = 3;
+					iCharacter = 2;
 			}
 		}
 	}
