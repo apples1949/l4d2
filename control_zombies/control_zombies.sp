@@ -313,7 +313,7 @@ public Plugin myinfo =
 	name = "Control Zombies In Co-op",
 	author = "sorallll",
 	description = "",
-	version = "3.3.7",
+	version = "3.3.8",
 	url = "https://steamcommunity.com/id/sorallll"
 }
 
@@ -321,7 +321,6 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 {
 	CreateNative("CZ_RespawnPZ", aNative_RespawnPZ);
 	CreateNative("CZ_SetSpawnablePZ", aNative_SetSpawnablePZ);
-	CreateNative("CZ_ResetSpawnablePZ", aNative_ResetSpawnablePZ);
 	CreateNative("CZ_IsSpawnablePZSupported", aNative_IsSpawnablePZSupported);
 
 	RegPluginLibrary("control_zombies");
@@ -346,12 +345,6 @@ any aNative_RespawnPZ(Handle plugin, int numParams)
 any aNative_SetSpawnablePZ(Handle plugin, int numParams)
 {
 	g_iSpawnablePZ = GetNativeCell(1);
-	return 0;
-}
-
-any aNative_ResetSpawnablePZ(Handle plugin, int numParams)
-{
-	g_iSpawnablePZ = 0;
 	return 0;
 }
 
@@ -2647,7 +2640,7 @@ void vSetupDetours(GameData hGameData = null)
 		pAddr += offset + view_as<Address>(5); // sizeof(instruction)
 	}
 
-	g_ddForEachTerrorPlayer_SpawnablePZScan = new DynamicDetour(pAddr, CallConv_CDECL, ReturnType_Void, ThisPointer_Ignore);
+	g_ddForEachTerrorPlayer_SpawnablePZScan = new DynamicDetour(pAddr, CallConv_CDECL, ReturnType_Int, ThisPointer_Ignore);
 	if (!g_ddForEachTerrorPlayer_SpawnablePZScan)
 		SetFailState("Failed to create DynamicDetour: \"ForEachTerrorPlayer<SpawnablePZScan>\"");
 
@@ -2833,20 +2826,12 @@ MRESReturn DD_CTerrorPlayer_PlayerZombieAbortControl_Post(int pThis)
 	return MRES_Ignored;
 }
 
-MRESReturn DD_ForEachTerrorPlayer_SpawnablePZScan_Pre(DHookParam hParams)
+MRESReturn DD_ForEachTerrorPlayer_SpawnablePZScan_Pre(DHookReturn hReturn, DHookParam hParams)
 {
-	if (!g_iSpawnablePZ || hParams.IsNull(1))
-		return MRES_Supercede;
-
-	if (!IsClientInGame(g_iSpawnablePZ) || IsFakeClient(g_iSpawnablePZ) || GetClientTeam(g_iSpawnablePZ) != 3)
-		return MRES_Supercede;
-
-	static Address pSpawnablePZ;
-	pSpawnablePZ = hParams.GetAddress(1);
-	if (!pSpawnablePZ)
-		return MRES_Supercede;
-
-	StoreToAddress(pSpawnablePZ, GetEntityAddress(g_iSpawnablePZ), NumberType_Int32);
+	static bool bSpawnable;
+	bSpawnable = g_iSpawnablePZ && IsClientInGame(g_iSpawnablePZ) && !IsFakeClient(g_iSpawnablePZ) && GetClientTeam(g_iSpawnablePZ) == 3;
+	StoreToAddress(hParams.GetAddress(1), !bSpawnable ? 0 : view_as<int>(GetEntityAddress(g_iSpawnablePZ)), NumberType_Int32);
+	hReturn.Value = bSpawnable ? 0 : 1;
 	return MRES_ChangedOverride;
 }
 
