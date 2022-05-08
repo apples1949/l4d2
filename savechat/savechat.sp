@@ -6,11 +6,27 @@
 
 #define PLUGIN_VERSION "1.3"
 
+StringMap
+	g_aCommands;
+
 ConVar
 	g_hHostport;
 
 char
 	g_sChatFilePath[PLATFORM_MAX_PATH];
+
+static const char
+	g_sCommands[][] =
+	{
+		"say",
+		"say_team",
+		"callvote",
+		"unpause",
+		"setpause",
+		"choose_opendoor",
+		"choose_closedoor",
+		"go_away_from_keyboard"
+	};
 
 public Plugin myinfo = 
 {
@@ -23,138 +39,165 @@ public Plugin myinfo =
 
 public void OnPluginStart()
 {
+	vInitCommands();
+
 	char sDate[21];
 	FormatTime(sDate, sizeof sDate, "%d%m%y", -1);
 	BuildPath(Path_SM, g_sChatFilePath, sizeof g_sChatFilePath, "/logs/chat%s-%i.log", sDate, (g_hHostport = FindConVar("hostport")).IntValue);
 
-	CreateConVar("sm_savechat_version", PLUGIN_VERSION, "Save Player CommandListener_ChatSay Messages Plugin", FCVAR_DONTRECORD|FCVAR_REPLICATED);
-
+	HookEvent("round_end", Event_RoundEnd, EventHookMode_PostNoCopy);
+	HookEvent("round_start", Event_RoundStart, EventHookMode_PostNoCopy);
 	HookEvent("player_disconnect", Event_PlayerDisconnect, EventHookMode_Pre);
 
-	AddCommandListener(CommandListener_ChatSay, "say");
-	AddCommandListener(CommandListener_ChatSayTeam, "say_team");
+	AddCommandListener(CommandListener, "");
 }
 
-Action CommandListener_ChatSay(int client, char[] command, int argc)
+void vInitCommands()
 {
-	vLogChat(client, false);
+	g_aCommands = new StringMap();
+	for(int i; i < sizeof g_sCommands; i++)
+		g_aCommands.SetValue(g_sCommands[i], i);
+}
+
+Action CommandListener(int client, char[] command, int argc)
+{
+	if (!client || !IsClientInGame(client) || IsFakeClient(client))
+		return Plugin_Continue;
+
+	if (strncmp(command, "sm", 2) != 0) {
+		static int value;
+		StringToLowerCase(command);
+		if (!g_aCommands.GetValue(command, value))
+			return Plugin_Continue;
+	}
+	
+	static char sTime[16];
+	static char sTeamName[12];
+	static char sMessage[255];
+
+	FormatTime(sTime, sizeof sTime, "%H:%M:%S", -1);
+	GetTeamName(GetClientTeam(client), sTeamName, sizeof sTeamName);
+	GetCmdArgString(sMessage, sizeof sMessage);
+	StripQuotes(sMessage);
+
+	Format(sMessage, sizeof sMessage, "[%s] [%s] %N: %s %s", sTime, sTeamName, client, command, sMessage);
+	vSaveMessage(sMessage);
 	return Plugin_Continue;
 }
 
-Action CommandListener_ChatSayTeam(int client, char[] command, int argc)
+/**
+ * Converts the given string to lower case
+ *
+ * @param szString     Input string for conversion and also the output
+ * @return             void
+ */
+void StringToLowerCase(char[] szInput) 
 {
-	vLogChat(client, true);
-	return Plugin_Continue;
+	int iIterator;
+	while (szInput[iIterator] != EOS) {
+		szInput[iIterator] = CharToLower(szInput[iIterator]);
+		++iIterator;
+	}
+}
+
+public void OnMapEnd()
+{
+	char sTime[32];
+	char sMessage[255];
+
+	FormatTime(sTime, sizeof sTime, "%d/%m/%Y %H:%M:%S", -1);
+
+	GetCurrentMap(sMessage, sizeof sMessage);
+	Format(sMessage, sizeof sMessage, "[%s] --- 地图结束: %s ---", sTime, sMessage);
+
+	vSaveMessage("--=================================================================--");
+	vSaveMessage(sMessage);
+	vSaveMessage("--=================================================================--");
 }
 
 public void OnMapStart()
 {
 	char sTime[32];
-	char sMessageBuffer[512];
+	char sMessage[255];
 
-	FormatTime(sMessageBuffer, sizeof sMessageBuffer, "%d%m%y", -1);
-	BuildPath(Path_SM, g_sChatFilePath, sizeof g_sChatFilePath, "/logs/chat%s-%i.log", sMessageBuffer, g_hHostport.IntValue);
+	FormatTime(sMessage, sizeof sMessage, "%d%m%y", -1);
+	BuildPath(Path_SM, g_sChatFilePath, sizeof g_sChatFilePath, "/logs/chat%s-%i.log", sMessage, g_hHostport.IntValue);
 
 	FormatTime(sTime, sizeof sTime, "%d/%m/%Y %H:%M:%S", -1);
 
-	GetCurrentMap(sMessageBuffer, sizeof sMessageBuffer);
-	Format(sMessageBuffer, sizeof sMessageBuffer, "[%s] --- 地图开始: %s ---", sTime, sMessageBuffer);
+	GetCurrentMap(sMessage, sizeof sMessage);
+	Format(sMessage, sizeof sMessage, "[%s] --- 地图开始: %s ---", sTime, sMessage);
 
 	vSaveMessage("--=================================================================--");
-	vSaveMessage(sMessageBuffer);
+	vSaveMessage(sMessage);
 	vSaveMessage("--=================================================================--");
 }
 
 public void OnClientPostAdminCheck(int client)
 {
-	if(IsFakeClient(client))
+	if (IsFakeClient(client))
 		return;
 
-	char steamID[32];
-	if(!GetClientAuthId(client, AuthId_Steam2, steamID, sizeof steamID))
-		return;
-
-	char sTime[32];
+	char sTime[16];
 	char sCountry[3];
-	char sPlayerIP[50];
-	char sMessageBuffer[512];
+	char sPlayerIP[32];
+	char sMessage[255];
 
-	if(!GetClientIP(client, sPlayerIP, sizeof sPlayerIP, true)) 
+	if (!GetClientIP(client, sPlayerIP, sizeof sPlayerIP, true)) 
 		strcopy(sCountry, sizeof sCountry, "  ");
-	else 
-	{
-		if(!GeoipCode2(sPlayerIP, sCountry)) 
+	else {
+		if (!GeoipCode2(sPlayerIP, sCountry)) 
 			strcopy(sCountry, sizeof sCountry, "  ");
 	}
 
 	FormatTime(sTime, sizeof sTime, "%H:%M:%S", -1);
-	FormatEx(sMessageBuffer, sizeof sMessageBuffer, "[%s] [%s] %-25N 加入游戏 (%s | %s)", sTime, sCountry, client, steamID, sPlayerIP);
+	FormatEx(sMessage, sizeof sMessage, "[%s] [%s] %L 加入游戏 (%s)", sTime, sCountry, client, sPlayerIP);
+	vSaveMessage(sMessage);
+}
 
-	vSaveMessage(sMessageBuffer);
+void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
+{
+	char sTime[32];
+	char sMessage[255];
+
+	FormatTime(sTime, sizeof sTime, "%d/%m/%Y %H:%M:%S", -1);
+
+	GetCurrentMap(sMessage, sizeof sMessage);
+	Format(sMessage, sizeof sMessage, "[%s] --- 回合结束: %s ---", sTime, sMessage);
+
+	vSaveMessage("--=================================================================--");
+	vSaveMessage(sMessage);
+	vSaveMessage("--=================================================================--");
+}
+
+void Event_RoundStart(Event event, const char[] name, bool dontBroadcast)
+{
+	char sTime[32];
+	char sMessage[255];
+
+	FormatTime(sTime, sizeof sTime, "%d/%m/%Y %H:%M:%S", -1);
+
+	GetCurrentMap(sMessage, sizeof sMessage);
+	Format(sMessage, sizeof sMessage, "[%s] --- 回合开始: %s ---", sTime, sMessage);
+
+	vSaveMessage("--=================================================================--");
+	vSaveMessage(sMessage);
+	vSaveMessage("--=================================================================--");
 }
 
 void Event_PlayerDisconnect(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientOfUserId(event.GetInt("userid"));
-	if(client == 0 || IsFakeClient(client))
+	if (!client || IsFakeClient(client))
 		return;
 
-	char steamID[32];
-	if(!GetClientAuthId(client, AuthId_Steam2, steamID, sizeof steamID))
-		return;
-
-	char sTime[32];
-	char sCountry[3];
-	char sPlayerIP[50];
-	char sMessageBuffer[512];
-
-	if(!GetClientIP(client, sPlayerIP, sizeof sPlayerIP, true)) 
-		strcopy(sCountry, sizeof sCountry, "  ");
-	else 
-	{
-		if(!GeoipCode2(sPlayerIP, sCountry)) 
-			strcopy(sCountry, sizeof sCountry, "  ");
-	}
+	char sTime[16];
+	char sMessage[255];
 
 	FormatTime(sTime, sizeof sTime, "%H:%M:%S", -1);
-	event.GetString("reason", sMessageBuffer, sizeof sMessageBuffer);
-	Format(sMessageBuffer, sizeof sMessageBuffer, "[%s] [%s] %-25N 离开游戏 (reason: %s) (%s | %s)", sTime, sCountry, client, sMessageBuffer, steamID, sPlayerIP);
-
-	vSaveMessage(sMessageBuffer);
-}
-
-void vLogChat(int client, bool bTeamChat)
-{
-	char sTime[32];
-	char sCountry[3];
-	char sTeamName[20];
-	char sPlayerIP[50];
-	char sMessageBuffer[512];
-
-	GetCmdArgString(sMessageBuffer, sizeof sMessageBuffer);
-	StripQuotes(sMessageBuffer);
-
-	if(client == 0 || !IsClientInGame(client))
-	{
-		strcopy(sCountry, sizeof sCountry, "  ");
-		strcopy(sTeamName, sizeof sTeamName, "");
-	} 
-	else 
-	{
-		if(!GetClientIP(client, sPlayerIP, sizeof sPlayerIP, true)) 
-			strcopy(sCountry, sizeof sCountry, "  ");
-		else 
-		{
-			if(!GeoipCode2(sPlayerIP, sCountry)) 
-				strcopy(sCountry, sizeof sCountry, "  ");
-		}
-		GetTeamName(GetClientTeam(client), sTeamName, sizeof sTeamName);
-	}
-
-	FormatTime(sTime, sizeof sTime, "%H:%M:%S", -1);
-	Format(sMessageBuffer, sizeof sMessageBuffer, "[%s] [%s] [%-11s] %-25N :%s %s", sTime, sCountry, sTeamName, client, bTeamChat == true ? " (TEAM)" : "", sMessageBuffer);
-
-	vSaveMessage(sMessageBuffer);
+	event.GetString("reason", sMessage, sizeof sMessage);
+	Format(sMessage, sizeof sMessage, "[%s] %L 离开游戏 (reason: %s)", sTime, client, sMessage);
+	vSaveMessage(sMessage);
 }
 
 void vSaveMessage(const char[] sMessage)
