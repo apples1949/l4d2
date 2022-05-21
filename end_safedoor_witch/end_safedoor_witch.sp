@@ -4,7 +4,7 @@
 #include <sdktools>
 
 // witch向门外偏移的距离
-#define WITCH_OFFSET	20.0
+#define WITCH_OFFSET	33.0
 #define GAMEDATA		"end_safedoor_witch"
 
 Handle
@@ -17,11 +17,11 @@ int
 
 public Plugin myinfo = 
 {
-	name = 			"End Safedoor Witch",
-	author = 		"sorallll",
-	description = 	"",
-	version = 		"1.0.3",
-	url = 			"https://forums.alliedmods.net/showthread.php?t=335777"
+	name = "End Safedoor Witch",
+	author = "sorallll",
+	description = "",
+	version = "1.0.3",
+	url = "https://forums.alliedmods.net/showthread.php?t=335777"
 }
 
 public void OnPluginStart()
@@ -47,14 +47,14 @@ void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
 
 void Event_RoundStart(Event event, const char[] name, bool dontBroadcast)
 {
-	if(g_iRoundStart == 0 && g_iPlayerSpawn == 1)
+	if (g_iRoundStart == 0 && g_iPlayerSpawn == 1)
 		CreateTimer(1.0, tmrSpawnWitch, _, TIMER_FLAG_NO_MAPCHANGE);
 	g_iRoundStart = 1;
 }
 
 void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
 {
-	if(g_iRoundStart == 1 && g_iPlayerSpawn == 0)
+	if (g_iRoundStart == 1 && g_iPlayerSpawn == 0)
 		CreateTimer(1.0, tmrSpawnWitch, _, TIMER_FLAG_NO_MAPCHANGE);
 	g_iPlayerSpawn = 1;
 }
@@ -62,11 +62,10 @@ void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
 Action tmrSpawnWitch(Handle timer)
 {
 	int entity = INVALID_ENT_REFERENCE;
-	if((entity = FindEntityByClassname(MaxClients + 1, "info_changelevel")) == INVALID_ENT_REFERENCE)
+	if ((entity = FindEntityByClassname(MaxClients + 1, "info_changelevel")) == INVALID_ENT_REFERENCE)
 		entity = FindEntityByClassname(MaxClients + 1, "trigger_changelevel");
 
-	if(entity != INVALID_ENT_REFERENCE)
-	{
+	if (entity != INVALID_ENT_REFERENCE) {
 		int i;
 		float vPos[3];
 		float vAng[3];
@@ -77,16 +76,15 @@ Action tmrSpawnWitch(Handle timer)
 		char sModel[64];
 
 		entity = MaxClients + 1;
-		while((entity = FindEntityByClassname(entity, "prop_door_rotating_checkpoint")) != INVALID_ENT_REFERENCE)
-		{
+		while ((entity = FindEntityByClassname(entity, "prop_door_rotating_checkpoint")) != INVALID_ENT_REFERENCE) {
 			i = GetEntProp(entity, Prop_Data, "m_spawnflags");
-			if(i & 8192 == 0 || i & 32768 != 0)
+			if (i & 8192 == 0 || i & 32768 != 0)
 				continue;
 		
-			if(!SDKCall(g_hSDK_IsCheckpointDoor, entity))
+			if (!SDKCall(g_hSDK_IsCheckpointDoor, entity))
 				continue;
 
-			if(SDKCall(g_hSDK_IsCheckpointExitDoor, entity))
+			if (SDKCall(g_hSDK_IsCheckpointExitDoor, entity))
 				continue;
 
 			GetEntPropVector(entity, Prop_Data, "m_vecAbsOrigin", vPos);
@@ -97,11 +95,9 @@ Action tmrSpawnWitch(Handle timer)
 			ScaleVector(vFwd, 24.0);
 			AddVectors(vPos, vFwd, vPos);
 
-			if(bGetEndPoint(vPos, vAng, 32.0, vEnd1, entity))
-			{
+			if (bGetEndPoint(vPos, vAng, 32.0, vEnd1, entity)) {
 				vAng[1] += 180.0;
-				if(bGetEndPoint(vPos, vAng, 32.0, vEnd2, entity))
-				{
+				if (bGetEndPoint(vPos, vAng, 32.0, vEnd2, entity)) {
 					NormalizeVector(vFwd, vFwd);
 					ScaleVector(vFwd, GetVectorDistance(vEnd1, vEnd2) * 0.5);
 					AddVectors(vEnd2, vFwd, vPos);
@@ -110,7 +106,7 @@ Action tmrSpawnWitch(Handle timer)
 
 			GetEntPropVector(entity, Prop_Data, "m_angRotationClosed", vAng);
 			GetEntPropString(entity, Prop_Data, "m_ModelName", sModel, sizeof sModel);
-			if(strcmp(sModel, "models/props_doors/checkpoint_door_-02.mdl") != 0)
+			if (strcmp(sModel, "models/props_doors/checkpoint_door_-02.mdl") != 0)
 				vAng[1] += 180.0;
 
 			GetAngleVectors(vAng, vFwd, NULL_VECTOR, NULL_VECTOR);
@@ -121,7 +117,7 @@ Action tmrSpawnWitch(Handle timer)
 			vPos[2] -= 25.0;
 			fHeight = fGetGroundHeight(vPos, entity);
 
-			if(fHeight && vPos[2] - fHeight < 104.0)
+			if (fHeight && vPos[2] - fHeight < 104.0)
 				vPos[2] = fHeight + 5.0;
 
 			vSpawnWitch(vPos, vAng);
@@ -135,7 +131,7 @@ float fGetGroundHeight(const float vPos[3], int entity)
 {
 	float vEnd[3];
 	Handle hTrace = TR_TraceRayFilterEx(vPos, view_as<float>({90.0, 0.0, 0.0}), MASK_ALL, RayType_Infinite, bTraceEntityFilter, entity);
-	if(TR_DidHit(hTrace))
+	if (TR_DidHit(hTrace))
 		TR_GetEndPosition(vEnd, hTrace);
 
 	delete hTrace;
@@ -151,8 +147,7 @@ bool bGetEndPoint(const float vStart[3], const float vAng[3], float fScale, floa
 	AddVectors(vStart, vEnd, vEnd);
 
 	Handle hTrace = TR_TraceHullFilterEx(vStart, vEnd, view_as<float>({-5.0, -5.0, 0.0}), view_as<float>({5.0, 5.0, 5.0}), MASK_ALL, bTraceEntityFilter, entity);
-	if(TR_DidHit(hTrace))
-	{
+	if (TR_DidHit(hTrace)) {
 		TR_GetEndPosition(vBuffer, hTrace);
 		delete hTrace;
 		return true;
@@ -164,12 +159,12 @@ bool bGetEndPoint(const float vStart[3], const float vAng[3], float fScale, floa
 
 bool bTraceEntityFilter(int entity, int contentsMask, any data)
 {
-	if(entity == data || entity <= MaxClients)
+	if (entity == data || entity <= MaxClients)
 		return false;
 
 	static char classname[9];
 	GetEntityClassname(entity, classname, sizeof classname);
-	if((classname[0] == 'i' && strcmp(classname, "infected") == 0) || (classname[0] == 'w' && strcmp(classname, "witch") == 0))
+	if ((classname[0] == 'i' && strcmp(classname[1], "nfected") == 0) || (classname[0] == 'w' && strcmp(classname[1], "itch") == 0))
 		return false;
 
 	return true;
@@ -179,8 +174,7 @@ bool bTraceEntityFilter(int entity, int contentsMask, any data)
 void vSpawnWitch(const float vPos[3], const float vAng[3])
 {
 	int entity = CreateEntityByName("witch");
-	if(entity != -1)
-	{
+	if (entity != -1) {
 		TeleportEntity(entity, vPos, vAng, NULL_VECTOR);
 		SetEntPropFloat(entity, Prop_Send, "m_rage", 0.5);
 		SetEntProp(entity, Prop_Data, "m_nSequence", 4);
@@ -192,7 +186,7 @@ void vSpawnWitch(const float vPos[3], const float vAng[3])
 
 Action tmrSolidCollision(Handle timer, int entity)
 {
-	if(EntRefToEntIndex(entity) != INVALID_ENT_REFERENCE)
+	if (EntRefToEntIndex(entity) != INVALID_ENT_REFERENCE)
 		SetEntProp(entity, Prop_Send, "m_CollisionGroup", 0);
 
 	return Plugin_Continue;
@@ -202,27 +196,25 @@ void vLoadGameData()
 {
 	char sPath[PLATFORM_MAX_PATH];
 	BuildPath(Path_SM, sPath, sizeof sPath, "gamedata/%s.txt", GAMEDATA);
-	if(FileExists(sPath) == false)
+	if (!FileExists(sPath))
 		SetFailState("\n==========\nMissing required file: \"%s\".\n==========", sPath);
 
 	GameData hGameData = new GameData(GAMEDATA);
-	if(!hGameData)
+	if (!hGameData)
 		SetFailState("Failed to load \"%s.txt\" gamedata.", GAMEDATA);
 
 	StartPrepSDKCall(SDKCall_Entity);
-	if(!PrepSDKCall_SetFromConf(hGameData, SDKConf_Virtual, "CPropDoorRotatingCheckpoint::IsCheckpointDoor"))
+	if (!PrepSDKCall_SetFromConf(hGameData, SDKConf_Virtual, "CPropDoorRotatingCheckpoint::IsCheckpointDoor"))
 		SetFailState("Failed to find offset: CPropDoorRotatingCheckpoint::IsCheckpointDoor");
 	PrepSDKCall_SetReturnInfo(SDKType_Bool, SDKPass_Plain);
-	g_hSDK_IsCheckpointDoor = EndPrepSDKCall();
-	if(!g_hSDK_IsCheckpointDoor)
+	if (!(g_hSDK_IsCheckpointDoor = EndPrepSDKCall()))
 		SetFailState("Failed to create SDKCall: CPropDoorRotatingCheckpoint::IsCheckpointDoor");
 
 	StartPrepSDKCall(SDKCall_Entity);
-	if(!PrepSDKCall_SetFromConf(hGameData, SDKConf_Virtual, "CPropDoorRotatingCheckpoint::IsCheckpointExitDoor"))
+	if (!PrepSDKCall_SetFromConf(hGameData, SDKConf_Virtual, "CPropDoorRotatingCheckpoint::IsCheckpointExitDoor"))
 		SetFailState("Failed to find offset: CPropDoorRotatingCheckpoint::IsCheckpointExitDoor");
 	PrepSDKCall_SetReturnInfo(SDKType_Bool, SDKPass_Plain);
-	g_hSDK_IsCheckpointExitDoor = EndPrepSDKCall();
-	if(!g_hSDK_IsCheckpointExitDoor)
+	if (!(g_hSDK_IsCheckpointExitDoor = EndPrepSDKCall()))
 		SetFailState("Failed to create SDKCall: CPropDoorRotatingCheckpoint::IsCheckpointExitDoor");
 
 	delete hGameData;
