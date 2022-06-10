@@ -313,7 +313,7 @@ public Plugin myinfo =
 	name = "Control Zombies In Co-op",
 	author = "sorallll",
 	description = "",
-	version = "3.3.8",
+	version = "3.3.9",
 	url = "https://steamcommunity.com/id/sorallll"
 }
 
@@ -332,7 +332,7 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 any aNative_RespawnPZ(Handle plugin, int numParams)
 {
 	int client = GetNativeCell(1);
-	if (client < 1 || client > MaxClients || !IsClientInGame(client) || IsFakeClient(client) || GetClientTeam(client) != 3 || IsPlayerAlive(client) || GetEntProp(client, Prop_Send, "m_isGhost") == 1)
+	if (client < 1 || client > MaxClients || !IsClientInGame(client) || IsFakeClient(client) || GetClientTeam(client) != 3 || IsPlayerAlive(client) || GetEntProp(client, Prop_Send, "m_isGhost"))
 		return false;
 
 	int iZombieClass = GetNativeCell(2);
@@ -996,7 +996,7 @@ int iDisplayClassMenuHandler(Menu menu, MenuAction action, int param1, int param
 {
 	switch (action) {
 		case MenuAction_Select: {
-			if (param2 == 0 && GetClientTeam(param1) == 3 && !IsFakeClient(param1) && IsPlayerAlive(param1) && GetEntProp(param1, Prop_Send, "m_isGhost") == 1)
+			if (param2 == 0 && GetClientTeam(param1) == 3 && !IsFakeClient(param1) && IsPlayerAlive(param1) && GetEntProp(param1, Prop_Send, "m_isGhost"))
 				vSelectZombieClassMenu(param1);
 		}
 		case MenuAction_End:
@@ -1028,7 +1028,7 @@ int iSelectZombieClassMenuHandler(Menu menu, MenuAction action, int param1, int 
 	switch (action) {
 		case MenuAction_Select: {
 			int iZombieClass;
-			if (GetClientTeam(param1) == 3 && !IsFakeClient(param1) && IsPlayerAlive(param1) && (iZombieClass = GetEntProp(param1, Prop_Send, "m_zombieClass")) != 8 && GetEntProp(param1, Prop_Send, "m_isGhost") == 1) {
+			if (GetClientTeam(param1) == 3 && !IsFakeClient(param1) && IsPlayerAlive(param1) && (iZombieClass = GetEntProp(param1, Prop_Send, "m_zombieClass")) != 8 && GetEntProp(param1, Prop_Send, "m_isGhost")) {
 				char sItem[2];
 				menu.GetItem(param2, sItem, sizeof sItem);
 				int iClass = StringToInt(sItem);
@@ -1096,7 +1096,7 @@ public void OnPlayerRunCmdPost(int client)
 
 	static int iFlags;
 	iFlags = GetEntProp(client, Prop_Data, "m_afButtonPressed");
-	if (GetEntProp(client, Prop_Send, "m_isGhost") == 1) {
+	if (GetEntProp(client, Prop_Send, "m_isGhost")) {
 		if (iFlags & IN_ZOOM) {
 			if (g_esPlayer[client].iMaterialized == 0 && bCheckClientAccess(client, 4))
 				vSelectAscendingZombieClass(client);
@@ -1327,7 +1327,7 @@ void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
 		case 3: {
 			g_esPlayer[client].iLastTeamID = 0;
 
-			if (team == 2 && GetEntProp(client, Prop_Send, "m_isGhost") == 1)
+			if (team == 2 && GetEntProp(client, Prop_Send, "m_isGhost"))
 				SetEntProp(client, Prop_Send, "m_isGhost", 0); // SDKCall(g_hSDK_CTerrorPlayer_MaterializeFromGhost, client);
 			
 			CreateTimer(0.1, tmrLadderAndGlow, userid, TIMER_FLAG_NO_MAPCHANGE);
@@ -1547,7 +1547,7 @@ Action tmrPlayerStatus(Handle timer)
 							g_esPlayer[i].fSuicideStartTime = 0.0;
 						}
 					}
-					else if (GetEntProp(i, Prop_Send, "m_isGhost") == 0) {
+					else if (!GetEntProp(i, Prop_Send, "m_isGhost")) {
 						if (bTankFrustrated[i] && GetEntProp(i, Prop_Send, "m_frustration") >= 100) {
 							// CTerrorPlayer::UpdateZombieFrustration(CTerrorPlayer *__hidden this)函数里面的原生方法
 							Event event = CreateEvent("tank_frustrated", true);
@@ -1633,7 +1633,7 @@ Action tmrReturnToSurvivor(Handle timer, int client)
 	static int i;
 	static int iTimes[MAXPLAYERS + 1] = {20, ...};
 
-	if ((client = GetClientOfUserId(client)) && IsClientInGame(client) && !IsFakeClient(client) && GetClientTeam(client) == 3 && IsPlayerAlive(client) && GetEntProp(client, Prop_Send, "m_zombieClass") == 8 && GetEntProp(client, Prop_Send, "m_isGhost") == 1) {
+	if ((client = GetClientOfUserId(client)) && IsClientInGame(client) && !IsFakeClient(client) && GetClientTeam(client) == 3 && IsPlayerAlive(client) && GetEntProp(client, Prop_Send, "m_zombieClass") == 8 && GetEntProp(client, Prop_Send, "m_isGhost")) {
 		i = iTimes[client]--;
 		if (i > 0)
 			PrintHintText(client, "还有 %d 秒变回生还者,请到掩体后面按鼠标[左键]重生.按[E]键可传送到生还者附近", i);
@@ -1714,6 +1714,7 @@ void vTeleportToSurvivor(int client, bool bRandom = true)
 	delete aClients;
 
 	if (iSurvivor) {
+		vSetInvincibilityTime(client, 1.0);
 		SetEntProp(client, Prop_Send, "m_bDucked", 1);
 		SetEntProp(client, Prop_Send, "m_fFlags", GetEntProp(client, Prop_Send, "m_fFlags")|FL_DUCKING);
 
@@ -1723,24 +1724,14 @@ void vTeleportToSurvivor(int client, bool bRandom = true)
 	}
 }
 
-void vSetGodMode(int client, float fDuration)
+void vSetInvincibilityTime(int client, float flDuration)
 {
-	if (!IsClientInGame(client))
-		return;
+	static int m_invulnerabilityTimer = -1;
+	if (m_invulnerabilityTimer == -1)
+		m_invulnerabilityTimer = FindSendPropInfo("CTerrorPlayer", "m_noAvoidanceTimer") - 12;
 
-	SetEntProp(client, Prop_Data, "m_takedamage", 0);
-	
-	if (fDuration > 0.0)
-		CreateTimer(fDuration, tmrMortal, GetClientUserId(client));
-}
-
-Action tmrMortal(Handle timer, int client)
-{
-	if (!(client = GetClientOfUserId(client)) || !IsClientInGame(client) || GetEntProp(client, Prop_Data, "m_takedamage") != 0)
-		return Plugin_Stop;
-
-	SetEntProp(client, Prop_Data, "m_takedamage", 2);
-	return Plugin_Continue;
+	SetEntDataFloat(client, m_invulnerabilityTimer + 4, flDuration);
+	SetEntDataFloat(client, m_invulnerabilityTimer + 8, GetGameTime() + flDuration);
 }
 
 int iFindUselessSurvivorBot(bool bAlive)
@@ -1999,7 +1990,7 @@ void vChangeTeamToSurvivor(int client)
 		return;
 
 	// 防止因切换而导致正处于Ghost状态的坦克丢失
-	if (GetEntProp(client, Prop_Send, "m_isGhost") == 1)
+	if (GetEntProp(client, Prop_Send, "m_isGhost"))
 		SetEntProp(client, Prop_Send, "m_isGhost", 0); // SDKCall(g_hSDK_CTerrorPlayer_MaterializeFromGhost, client);
 
 	int iBot = GetClientOfUserId(g_esPlayer[client].iPlayerBot);
@@ -2020,7 +2011,6 @@ void vChangeTeamToSurvivor(int client)
 		if (!IsPlayerAlive(client))
 			vRoundRespawn(client);
 
-		vSetGodMode(client, 1.0);
 		vTeleportToSurvivor(client);
 	}
 
@@ -2644,7 +2634,7 @@ void vSetupDetours(GameData hGameData = null)
 	if (!g_ddForEachTerrorPlayer_SpawnablePZScan)
 		SetFailState("Failed to create DynamicDetour: \"ForEachTerrorPlayer<SpawnablePZScan>\"");
 
-	g_ddForEachTerrorPlayer_SpawnablePZScan.AddParam(HookParamType_CBaseEntity, -1, DHookPass_ByRef, DHookRegister_Default);
+	g_ddForEachTerrorPlayer_SpawnablePZScan.AddParam(HookParamType_CBaseEntity);
 }
 
 void vSetInfectedGhost(int client, bool bSavePos = false)
@@ -2794,11 +2784,12 @@ MRESReturn DD_CTerrorPlayer_MaterializeFromGhost_Pre(int pThis)
 
 MRESReturn DD_CTerrorPlayer_MaterializeFromGhost_Post(int pThis)
 {
+	g_bOnMaterializeFromGhost = false;
+
 	if (GetEntProp(pThis, Prop_Send, "m_isGhost"))
 		return MRES_Ignored;
 
 	g_esPlayer[pThis].iMaterialized++;
-	g_bOnMaterializeFromGhost = false;
 
 	if (!IsFakeClient(pThis)) {
 		g_esPlayer[pThis].fBugExploitTime[0] = GetGameTime() + 1.5;
@@ -2837,7 +2828,7 @@ MRESReturn DD_ForEachTerrorPlayer_SpawnablePZScan_Pre(DHookReturn hReturn, DHook
 
 void OnNextFrame_EnterGhostState(int client)
 {
-	if (g_iControlled == 0 && (client = GetClientOfUserId(client)) && IsClientInGame(client) && !IsFakeClient(client) && GetClientTeam(client) == 3 && IsPlayerAlive(client) && GetEntProp(client, Prop_Send, "m_zombieClass") != 8 && GetEntProp(client, Prop_Send, "m_isGhost") == 1) {
+	if (g_iControlled == 0 && (client = GetClientOfUserId(client)) && IsClientInGame(client) && !IsFakeClient(client) && GetClientTeam(client) == 3 && IsPlayerAlive(client) && GetEntProp(client, Prop_Send, "m_zombieClass") != 8 && GetEntProp(client, Prop_Send, "m_isGhost")) {
 		if (g_esPlayer[client].iEnteredGhost == 0) {
 			if (bCheckClientAccess(client, 0))
 				CPrintToChat(client, "{default}聊天栏输入 {olive}!team2 {default}可切换回{blue}生还者");
