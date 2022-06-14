@@ -271,9 +271,8 @@ MRESReturn DD_CTerrorPlayer_TransitionRestore_Pre(int pThis, DHookReturn hReturn
 
 	char ModelName[PLATFORM_MAX_PATH];
 	SDKCall(g_hSDK_KeyValues_GetString, pSavedData, ModelName, sizeof ModelName, "ModelName", "");
-	if (!IsModelPrecached(ModelName)) {
+	if (!IsModelPrecached(ModelName))
 		PrecacheModel(ModelName, true);
-	}
 
 	if (g_bCDirector_Restart && iTeam == 2) {
 		char character[4];
