@@ -216,6 +216,7 @@ ConVar
 	g_hPZTeamLimit,
 	g_hCmdCooldownTime,
 	g_hCmdEnterCooling,
+	g_hLotTargetPlayer,
 	g_hPZChangeTeamTo,
 	g_hGlowColorEnable,
 	g_hGlowColor[4],
@@ -271,6 +272,7 @@ int
 	g_iPZChangeTeamTo,
 	g_iAutoDisplayMenu,
 	g_iCmdEnterCooling,
+	g_iLotTargetPlayer,
 	g_iGlowColor[4],
 	g_iSpawnLimits[6],
 	g_iSpawnWeights[6],
@@ -313,7 +315,7 @@ public Plugin myinfo =
 	name = "Control Zombies In Co-op",
 	author = "sorallll",
 	description = "",
-	version = "3.4.0",
+	version = "3.4.1",
 	url = "https://steamcommunity.com/id/sorallll"
 }
 
@@ -359,7 +361,7 @@ public void OnPluginStart()
 
 	g_hMaxTankPlayer = 				CreateConVar("cz_max_tank_player", 					"1", 					"坦克玩家达到多少后插件将不再控制玩家接管(0=不接管坦克)", CVAR_FLAGS, true, 0.0);
 	g_hSurvuivorLimit = 			CreateConVar("cz_allow_survivor_limit", 			"1", 					"至少有多少名正常生还者(未被控,未倒地,未死亡)时,才允许玩家接管坦克", CVAR_FLAGS, true, 0.0);
-	g_hSurvuivorChance = 			CreateConVar("cz_survivor_allow_chance", 			"0.0", 					"准备叛变的玩家数量为0时,自动抽取生还者和感染者玩家的几率(排除闲置旁观玩家)(0.0=不自动抽取)", CVAR_FLAGS, true, 0.0, true, 1.0);
+	g_hSurvuivorChance = 			CreateConVar("cz_survivor_allow_chance", 			"0.0", 					"准备叛变的玩家数量为0时,自动抽取生还者和感染者玩家的几率(排除闲置旁观玩家)(0.0=不自动抽取)", CVAR_FLAGS);
 	g_hExchangeTeam = 				CreateConVar("cz_exchange_team", 					"0", 					"特感玩家杀死生还者玩家后是否互换队伍?(0=否,1=是)", CVAR_FLAGS);
 	g_hPZSuicideTime = 				CreateConVar("cz_pz_suicide_time", 					"120", 					"特感玩家复活后自动处死的时间(0=不会处死复活后的特感玩家)", CVAR_FLAGS, true, 0.0);
 	g_hPZRespawnTime = 				CreateConVar("cz_pz_respawn_time", 					"15", 					"特感玩家自动复活时间(0=插件不会接管特感玩家的复活)", CVAR_FLAGS, true, 0.0);
@@ -369,7 +371,8 @@ public void OnPluginStart()
 	g_hPZTeamLimit = 				CreateConVar("cz_pz_team_limit", 					"2", 					"感染玩家数量达到多少后将限制使用sm_team3命令(-1=感染玩家不能超过生还玩家,大于等于0=感染玩家不能超过该值)", CVAR_FLAGS, true, -1.0);
 	g_hCmdCooldownTime = 			CreateConVar("cz_cmd_cooldown_time", 				"60.0", 				"sm_team2,sm_team3,sm_tt命令的冷却时间(0.0-无冷却)", CVAR_FLAGS, true, 0.0);
 	g_hCmdEnterCooling = 			CreateConVar("cz_return_enter_cooling", 			"31", 					"什么情况下sm_team2,sm_team3,sm_tt命令会进入冷却(1=使用其中一个命令,2=坦克玩家掉控,4=坦克玩家死亡,8=坦克玩家未及时重生,16=特感玩家杀掉生还者玩家,31=所有)", CVAR_FLAGS);
-	g_hPZChangeTeamTo = 			CreateConVar("cz_pz_change_team_to", 				"0", 					"换图,过关以及任务失败时是否自动将特感玩家切换到哪个队伍?(0=不切换,1=旁观者,2=生还者)", CVAR_FLAGS, true, 0.0, true, 2.0);
+	g_hLotTargetPlayer = 			CreateConVar("cz_lot_target_player", 				"7", 					"抽取哪些玩家来接管坦克?(0=不抽取,1=叛变玩家,2=生还者,4=感染者)", CVAR_FLAGS);
+	g_hPZChangeTeamTo = 			CreateConVar("cz_pz_change_team_to", 				"0", 					"换图,过关以及任务失败时是否自动将特感玩家切换到哪个队伍?(0=不切换,1=旁观者,2=生还者)", CVAR_FLAGS);
 	g_hGlowColorEnable = 			CreateConVar("cz_survivor_color_enable", 			"1", 					"是否给生还者创发光建模型?(0=否,1=是)", CVAR_FLAGS);
 	g_hGlowColor[COLOR_NORMAL] = 	CreateConVar("cz_survivor_color_normal", 			"0 180 0", 				"特感玩家看到的正常状态生还者发光颜色", CVAR_FLAGS);
 	g_hGlowColor[COLOR_INCAPA] = 	CreateConVar("cz_survivor_color_incapacitated", 	"180 0 0", 				"特感玩家看到的倒地状态生还者发光颜色", CVAR_FLAGS);
@@ -418,6 +421,7 @@ public void OnPluginStart()
 	g_hPZTeamLimit.AddChangeHook(vGeneralConVarChanged);
 	g_hCmdCooldownTime.AddChangeHook(vGeneralConVarChanged);
 	g_hCmdEnterCooling.AddChangeHook(vGeneralConVarChanged);
+	g_hLotTargetPlayer.AddChangeHook(vGeneralConVarChanged);
 	g_hPZChangeTeamTo.AddChangeHook(vGeneralConVarChanged);
 
 	g_hGlowColorEnable.AddChangeHook(vColorConVarChanged);
@@ -584,6 +588,7 @@ void vGetGeneralCvars()
 	g_iPZTeamLimit = g_hPZTeamLimit.IntValue;
 	g_fCmdCooldownTime = g_hCmdCooldownTime.FloatValue;
 	g_iCmdEnterCooling = g_hCmdEnterCooling.IntValue;
+	g_iLotTargetPlayer = g_hLotTargetPlayer.IntValue;
 	g_iPZChangeTeamTo = g_hPZChangeTeamTo.IntValue;
 }
 
@@ -1793,13 +1798,25 @@ int iTakeOverTank(int tank)
 
 		switch (GetClientTeam(client)) {
 			case 2: {
-				if (bAllowsurvivor)
-					aClients.Set(aClients.Push(g_esPlayer[client].bIsPlayerPB ? 0 : 1), client, 1);
+				if (bAllowsurvivor) {
+					if (g_esPlayer[client].bIsPlayerPB) {
+						if (g_iLotTargetPlayer & (1 << 0))
+							aClients.Set(aClients.Push(0), client, 1);
+					}
+					else if (g_iLotTargetPlayer & (1 << 1))
+						aClients.Set(aClients.Push(1), client, 1);
+				}
 			}
 
 			case 3: {
-				if (!IsPlayerAlive(client) || GetEntProp(client, Prop_Send, "m_zombieClass") != 8)
-					aClients.Set(aClients.Push(g_esPlayer[client].bIsPlayerPB ? 0 : 1), client, 1);
+				if (!IsPlayerAlive(client) || GetEntProp(client, Prop_Send, "m_zombieClass") != 8) {
+					if (g_esPlayer[client].bIsPlayerPB) {
+						if (g_iLotTargetPlayer & (1 << 0))
+							aClients.Set(aClients.Push(0), client, 1);
+					}
+					else if (g_iLotTargetPlayer & (1 << 2))
+						aClients.Set(aClients.Push(1), client, 1);
+				}
 			}
 		}
 	}
