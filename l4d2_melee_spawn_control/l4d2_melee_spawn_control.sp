@@ -26,7 +26,7 @@ public Plugin myinfo=
 	name = "l4d2 melee spawn control",
 	author = "IA/NanaNana, sorallll",
 	description = "Unlock melee weapons",
-	version = "1.5",
+	version = "1.6",
 	url = "https://forums.alliedmods.net/showthread.php?p=2719531"
 }
 
@@ -55,8 +55,7 @@ MRESReturn DD_CMeleeWeaponInfoStore_LoadScripts_Pre(Address pThis, DHookReturn h
 		return MRES_Ignored;
 
 	char sMissionDefault[512];
-	if (!g_aMissionDefaultMelees.GetString(sMissionFirstMap, sMissionDefault, sizeof sMissionDefault))
-	{
+	if (!g_aMissionDefaultMelees.GetString(sMissionFirstMap, sMissionDefault, sizeof sMissionDefault)) {
 		char sMapCurrent[512];
 		SDKCall(g_hSDK_KeyValues_GetString, infoPointer, sMapCurrent, sizeof sMapCurrent, "meleeweapons", "");
 
@@ -84,8 +83,7 @@ MRESReturn DD_CDirectorItemManager_IsMeleeWeaponAllowedToExistPost(Address pThis
 {
 	/**char sScriptName[32];
 	hParams.GetString(1, sScriptName, sizeof sScriptName);
-	if (strcmp(sScriptName, "knife", false) == 0)
-	{
+	if (strcmp(sScriptName, "knife", false) == 0) {
 		hReturn.Value = 1;
 		return MRES_Override;
 	}
@@ -105,8 +103,7 @@ void LoadScriptsFromManifest(char[] buffer, int maxlength)
 	char sLine[PLATFORM_MAX_PATH];
 	char sValue[PLATFORM_MAX_PATH];
 
-	while (!hFile.EndOfFile())
-	{
+	while (!hFile.EndOfFile()) {
 		if (!hFile.ReadLine(sLine, sizeof sLine))
 			break;
 
@@ -135,12 +132,10 @@ bool KV_GetValue(char[] str, char[] key, char buffer[PLATFORM_MAX_PATH])
 	FormatEx(substr, sizeof substr, "\"%s\"", key);
 	
 	posKey = StrContains(str, substr, false);
-	if (posKey != -1)
-	{
+	if (posKey != -1) {
 		posComment = StrContains(str, "//", true);
 		
-		if (posComment == -1 || posComment > posKey)
-		{
+		if (posComment == -1 || posComment > posKey) {
 			sizeKey = strlen(substr);
 			buffer = UnQuote(str[posKey + sizeKey]);
 			return true;
@@ -187,8 +182,7 @@ char[] sGetMapSetMelees(const char[] str)
 	g_hBaseMelees.GetString(sBase, sizeof sBase);
 	g_hExtraMelees.GetString(sExtra, sizeof sExtra);
 
-	if (!sBase[0])
-	{
+	if (!sBase[0]) {
 		if (!sExtra[0])
 			return sBase;
 
@@ -203,8 +197,7 @@ char[] sGetMapSetMelees(const char[] str)
 
 	sBase[0] = '\0';
 	int len = aMelee.Length;
-	if (!len)
-	{
+	if (!len) {
 		delete aMelee;
 		return sBase;
 	}
@@ -216,8 +209,7 @@ char[] sGetMapSetMelees(const char[] str)
 	aMelee.GetString(0, buffer, sizeof buffer);
 	StrCat(sBase, sizeof sBase, buffer);
 
-	for (int i = 1; i < len; i++)
-	{
+	for (int i = 1; i < len; i++) {
 		StrCat(sBase, sizeof sBase, ";");
 		aMelee.GetString(i, buffer, sizeof buffer);
 		StrCat(sBase, sizeof sBase, buffer);
@@ -233,8 +225,7 @@ void ParseMeleeString(const char[] source, ArrayList array)
 	char buffer[32];
 	char path[PLATFORM_MAX_PATH];
 
-	while ((idx = SplitString(source[reloc_idx], ";", buffer, sizeof buffer)) != -1)
-	{
+	while ((idx = SplitString(source[reloc_idx], ";", buffer, sizeof buffer)) != -1) {
 		reloc_idx += idx;
 		TrimString(buffer);
 		if (!buffer[0])
@@ -251,16 +242,13 @@ void ParseMeleeString(const char[] source, ArrayList array)
 		array.PushString(buffer);
 	}
 
-	if (reloc_idx > 0)
-	{
+	if (reloc_idx > 0) {
 		strcopy(buffer, sizeof buffer, source[reloc_idx]);
 
 		TrimString(buffer);
-		if (buffer[0])
-		{
+		if (buffer[0]) {
 			StringToLowerCase(buffer);
-			if (array.FindString(buffer) == -1)
-			{
+			if (array.FindString(buffer) == -1) {
 				FormatEx(path, sizeof path, "scripts/melee/%s.txt", buffer);
 				if (FileExists(path, true))
 					array.PushString(buffer);
@@ -278,8 +266,7 @@ void ParseMeleeString(const char[] source, ArrayList array)
 void StringToLowerCase(char[] szInput)
 {
 	int iIterator;
-	while (szInput[iIterator] != EOS)
-	{
+	while (szInput[iIterator] != EOS) {
 		szInput[iIterator] = CharToLower(szInput[iIterator]);
 		++iIterator;
 	}
