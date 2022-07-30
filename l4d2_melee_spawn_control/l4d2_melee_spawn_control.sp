@@ -101,7 +101,7 @@ void LoadScriptsFromManifest(char[] buffer, int maxlength)
 		return;
 
 	char sLine[PLATFORM_MAX_PATH];
-	char sValue[PLATFORM_MAX_PATH];
+	char sBuff[PLATFORM_MAX_PATH];
 
 	while (!hFile.EndOfFile()) {
 		if (!hFile.ReadLine(sLine, sizeof sLine))
@@ -109,14 +109,14 @@ void LoadScriptsFromManifest(char[] buffer, int maxlength)
 
 		TrimString(sLine);
 
-		if (!KV_GetValue(sLine, "file", sValue))
+		if (!KV_GetValue(sLine, "file", sBuff))
 			continue;
 
-		if (SplitString(sValue, ".txt", sValue, sizeof sValue) == -1)
+		if (SplitString(sBuff, ".txt", sBuff, sizeof sBuff) == -1)
 			continue;
 
-		if (SplitStringRight(sValue, "scripts/melee/", sValue, sizeof sValue))
-			Format(buffer, maxlength, "%s;%s", buffer, sValue);
+		if (SplitStringRight(sBuff, "scripts/melee/", sBuff, sizeof sBuff))
+			Format(buffer, maxlength, "%s;%s", buffer, sBuff);
 	}
 	
 	delete hFile;
@@ -196,20 +196,20 @@ char[] sGetMapSetMelees(const char[] str)
 		ParseMeleeString(sExtra, aMelee);
 
 	sBase[0] = '\0';
-	int len = aMelee.Length;
-	if (!len) {
+	int length = aMelee.Length;
+	if (!length) {
 		delete aMelee;
 		return sBase;
 	}
 
-	if (len > MAX_MELEE)
-		len = MAX_MELEE;
+	if (length > MAX_MELEE)
+		length = MAX_MELEE;
 
 	char buffer[32];
 	aMelee.GetString(0, buffer, sizeof buffer);
 	StrCat(sBase, sizeof sBase, buffer);
 
-	for (int i = 1; i < len; i++) {
+	for (int i = 1; i < length; i++) {
 		StrCat(sBase, sizeof sBase, ";");
 		aMelee.GetString(i, buffer, sizeof buffer);
 		StrCat(sBase, sizeof sBase, buffer);
@@ -274,10 +274,10 @@ void StringToLowerCase(char[] szInput)
 
 void vInitGameData()
 {
-	char sValue[PLATFORM_MAX_PATH];
-	BuildPath(Path_SM, sValue, sizeof sValue, "gamedata/%s.txt", GAMEDATA);
-	if (!FileExists(sValue))
-		SetFailState("\n==========\nMissing required file: \"%s\".\n==========", sValue);
+	char sPath[PLATFORM_MAX_PATH];
+	BuildPath(Path_SM, sPath, sizeof sPath, "gamedata/%s.txt", GAMEDATA);
+	if (!FileExists(sPath))
+		SetFailState("\n==========\nMissing required file: \"%s\".\n==========", sPath);
 
 	GameData hGameData = new GameData(GAMEDATA);
 	if (!hGameData)
