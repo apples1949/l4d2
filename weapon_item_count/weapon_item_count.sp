@@ -91,7 +91,7 @@ Action cmdResetItemCount(int args)
 	
 void vResetWeaponRules()
 {
-	for(int i; i < view_as<int>(L4D2WeaponId_MAX); i++)
+	for (int i; i < view_as<int>(L4D2WeaponId_MAX); i++)
 		g_iItemCountRules[i] = -1;
 }
 
