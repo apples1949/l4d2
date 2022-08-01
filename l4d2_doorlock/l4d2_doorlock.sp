@@ -291,6 +291,7 @@ void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
 void vResetPlugin()
 {
 	g_iCountDown = 0;
+	g_iStartDoor = 0;
 	g_iRoundStart = 0;
 	g_iPlayerSpawn = 0;
 	g_bFreezeAllowed = false;
@@ -488,22 +489,17 @@ void vUnFreezePlayers()
 
 void vInitPlugin()
 {
-	if(bHasAnySurvivorLeftSafeArea())
+	if(g_hTimer || g_iCountDown)
 		return;
 
-	if(g_hTimer || g_iCountDown || bIsValidEntRef(g_iStartDoor))
+	if(bHasAnySurvivorLeftSafeArea())
 		return;
 
 	g_iStartDoor = 0;
 
-	int m_spawnflags;
 	int entity = MaxClients + 1;
 	while ((entity = FindEntityByClassname(entity, "prop_door_rotating_checkpoint")) != INVALID_ENT_REFERENCE) {
-		if (GetEntProp(entity, Prop_Send, "m_bLocked") != 1)
-			continue;
-
-		m_spawnflags = GetEntProp(entity, Prop_Data, "m_spawnflags");
-		if (m_spawnflags & 8192 == 0 || m_spawnflags & 32768 != 0)
+		if (GetEntProp(entity, Prop_Data, "m_spawnflags") & 32768 != 0)
 			continue;
 
 		if (!SDKCall(g_hSDK_IsCheckpointDoor, entity))
