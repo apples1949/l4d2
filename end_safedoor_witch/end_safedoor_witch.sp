@@ -20,7 +20,7 @@ public Plugin myinfo =
 	name = "End Safedoor Witch",
 	author = "sorallll",
 	description = "",
-	version = "1.0.3",
+	version = "1.0.4",
 	url = "https://forums.alliedmods.net/showthread.php?t=335777"
 }
 
@@ -66,7 +66,6 @@ Action tmrSpawnWitch(Handle timer)
 		entity = FindEntityByClassname(MaxClients + 1, "trigger_changelevel");
 
 	if (entity != INVALID_ENT_REFERENCE) {
-		int i;
 		float vPos[3];
 		float vAng[3];
 		float vFwd[3];
@@ -77,8 +76,7 @@ Action tmrSpawnWitch(Handle timer)
 
 		entity = MaxClients + 1;
 		while ((entity = FindEntityByClassname(entity, "prop_door_rotating_checkpoint")) != INVALID_ENT_REFERENCE) {
-			i = GetEntProp(entity, Prop_Data, "m_spawnflags");
-			if (i & 8192 == 0 || i & 32768 != 0)
+			if (GetEntProp(entity, Prop_Data, "m_spawnflags") & 32768 != 0)
 				continue;
 		
 			if (!SDKCall(g_hSDK_IsCheckpointDoor, entity))
