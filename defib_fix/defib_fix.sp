@@ -45,8 +45,7 @@ bool
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
 {
-	if(GetEngineVersion() != Engine_Left4Dead2)
-	{
+	if (GetEngineVersion() != Engine_Left4Dead2) {
 		strcopy(error, err_max, "Plugin only supports Left 4 Dead 2");
 		return APLRes_SilentFailure;
 	}
@@ -69,43 +68,43 @@ public void OnPluginStart()
 {
 	char sPath[PLATFORM_MAX_PATH];
 	BuildPath(Path_SM, sPath, sizeof sPath, "gamedata/%s.txt", GAMEDATA);
-	if(!FileExists(sPath))
+	if (!FileExists(sPath))
 		SetFailState("\n==========\nMissing required file: \"%s\".\n==========", sPath);
 
 	GameData hGameData = new GameData(GAMEDATA);
-	if(!hGameData)
+	if (!hGameData)
 		SetFailState("Failed to load \"%s.txt\" gamedata.", GAMEDATA);
 
 	DynamicDetour dDetour = DynamicDetour.FromConf(hGameData, "DD::CSurvivorDeathModel::Create");
-	if(!dDetour)
+	if (!dDetour)
 		SetFailState("Failed to create DynamicDetour: DD::CSurvivorDeathModel::Create");
 		
-	if(!dDetour.Enable(Hook_Pre, DD_CSurvivorDeathModel_Create_Pre))
+	if (!dDetour.Enable(Hook_Pre, DD_CSurvivorDeathModel_Create_Pre))
 		SetFailState("Failed to detour pre: DD::CSurvivorDeathModel::Create");
 
-	if(!dDetour.Enable(Hook_Post, DD_CSurvivorDeathModel_Create_Post))
+	if (!dDetour.Enable(Hook_Post, DD_CSurvivorDeathModel_Create_Post))
 		SetFailState("Failed to detour post: DD::CSurvivorDeathModel::Create");
 
 	dDetour = DynamicDetour.FromConf(hGameData, "DD::CTerrorPlayer::GetPlayerByCharacter");
-	if(!dDetour)
+	if (!dDetour)
 		SetFailState("Failed to create DynamicDetour: DD::CTerrorPlayer::GetPlayerByCharacter");
 
-	if(!dDetour.Enable(Hook_Pre, DD_CTerrorPlayer_GetPlayerByCharacter_Pre))
+	if (!dDetour.Enable(Hook_Pre, DD_CTerrorPlayer_GetPlayerByCharacter_Pre))
 		SetFailState("Failed to detour pre: DD::CTerrorPlayer::GetPlayerByCharacter");
 	
 	g_dDH_OnStartAction = DynamicHook.FromConf(hGameData, "DH::CItemDefibrillator::OnStartAction");
-	if(!g_dDH_OnStartAction)
+	if (!g_dDH_OnStartAction)
 		SetFailState("Failed to create DynamicHook: DH::CItemDefibrillator::OnStartAction");
 	
 	g_dDH_OnActionComplete = DynamicHook.FromConf(hGameData, "DH::CItemDefibrillator::OnActionComplete");
-	if(!g_dDH_OnActionComplete)
+	if (!g_dDH_OnActionComplete)
 		SetFailState("Failed to create DynamicHook: DH::CItemDefibrillator::OnActionComplete");
 
 	delete hGameData;
 
 	CreateConVar("defib_fix_version", PLUGIN_VERSION, "", FCVAR_NOTIFY|FCVAR_DONTRECORD);
 
-	for(int i = 1; i <= MaxClients; i++)
+	for (int i = 1; i <= MaxClients; i++)
 		g_aDeathModel[i] = new ArrayList();
 
 	HookEvent("round_end", Event_RoundEnd, EventHookMode_PostNoCopy);
@@ -115,7 +114,7 @@ public void OnPluginStart()
 
 public void OnMapEnd()
 {
-	for(int i = 1; i <= MaxClients; i++)
+	for (int i = 1; i <= MaxClients; i++)
 		g_aDeathModel[i].Clear();
 }
 
@@ -132,16 +131,14 @@ void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
 void Event_BotPlayerReplace(Event event, char[] name, bool dontBroadcast)
 {
 	int player = GetClientOfUserId(event.GetInt("player"));
-	if(!player || !IsClientInGame(player) || GetClientTeam(player) != 2) 
+	if (!player || !IsClientInGame(player) || GetClientTeam(player) != 2) 
 		return;
 
 	int bot = GetClientOfUserId(event.GetInt("bot"));
-	if(bot)
-	{
-		if(!g_aDeathModel[bot].Length)
+	if (bot) {
+		if (!g_aDeathModel[bot].Length)
 			g_aDeathModel[player].Clear();
-		else
-		{
+		else {
 			delete g_aDeathModel[player];
 			g_aDeathModel[player] = g_aDeathModel[bot].Clone();
 		}
@@ -153,16 +150,14 @@ void Event_BotPlayerReplace(Event event, char[] name, bool dontBroadcast)
 void Event_PlayerBotReplace(Event event, char[] name, bool dontBroadcast)
 {
 	int bot = GetClientOfUserId(event.GetInt("bot"));
-	if(!bot || !IsClientInGame(bot) || GetClientTeam(bot) != 2)
+	if (!bot || !IsClientInGame(bot) || GetClientTeam(bot) != 2)
 		return;
 
 	int player = GetClientOfUserId(event.GetInt("player"));
-	if(player)
-	{
-		if(!g_aDeathModel[player].Length)
+	if (player) {
+		if (!g_aDeathModel[player].Length)
 			g_aDeathModel[bot].Clear();
-		else
-		{
+		else {
 			delete g_aDeathModel[bot];
 			g_aDeathModel[bot] = g_aDeathModel[player].Clone();
 		}
@@ -173,7 +168,7 @@ void Event_PlayerBotReplace(Event event, char[] name, bool dontBroadcast)
 
 public void OnEntityCreated(int entity, const char[] classname)
 {
-	if(classname[0] != 'w' || strcmp(classname[7], "defibrillator", false) != 0)
+	if (classname[0] != 'w' || strcmp(classname[7], "defibrillator", false) != 0)
 	 	return;
 
 	g_dDH_OnStartAction.HookEntity(Hook_Pre, entity, DH_CItemDefibrillator_OnStartAction_Pre);
@@ -190,10 +185,10 @@ MRESReturn DD_CSurvivorDeathModel_Create_Pre(int pThis)
 MRESReturn DD_CSurvivorDeathModel_Create_Post(int pThis, DHookReturn hReturn)
 {
 	int iDeathModel = hReturn.Value;
-	if(!iDeathModel)
+	if (!iDeathModel)
 		return MRES_Ignored;
 
-	if(!IsClientInGame(g_iTempClient))
+	if (!IsClientInGame(g_iTempClient))
 		return MRES_Ignored;
 
 	float vPos[3];
@@ -213,18 +208,16 @@ MRESReturn DD_CSurvivorDeathModel_Create_Post(int pThis, DHookReturn hReturn)
 MRESReturn DH_CItemDefibrillator_OnStartAction_Pre(DHookReturn hReturn, DHookParam hParams)
 {
 	int iDeathModel = hParams.Get(3);
-	if(!iDeathModel)
+	if (!iDeathModel)
 		return MRES_Ignored;
 
-	if(bIsAllSurvivorsAlive())
-	{
+	if (bIsAllSurvivorsAlive()) {
 		vRemoveAllDeathModel();
 		hReturn.Value = 0;
 		return MRES_Supercede;
 	}
 
-	if(!iFindDeathModelOwner(EntIndexToEntRef(iDeathModel)))
-	{
+	if (!iFindDeathModelOwner(EntIndexToEntRef(iDeathModel))) {
 		RemoveEntity(iDeathModel);
 		hReturn.Value = 0;
 		return MRES_Supercede;
@@ -236,18 +229,16 @@ MRESReturn DH_CItemDefibrillator_OnStartAction_Pre(DHookReturn hReturn, DHookPar
 MRESReturn DH_CItemDefibrillator_OnActionComplete_Pre(DHookReturn hReturn, DHookParam hParams)
 {
 	int iDeathModel = hParams.Get(2);
-	if(!iDeathModel)
+	if (!iDeathModel)
 		return MRES_Ignored;
 
-	if(bIsAllSurvivorsAlive())
-	{
+	if (bIsAllSurvivorsAlive()) {
 		vRemoveAllDeathModel();
 		hReturn.Value = 0;
 		return MRES_Supercede;
 	}
 
-	if(!iFindDeathModelOwner(EntIndexToEntRef(iDeathModel)))
-	{
+	if (!iFindDeathModelOwner(EntIndexToEntRef(iDeathModel))) {
 		RemoveEntity(iDeathModel);
 		hReturn.Value = 0;
 		return MRES_Supercede;
@@ -260,9 +251,9 @@ MRESReturn DH_CItemDefibrillator_OnActionComplete_Pre(DHookReturn hReturn, DHook
 
 MRESReturn DH_CItemDefibrillator_OnActionComplete_Post(DHookReturn hReturn, DHookParam hParams)
 {
-	if(bIsAllSurvivorsAlive())
+	if (bIsAllSurvivorsAlive())
 		vRemoveAllDeathModel();
-	else if(g_iOwner)
+	else if (g_iOwner)
 		vRemoveDeathModel(g_iOwner);
 
 	g_iOwner = 0;
@@ -273,12 +264,11 @@ MRESReturn DH_CItemDefibrillator_OnActionComplete_Post(DHookReturn hReturn, DHoo
 
 MRESReturn DD_CTerrorPlayer_GetPlayerByCharacter_Pre(DHookReturn hReturn, DHookParam hParams)
 {
-	if(!g_bOnActionComplete)
+	if (!g_bOnActionComplete)
 		return MRES_Ignored;
 
 	g_iOwner = iFindDeathModelOwner(EntIndexToEntRef(g_iDeathModel));
-	if(!g_iOwner)
-	{
+	if (!g_iOwner) {
 		hParams.Set(1, 8);
 		RemoveEntity(g_iDeathModel);
 		return MRES_ChangedHandled;
@@ -290,9 +280,8 @@ MRESReturn DD_CTerrorPlayer_GetPlayerByCharacter_Pre(DHookReturn hReturn, DHookP
 
 int iFindDeathModelOwner(int iDeathModelRef)
 {
-	for(int i = 1; i <= MaxClients; i++)
-	{
-		if(IsClientInGame(i) && GetClientTeam(i) == 2 && !IsPlayerAlive(i) && g_aDeathModel[i].FindValue(iDeathModelRef) != -1)
+	for (int i = 1; i <= MaxClients; i++) {
+		if (IsClientInGame(i) && GetClientTeam(i) == 2 && !IsPlayerAlive(i) && g_aDeathModel[i].FindValue(iDeathModelRef) != -1)
 			return i;
 	}
 	return 0;
@@ -302,9 +291,8 @@ void vRemoveDeathModel(int client)
 {
 	int iEntRef;
 	int iLength = g_aDeathModel[client].Length;
-	for(int i; i < iLength; i++)
-	{
-		if(EntRefToEntIndex((iEntRef = g_aDeathModel[client].Get(i))) != INVALID_ENT_REFERENCE)
+	for (int i; i < iLength; i++) {
+		if (EntRefToEntIndex((iEntRef = g_aDeathModel[client].Get(i))) != INVALID_ENT_REFERENCE)
 			RemoveEntity(iEntRef);
 	}
 
@@ -313,9 +301,8 @@ void vRemoveDeathModel(int client)
 
 bool bIsAllSurvivorsAlive()
 {
-	for(int i = 1; i <= MaxClients; i++)
-	{
-		if(IsClientInGame(i) && GetClientTeam(i) == 2 && !IsPlayerAlive(i))
+	for (int i = 1; i <= MaxClients; i++) {
+		if (IsClientInGame(i) && GetClientTeam(i) == 2 && !IsPlayerAlive(i))
 			return false;
 	}
 	return true;
@@ -324,9 +311,9 @@ bool bIsAllSurvivorsAlive()
 void vRemoveAllDeathModel()
 {
 	int entity = MaxClients + 1;
-	while((entity = FindEntityByClassname(entity, "survivor_death_model")) != INVALID_ENT_REFERENCE)
+	while ((entity = FindEntityByClassname(entity, "survivor_death_model")) != INVALID_ENT_REFERENCE)
 		RemoveEntity(entity);
 
-	for(entity = 1; entity <= MaxClients; entity++)
+	for (entity = 1; entity <= MaxClients; entity++)
 		g_aDeathModel[entity].Clear();
 }
