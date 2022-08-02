@@ -76,7 +76,7 @@ void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
 void Event_ChargerChargeStart(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientOfUserId(event.GetInt("userid"));
-	if(!client || !IsClientInGame(client) || !IsFakeClient(client))
+	if (!client || !IsClientInGame(client) || !IsFakeClient(client))
 		return;
 
 	int flags = GetEntityFlags(client);
@@ -87,31 +87,27 @@ void Event_ChargerChargeStart(Event event, const char[] name, bool dontBroadcast
 
 public Action OnPlayerRunCmd(int client, int &buttons)
 {
-	if(!IsClientInGame(client) || !IsFakeClient(client) || GetClientTeam(client) != 3 || !IsPlayerAlive(client) || GetEntProp(client, Prop_Send, "m_zombieClass") != 6 || GetEntProp(client, Prop_Send, "m_isGhost") == 1)
+	if (!IsClientInGame(client) || !IsFakeClient(client) || GetClientTeam(client) != 3 || !IsPlayerAlive(client) || GetEntProp(client, Prop_Send, "m_zombieClass") != 6 || GetEntProp(client, Prop_Send, "m_isGhost") == 1)
 		return Plugin_Continue;
 
 	static float fSurvivorProximity;
 	fSurvivorProximity = fNearestSurvivorDistance(client);
-	if(fSurvivorProximity > g_fChargeProximity && GetEntProp(client, Prop_Send, "m_iHealth") > g_iHealthThresholdCharger)
-	{
-		if(!g_bShouldCharge[client])
+	if (fSurvivorProximity > g_fChargeProximity && GetEntProp(client, Prop_Send, "m_iHealth") > g_iHealthThresholdCharger) {
+		if (!g_bShouldCharge[client])
 			vResetAbilityTime(client, 0.1);
 	}
 	else
 		g_bShouldCharge[client] = true;
 		
-	if(g_bShouldCharge[client] && -1.0 < fSurvivorProximity < 150.0 && bChargerCanCharge(client))
-	{
+	if (g_bShouldCharge[client] && -1.0 < fSurvivorProximity < 150.0 && bChargerCanCharge(client)) {
 		static int iTarget;
 		iTarget = GetClientAimTarget(client, true);
-		if(bIsAliveSurvivor(iTarget) && !bIsIncapacitated(iTarget))
-		{
+		if (bIsAliveSurvivor(iTarget) && !bIsIncapacitated(iTarget)) {
 			static float vPos[3];
 			static float vTarg[3];
 			GetClientAbsOrigin(client, vPos);
 			GetClientAbsOrigin(iTarget, vTarg);
-			if(GetVectorDistance(vPos, vTarg) < 150.0 && (buttons & IN_ATTACK2 || !bHitWall(client, iTarget)))
-			{
+			if (GetVectorDistance(vPos, vTarg) < 150.0 && (buttons & IN_ATTACK2 || !bHitWall(client, iTarget))) {
 				buttons |= IN_ATTACK;
 				buttons |= IN_ATTACK2;
 				return Plugin_Changed;
@@ -119,15 +115,13 @@ public Action OnPlayerRunCmd(int client, int &buttons)
 		}
 	}
 
-	if(g_bChargerBhop && 150.0 < fSurvivorProximity < 1000.0 && GetEntityFlags(client) & FL_ONGROUND && GetEntityMoveType(client) != MOVETYPE_LADDER && GetEntProp(client, Prop_Data, "m_nWaterLevel") < 2 && GetEntProp(client, Prop_Send, "m_hasVisibleThreats"))
-	{
+	if (g_bChargerBhop && 150.0 < fSurvivorProximity < 1000.0 && GetEntityFlags(client) & FL_ONGROUND && GetEntityMoveType(client) != MOVETYPE_LADDER && GetEntProp(client, Prop_Data, "m_nWaterLevel") < 2 && GetEntProp(client, Prop_Send, "m_hasVisibleThreats")) {
 		static float vVel[3];
 		GetEntPropVector(client, Prop_Data, "m_vecVelocity", vVel);
-		if(SquareRoot(Pow(vVel[0], 2.0) + Pow(vVel[1], 2.0)) > 150.0)
-		{
+		if (SquareRoot(Pow(vVel[0], 2.0) + Pow(vVel[1], 2.0)) > 150.0) {
 			static float vAng[3];
-			GetClientEyeAngles(client,  vAng);
-			if(bBhop(client, buttons,  vAng))
+			GetClientEyeAngles(client, vAng);
+			if (bBhop(client, buttons, vAng))
 				return Plugin_Changed;
 		}
 	}
@@ -140,15 +134,13 @@ bool bBhop(int client, int &buttons, float vAng[3])
 	static bool bJumped;
 	bJumped = false;
 
-	if(buttons & IN_FORWARD || buttons & IN_BACK)
-	{
+	if (buttons & IN_FORWARD || buttons & IN_BACK) {
 		GetAngleVectors(vAng, vAng, NULL_VECTOR, NULL_VECTOR);
-		if(bClientPush(client, buttons, vAng, buttons & IN_FORWARD ? 180.0 : -90.0))
+		if (bClientPush(client, buttons, vAng, buttons & IN_FORWARD ? 180.0 : -90.0))
 			bJumped = true;
 	}
 
-	if(buttons & IN_MOVELEFT || buttons & IN_MOVERIGHT)
-	{
+	if (buttons & IN_MOVELEFT || buttons & IN_MOVERIGHT) {
 		static float vPos[3];
 		static float vVec[3];
 		GetAngleVectors(vAng, NULL_VECTOR, vAng, NULL_VECTOR);
@@ -168,9 +160,8 @@ bool bBhop(int client, int &buttons, float vAng[3])
 
 		static Handle hTrace;
 		hTrace = TR_TraceHullFilterEx(vPos, vVec, vMins, vMaxs, MASK_PLAYERSOLID_BRUSHONLY, bTraceEntityFilter);
-		if(!TR_DidHit(hTrace))
-		{
-			if(bClientPush(client, buttons, vAng, buttons & IN_MOVELEFT ? -90.0 : 90.0))
+		if (!TR_DidHit(hTrace)) {
+			if (bClientPush(client, buttons, vAng, buttons & IN_MOVELEFT ? -90.0 : 90.0))
 				bJumped = true;
 		}
 
@@ -189,8 +180,7 @@ bool bClientPush(int client, int &buttons, float vVec[3], float fForce)
 	GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", vVel);
 	AddVectors(vVel, vVec, vVel);
 
-	if(bWontFall(client, vVel))
-	{
+	if (bWontFall(client, vVel)) {
 		buttons |= IN_DUCK;
 		buttons |= IN_JUMP;
 		TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, vVel);
@@ -223,19 +213,17 @@ bool bWontFall(int client, const float vVel[3])
 	hTrace = TR_TraceHullFilterEx(vPos, vEnd, vMins, vMaxs, MASK_PLAYERSOLID_BRUSHONLY, bTraceEntityFilter);
 	vEnd[2] -= OBSTACLE_HEIGHT;
 
-	if(TR_DidHit(hTrace))
-	{
+	if (TR_DidHit(hTrace)) {
 		bHit = true;
 		TR_GetEndPosition(vEndPos, hTrace);
-		if(GetVectorDistance(vPos, vEndPos) < 64.0)
-		{
+		if (GetVectorDistance(vPos, vEndPos) < 64.0) {
 			delete hTrace;
 			return false;
 		}
 	}
 	delete hTrace;
 	
-	if(!bHit)
+	if (!bHit)
 		vEndPos = vEnd;
 
 	static float vDown[3];
@@ -244,22 +232,18 @@ bool bWontFall(int client, const float vVel[3])
 	vDown[2] = vEndPos[2] - 100000.0;
 
 	hTrace = TR_TraceHullFilterEx(vEndPos, vDown, vMins, vMaxs, MASK_PLAYERSOLID_BRUSHONLY, bTraceEntityFilter);
-	if(TR_DidHit(hTrace))
-	{
+	if (TR_DidHit(hTrace)) {
 		TR_GetEndPosition(vEnd, hTrace);
-		if(vEndPos[2] - vEnd[2] > 120.0)
-		{
+		if (vEndPos[2] - vEnd[2] > 120.0) {
 			delete hTrace;
 			return false;
 		}
 
 		static int entity;
-		if((entity = TR_GetEntityIndex(hTrace)) > MaxClients)
-		{
+		if ((entity = TR_GetEntityIndex(hTrace)) > MaxClients) {
 			static char classname[13];
 			GetEdictClassname(entity, classname, sizeof(classname));
-			if(strcmp(classname, "trigger_hurt") == 0)
-			{
+			if (strcmp(classname, "trigger_hurt") == 0) {
 				delete hTrace;
 				return false;
 			}
@@ -274,12 +258,12 @@ bool bWontFall(int client, const float vVel[3])
 
 bool bTraceEntityFilter(int entity, int contentsMask)
 {
-	if(entity <= MaxClients)
+	if (entity <= MaxClients)
 		return false;
 
 	static char classname[9];
 	GetEntityClassname(entity, classname, sizeof classname);
-	if((classname[0] == 'i' && strcmp(classname[1], "nfected") == 0) || (classname[0] == 'w' && strcmp(classname[1], "itch") == 0))
+	if ((classname[0] == 'i' && strcmp(classname[1], "nfected") == 0) || (classname[0] == 'w' && strcmp(classname[1], "itch") == 0))
 		return false;
 
 	return true;
@@ -296,16 +280,14 @@ float fNearestSurvivorDistance(int client)
 	iCount = 0;
 	GetClientAbsOrigin(client, vPos);
 
-	for(i = 1; i <= MaxClients; i++)
-	{
-		if(i != client && IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i))
-		{
+	for (i = 1; i <= MaxClients; i++) {
+		if (i != client && IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i)) {
 			GetClientAbsOrigin(i, vTarg);
 			fDists[iCount++] = GetVectorDistance(vPos, vTarg);
 		}
 	}
 
-	if(iCount == 0)
+	if (!iCount)
 		return -1.0;
 
 	SortFloats(fDists, iCount, Sort_Ascending);
@@ -318,8 +300,8 @@ bool bHitWall(int client, int iTarget)
 	static float vTarg[3];
 	GetClientAbsOrigin(client, vPos);
 	GetClientAbsOrigin(iTarget, vTarg);
-	vPos[2] += 20.0;
-	vTarg[2] += 20.0;
+	vPos[2] += 10.0;
+	vTarg[2] += 10.0;
 
 	static bool bHit;
 	static Handle hTrace;
@@ -331,7 +313,7 @@ bool bHitWall(int client, int iTarget)
 
 bool bChargerCanCharge(int client)
 {
-	if(GetEntPropEnt(client, Prop_Send, "m_pummelVictim") > 0 || GetEntPropEnt(client, Prop_Send, "m_carryVictim") > 0)
+	if (GetEntPropEnt(client, Prop_Send, "m_pummelVictim") > 0 || GetEntPropEnt(client, Prop_Send, "m_carryVictim") > 0)
 		return false;
 
 	static int iAbility;
@@ -343,7 +325,7 @@ void vResetAbilityTime(int client, float fTime)
 {
 	static int iAbility;
 	iAbility = GetEntPropEnt(client, Prop_Send, "m_customAbility");
-	if(iAbility != -1)
+	if (iAbility != -1)
 		SetEntPropFloat(iAbility, Prop_Send, "m_timestamp", GetGameTime() + fTime);	
 }
 
@@ -353,10 +335,10 @@ void vCharger_OnCharge(int client)
 {
 	static int iTarget;
 	iTarget = GetClientAimTarget(client, true);
-	if(!bIsAliveSurvivor(iTarget) || bIsIncapacitated(iTarget) || bIsPinned(iTarget) || bHitWall(client, iTarget) || bWithinViewAngle(client, iTarget, g_fAimOffsetSensitivityCharger))
+	if (!bIsAliveSurvivor(iTarget) || bIsIncapacitated(iTarget) || bIsPinned(iTarget) || bHitWall(client, iTarget) || bWithinViewAngle(client, iTarget, g_fAimOffsetSensitivityCharger))
 		iTarget = iGetClosestSurvivor(client, iTarget, g_fChargeStartSpeed);
 
-	if(iTarget == -1)
+	if (iTarget == -1)
 		return;
 
 	static float vVelocity[3];
@@ -372,11 +354,10 @@ void vCharger_OnCharge(int client)
 	GetClientAbsOrigin(iTarget, vTarg);
 
 	float fHeight = vTarg[2] - vPos[2];
-	if(fHeight > PLAYER_HEIGHT)
+	if (fHeight > PLAYER_HEIGHT)
 		vLength += fHeight;
 	
-	if(GetEntityFlags(client) & FL_ONGROUND == 0)
-	{
+	if (GetEntityFlags(client) & FL_ONGROUND == 0) {
 		vTarg[2] += bIsGettingUp(iTarget) ? 10.0 : CROUCHING_EYE;
 
 		vLength += g_fChargeStartSpeed;
@@ -404,15 +385,15 @@ bool bIsIncapacitated(int client)
 
 bool bIsPinned(int client)
 {
-	if(GetEntPropEnt(client, Prop_Send, "m_pummelAttacker") > 0)
+	if (GetEntPropEnt(client, Prop_Send, "m_pummelAttacker") > 0)
 		return true;
-	if(GetEntPropEnt(client, Prop_Send, "m_carryAttacker") > 0)
+	if (GetEntPropEnt(client, Prop_Send, "m_carryAttacker") > 0)
 		return true;
-	if(GetEntPropEnt(client, Prop_Send, "m_pounceAttacker") > 0)
+	if (GetEntPropEnt(client, Prop_Send, "m_pounceAttacker") > 0)
 		return true;
-	/*if(GetEntPropEnt(client, Prop_Send, "m_jockeyAttacker") > 0)
+	/*if (GetEntPropEnt(client, Prop_Send, "m_jockeyAttacker") > 0)
 		return true;
-	if(GetEntPropEnt(client, Prop_Send, "m_tongueOwner") > 0)
+	if (GetEntPropEnt(client, Prop_Send, "m_tongueOwner") > 0)
 		return true;*/
 	return false;
 }
@@ -432,21 +413,18 @@ int iGetClosestSurvivor(int client, int iExclude = -1, float fDistance)
 	GetClientEyePosition(client, vSrc);
 	iCount = GetClientsInRange(vSrc, RangeType_Visibility, iTargets, MAXPLAYERS);
 
-	if(iCount == 0)
+	if (!iCount)
 		return -1;
 
 	static ArrayList aClients;
 	aClients = new ArrayList(3);
 
 	float fFOV = GetFOVDotProduct(g_fAimOffsetSensitivityCharger);
-	for(i = 0; i < iCount; i++)
-	{
-		if(iTargets[i] && iTargets[i] != iExclude && GetClientTeam(iTargets[i]) == 2 && IsPlayerAlive(iTargets[i]) && !bIsIncapacitated(iTargets[i]) && !bIsPinned(iTargets[i]) && !bHitWall(client, iTargets[i]))
-		{
+	for (i = 0; i < iCount; i++) {
+		if (iTargets[i] && iTargets[i] != iExclude && GetClientTeam(iTargets[i]) == 2 && IsPlayerAlive(iTargets[i]) && !bIsIncapacitated(iTargets[i]) && !bIsPinned(iTargets[i]) && !bHitWall(client, iTargets[i])) {
 			GetClientEyePosition(iTargets[i], vTarg);
 			fDist = GetVectorDistance(vSrc, vTarg);
-			if(fDist < fDistance)
-			{
+			if (fDist < fDistance) {
 				iIndex = aClients.Push(fDist);
 				aClients.Set(iIndex, iTargets[i], 1);
 
@@ -456,8 +434,7 @@ int iGetClosestSurvivor(int client, int iExclude = -1, float fDistance)
 		}
 	}
 
-	if(aClients.Length == 0)
-	{
+	if (!aClients.Length) {
 		delete aClients;
 		return -1;
 	}
@@ -537,76 +514,57 @@ static bool bIsGettingUp(int client)
 {
 	static char sModel[31];
 	GetEntPropString(client, Prop_Data, "m_ModelName", sModel, sizeof sModel);
-	switch(sModel[29])
-	{
-		case 'b'://nick
-		{
-			switch(GetEntProp(client, Prop_Send, "m_nSequence"))
-			{
+	switch (sModel[29]) {
+		case 'b': {//nick
+			switch (GetEntProp(client, Prop_Send, "m_nSequence")) {
 				case 680, 667, 671, 672, 630, 620, 627:
 					return true;
 			}
 		}
-		case 'd'://rochelle
-		{
-			switch(GetEntProp(client, Prop_Send, "m_nSequence"))
-			{
+		case 'd': {//rochelle
+			switch (GetEntProp(client, Prop_Send, "m_nSequence")) {
 				case 687, 679, 678, 674, 638, 635, 629:
 					return true;
 			}
 		}
-		case 'c'://coach
-		{
-			switch(GetEntProp(client, Prop_Send, "m_nSequence"))
-			{
+		case 'c': {//coach
+			switch (GetEntProp(client, Prop_Send, "m_nSequence")) {
 				case 669, 661, 660, 656, 630, 627, 621:
 					return true;
 			}
 		}
-		case 'h'://ellis
-		{
-			switch(GetEntProp(client, Prop_Send, "m_nSequence"))
-			{
+		case 'h': {//ellis
+			switch (GetEntProp(client, Prop_Send, "m_nSequence")) {
 				case 684, 676, 675, 671, 625, 635, 632:
 					return true;
 			}
 		}
-		case 'v'://bill
-		{
-			switch(GetEntProp(client, Prop_Send, "m_nSequence"))
-			{
+		case 'v': {//bill
+			switch (GetEntProp(client, Prop_Send, "m_nSequence")) {
 				case 772, 764, 763, 759, 538, 535, 528:
 					return true;
 			}
 		}
-		case 'n'://zoey
-		{
-			switch(GetEntProp(client, Prop_Send, "m_nSequence"))
-			{
+		case 'n': {//zoey
+			switch (GetEntProp(client, Prop_Send, "m_nSequence")) {
 				case 824, 823, 819, 809, 547, 544, 537:
 					return true;
 			}
 		}
-		case 'e'://francis
-		{
-			switch(GetEntProp(client, Prop_Send, "m_nSequence"))
-			{
+		case 'e': {//francis
+			switch (GetEntProp(client, Prop_Send, "m_nSequence")) {
 				case 775, 767, 766, 762, 541, 539, 531:
 					return true;
 			}
 		}
-		case 'a'://louis
-		{
-			switch(GetEntProp(client, Prop_Send, "m_nSequence"))
-			{
+		case 'a': {//louis
+			switch (GetEntProp(client, Prop_Send, "m_nSequence")) {
 				case 772, 764, 763, 759, 538, 535, 528:
 					return true;
 			}
 		}
-		case 'w'://adawong
-		{
-			switch(GetEntProp(client, Prop_Send, "m_nSequence"))
-			{
+		case 'w': {//adawong
+			switch (GetEntProp(client, Prop_Send, "m_nSequence")) {
 				case 687, 679, 678, 674, 638, 635, 629:
 					return true;
 			}

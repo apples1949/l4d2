@@ -42,20 +42,17 @@ void vGetCvars()
 
 public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3], float angles[3])
 {
-	if(!g_bSpitterBhop)
+	if (!g_bSpitterBhop)
 		return Plugin_Continue;
 
-	if(!IsClientInGame(client) || !IsFakeClient(client) || GetClientTeam(client) != 3 || !IsPlayerAlive(client) || GetEntProp(client, Prop_Send, "m_zombieClass") != 4 || GetEntProp(client, Prop_Send, "m_isGhost") == 1)
+	if (!IsClientInGame(client) || !IsFakeClient(client) || GetClientTeam(client) != 3 || !IsPlayerAlive(client) || GetEntProp(client, Prop_Send, "m_zombieClass") != 4 || GetEntProp(client, Prop_Send, "m_isGhost") == 1)
 		return Plugin_Continue;
 
-	if(GetEntityFlags(client) & FL_ONGROUND && GetEntityMoveType(client) != MOVETYPE_LADDER && GetEntProp(client, Prop_Data, "m_nWaterLevel") < 2 && GetEntProp(client, Prop_Send, "m_hasVisibleThreats"))
-	{
+	if (GetEntityFlags(client) & FL_ONGROUND && GetEntityMoveType(client) != MOVETYPE_LADDER && GetEntProp(client, Prop_Data, "m_nWaterLevel") < 2 && GetEntProp(client, Prop_Send, "m_hasVisibleThreats")) {
 		static float vVel[3];
 		GetEntPropVector(client, Prop_Data, "m_vecVelocity", vVel);
-		if(SquareRoot(Pow(vVel[0], 2.0) + Pow(vVel[1], 2.0)) > 150.0)
-		{
-			if(150.0 < fNearestSurvivorDistance(client) < 1000.0)
-			{
+		if (SquareRoot(Pow(vVel[0], 2.0) + Pow(vVel[1], 2.0)) > 150.0) {
+			if (150.0 < fNearestSurvivorDistance(client) < 1000.0) {
 				buttons |= IN_DUCK;
 				buttons |= IN_JUMP;
 				
@@ -72,23 +69,20 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 
 void vBhop(int client, int &buttons, float vAng[3])
 {
-	if(buttons & IN_FORWARD)
+	if (buttons & IN_FORWARD)
 		vClient_Push(client, vAng, 120.0);
 		
-	if(buttons & IN_BACK)
-	{
+	if (buttons & IN_BACK) {
 		vAng[1] += 180.0;
 		vClient_Push(client, vAng, 60.0);
 	}
 	
-	if(buttons & IN_MOVELEFT)
-	{
+	if (buttons & IN_MOVELEFT) {
 		vAng[1] += 90.0;
 		vClient_Push(client, vAng, 60.0);
 	}
 
-	if(buttons & IN_MOVERIGHT)
-	{
+	if (buttons & IN_MOVERIGHT) {
 		vAng[1] -= 90.0;
 		vClient_Push(client, vAng, 60.0);
 	}
@@ -118,16 +112,14 @@ float fNearestSurvivorDistance(int client)
 	iCount = 0;
 	GetClientAbsOrigin(client, vPos);
 
-	for(i = 1; i <= MaxClients; i++)
-	{
-		if(i != client && IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i))
-		{
+	for (i = 1; i <= MaxClients; i++) {
+		if (i != client && IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i)) {
 			GetClientAbsOrigin(i, vTarg);
 			fDists[iCount++] = GetVectorDistance(vPos, vTarg);
 		}
 	}
 
-	if(iCount == 0)
+	if (!iCount)
 		return -1.0;
 
 	SortFloats(fDists, iCount, Sort_Ascending);

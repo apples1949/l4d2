@@ -101,13 +101,13 @@ void vGetCvars()
 
 public void OnMapEnd()
 {
-	for(int i = 1; i <= MaxClients; i++)
+	for (int i = 1; i <= MaxClients; i++)
 		g_fCanLungeTime[i] = 0.0;
 }
 
 void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
 {
-	for(int i = 1; i <= MaxClients; i++)
+	for (int i = 1; i <= MaxClients; i++)
 		g_fCanLungeTime[i] = 0.0;
 }
 
@@ -121,38 +121,34 @@ void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
 void Event_AbilityUse(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientOfUserId(event.GetInt("userid"));
-	if(!client || !IsClientInGame(client) || !IsFakeClient(client) || GetClientTeam(client) != 3 || !IsPlayerAlive(client) || GetEntProp(client, Prop_Send, "m_zombieClass") != 3 || GetEntProp(client, Prop_Send, "m_isGhost") == 1)
+	if (!client || !IsClientInGame(client) || !IsFakeClient(client) || GetClientTeam(client) != 3 || !IsPlayerAlive(client) || GetEntProp(client, Prop_Send, "m_zombieClass") != 3 || GetEntProp(client, Prop_Send, "m_isGhost") == 1)
 		return;
 	
 	static char sAbility[16];
 	event.GetString("ability", sAbility, sizeof(sAbility));
-	if(strcmp(sAbility, "ability_lunge") == 0)
+	if (strcmp(sAbility, "ability_lunge") == 0)
 		vHunter_OnPounce(GetClientOfUserId(event.GetInt("userid")));
 }
 
 public Action OnPlayerRunCmd(int client, int &buttons)
 {
-	if(!IsClientInGame(client) || !IsFakeClient(client) || GetClientTeam(client) != 3 || !IsPlayerAlive(client) || GetEntProp(client, Prop_Send, "m_zombieClass") != 3 || GetEntProp(client, Prop_Send, "m_isGhost") == 1)
+	if (!IsClientInGame(client) || !IsFakeClient(client) || GetClientTeam(client) != 3 || !IsPlayerAlive(client) || GetEntProp(client, Prop_Send, "m_zombieClass") != 3 || GetEntProp(client, Prop_Send, "m_isGhost") == 1)
 		return Plugin_Continue;
 
-	buttons &= ~IN_ATTACK2;
+	//buttons &= ~IN_ATTACK2;
 	
 	static int flags;
 	flags = GetEntityFlags(client);
-	if(flags & FL_DUCKING && flags & FL_ONGROUND && GetEntProp(client, Prop_Send, "m_hasVisibleThreats"))
-	{
+	if (flags & FL_DUCKING && flags & FL_ONGROUND && GetEntProp(client, Prop_Send, "m_hasVisibleThreats")) {
 		static float vPos[3];
 		GetClientAbsOrigin(client, vPos);
-		if(fNearestSurvivorDistance(client, vPos) < g_fFastPounceProximity)
-		{
+		if (fNearestSurvivorDistance(client, vPos) < g_fFastPounceProximity) {
 			buttons &= ~IN_ATTACK;			
-			if(!g_bHasQueuedLunge[client])
-			{
+			if (!g_bHasQueuedLunge[client]) {
 				g_bHasQueuedLunge[client] = true;
 				g_fCanLungeTime[client] = GetGameTime() + g_fLungeInterval;
 			}
-			else if(g_fCanLungeTime[client] < GetGameTime())
-			{
+			else if (g_fCanLungeTime[client] < GetGameTime()) {
 				buttons |= IN_ATTACK;
 				g_bHasQueuedLunge[client] = false;
 			}
@@ -171,16 +167,14 @@ float fNearestSurvivorDistance(int client, const float vOrigin[3])
 
 	iCount = 0;
 
-	for(i = 1; i <= MaxClients; i++)
-	{
-		if(i != client && IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i))
-		{
+	for (i = 1; i <= MaxClients; i++) {
+		if (i != client && IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i)) {
 			GetClientAbsOrigin(i, vTarg);
 			fDistance[iCount++] = GetVectorDistance(vOrigin, vTarg);
 		}
 	}
 
-	if(iCount == 0)
+	if (!iCount)
 		return -1.0;
 
 	SortFloats(fDistance, iCount, Sort_Ascending);
@@ -194,24 +188,21 @@ bool bIsBotHunter(int client)
 
 void vHunter_OnPounce(int client)
 {	
-	if(!bIsBotHunter(client))
+	if (!bIsBotHunter(client))
 		return;
 
 	static int iLunge;
 	static float vPos[3];
 	GetClientAbsOrigin(client, vPos);
-	if(g_fWallDetectionDistance > 0.0 && bHitWall(client, vPos))
-	{
+	if (g_fWallDetectionDistance > 0.0 && bHitWall(client, vPos)) {
 		iLunge = GetEntPropEnt(client, Prop_Send, "m_customAbility");
-		if(GetRandomInt(0, 1))
+		if (GetRandomInt(0, 1))
 			vAngleLunge(iLunge, 45.0);
 		else
 			vAngleLunge(iLunge, 315.0);
 	}
-	else
-	{	
-		if(bIsBeingWatched(client, g_fAimOffsetSensitivityHunter) && fNearestSurvivorDistance(client, vPos) > g_fStraightPounceProximity)
-		{
+	else {	
+		if (bIsBeingWatched(client, g_fAimOffsetSensitivityHunter) && fNearestSurvivorDistance(client, vPos) > g_fStraightPounceProximity) {
 			iLunge = GetEntPropEnt(client, Prop_Send, "m_customAbility");
 			vAngleLunge(iLunge, fGaussianRNG(g_fPounceAngleMean, g_fPounceAngleStd));
 			vLimitLungeVerticality(iLunge);				
@@ -234,14 +225,12 @@ bool bHitWall(int client, float vStart[3])
 
 	static Handle hTrace;
 	hTrace = TR_TraceHullFilterEx(vStart, vEnd, view_as<float>({-16.0, -16.0, 0.0}), view_as<float>({16.0, 16.0, 36.0}), MASK_PLAYERSOLID_BRUSHONLY, bTraceEntityFilter);
-	if(TR_DidHit(hTrace))
-	{
+	if (TR_DidHit(hTrace)) {
 		static float vPlane[3];
 		TR_GetPlaneNormal(hTrace, vPlane);
 		NegateVector(vPlane);
 		NormalizeVector(vPlane, vPlane);
-		if(RadToDeg(ArcCosine(GetVectorDotProduct(vAng, vPlane))) < 30.0)
-		{
+		if (RadToDeg(ArcCosine(GetVectorDotProduct(vAng, vPlane))) < 30.0) {
 			delete hTrace;
 			return true;
 		}
@@ -252,12 +241,12 @@ bool bHitWall(int client, float vStart[3])
 
 bool bTraceEntityFilter(int entity, int contentsMask)
 {
-	if(entity <= MaxClients)
+	if (entity <= MaxClients)
 		return false;
 
 	static char classname[9];
 	GetEntityClassname(entity, classname, sizeof classname);
-	if((classname[0] == 'i' && strcmp(classname[1], "nfected") == 0) || (classname[0] == 'w' && strcmp(classname[1], "itch") == 0))
+	if ((classname[0] == 'i' && strcmp(classname[1], "nfected") == 0) || (classname[0] == 'w' && strcmp(classname[1], "itch") == 0))
 		return false;
 
 	return true;
@@ -266,7 +255,7 @@ bool bTraceEntityFilter(int entity, int contentsMask)
 bool bIsBeingWatched(int client, float fOffsetThreshold)
 {
 	static int iTarget;
-	if(bIsAliveSurvivor((iTarget = GetClientAimTarget(client))) && fGetPlayerAimOffset(client, iTarget) > fOffsetThreshold)
+	if (bIsAliveSurvivor((iTarget = GetClientAimTarget(client))) && fGetPlayerAimOffset(client, iTarget) > fOffsetThreshold)
 		return false;
 
 	return true;
@@ -335,12 +324,11 @@ float fGaussianRNG(float fMean, float fStd)
 	static float fX2;
 	static float fW;
 
-	do
-	{
+	do {
 		fX1 = 2.0 * GetRandomFloat(0.0, 1.0) - 1.0;
 		fX2 = 2.0 * GetRandomFloat(0.0, 1.0) - 1.0;
 		fW = Pow(fX1, 2.0) + Pow(fX2, 2.0);
-	}while(fW >= 1.0);
+	}while (fW >= 1.0);
 	
 	static float e = 2.71828;
 	fW = SquareRoot(-2.0 * (Logarithm(fW, e) / fW));

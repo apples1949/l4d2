@@ -67,13 +67,13 @@ void vGetCvars()
 
 public void OnMapEnd()
 {
-	for(int i = 1; i <= MaxClients; i++)
+	for (int i = 1; i <= MaxClients; i++)
 		g_fLeapAgainTime[i] = 0.0;
 }
 
 void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
 {
-	for(int i = 1; i <= MaxClients; i++)
+	for (int i = 1; i <= MaxClients; i++)
 		g_fLeapAgainTime[i] = 0.0;
 }
 
@@ -85,7 +85,7 @@ void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
 void Event_PlayerShoved(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientOfUserId(event.GetInt("userid"));
-	if(bIsBotJockey(client))
+	if (bIsBotJockey(client))
 		g_fLeapAgainTime[client] = GetGameTime() + g_fJockeyLeapAgain;
 }
 
@@ -96,15 +96,15 @@ bool bIsBotJockey(int client)
 
 void Event_JockeyRide(Event event, const char[] name, bool dontBroadcast)
 {	
-	if(g_fJockeyStumbleRadius <= 0.0 || !L4D_IsCoopMode())
+	if (g_fJockeyStumbleRadius <= 0.0 || !L4D_IsCoopMode())
 		return;
 
 	int attacker = GetClientOfUserId(event.GetInt("userid"));
-	if(attacker == 0 || !IsClientInGame(attacker))
+	if (!attacker || !IsClientInGame(attacker))
 		return;
 
 	int victim = GetClientOfUserId(event.GetInt("victim"));
-	if(victim == 0 || !IsClientInGame(victim))
+	if (!victim || !IsClientInGame(victim))
 		return;
 	
 	vStumbleByStanders(victim, attacker);
@@ -117,15 +117,13 @@ void vStumbleByStanders(int iPinnedSurvivor, int iPinner)
 	static float vDir[3];
 
 	GetClientAbsOrigin(iPinnedSurvivor, vPos);
-	for(i = 1; i <= MaxClients; i++)
-	{
-		if(i == iPinnedSurvivor || i == iPinner || !IsClientInGame(i) || GetClientTeam(i) != 2 || !IsPlayerAlive(i) || bIsPinned(i))
+	for (i = 1; i <= MaxClients; i++) {
+		if (i == iPinnedSurvivor || i == iPinner || !IsClientInGame(i) || GetClientTeam(i) != 2 || !IsPlayerAlive(i) || bIsPinned(i))
 			continue;
 		
 		GetClientAbsOrigin(i, vDir);
 		MakeVectorFromPoints(vPos, vDir, vDir);
-		if(GetVectorLength(vDir) <= g_fJockeyStumbleRadius)
-		{
+		if (GetVectorLength(vDir) <= g_fJockeyStumbleRadius) {
 			NormalizeVector(vDir, vDir);
 			L4D_StaggerPlayer(i, iPinnedSurvivor, vDir);
 		}
@@ -134,15 +132,15 @@ void vStumbleByStanders(int iPinnedSurvivor, int iPinner)
 
 bool bIsPinned(int client)
 {
-	if(GetEntPropEnt(client, Prop_Send, "m_pummelAttacker") > 0)
+	if (GetEntPropEnt(client, Prop_Send, "m_pummelAttacker") > 0)
 		return true;
-	if(GetEntPropEnt(client, Prop_Send, "m_carryAttacker") > 0)
+	if (GetEntPropEnt(client, Prop_Send, "m_carryAttacker") > 0)
 		return true;
-	if(GetEntPropEnt(client, Prop_Send, "m_pounceAttacker") > 0)
+	if (GetEntPropEnt(client, Prop_Send, "m_pounceAttacker") > 0)
 		return true;
-	if(GetEntPropEnt(client, Prop_Send, "m_jockeyAttacker") > 0)
+	if (GetEntPropEnt(client, Prop_Send, "m_jockeyAttacker") > 0)
 		return true;
-	if(GetEntPropEnt(client, Prop_Send, "m_tongueOwner") > 0)
+	if (GetEntPropEnt(client, Prop_Send, "m_tongueOwner") > 0)
 		return true;
 	return false;
 }
@@ -150,29 +148,25 @@ bool bIsPinned(int client)
 public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3], float angles[3])
 {
 	
-	if(!IsClientInGame(client) || !IsFakeClient(client) || GetClientTeam(client) != 3 || !IsPlayerAlive(client) || GetEntProp(client, Prop_Send, "m_zombieClass") != 5 || GetEntProp(client, Prop_Send, "m_isGhost") == 1 || !GetEntProp(client, Prop_Send, "m_hasVisibleThreats"))
+	if (!IsClientInGame(client) || !IsFakeClient(client) || GetClientTeam(client) != 3 || !IsPlayerAlive(client) || GetEntProp(client, Prop_Send, "m_zombieClass") != 5 || GetEntProp(client, Prop_Send, "m_isGhost") == 1 || !GetEntProp(client, Prop_Send, "m_hasVisibleThreats"))
 		return Plugin_Continue;
 
 	static float fSurvivorProximity;
 	fSurvivorProximity = fNearestSurvivorDistance(client);
-	if(fSurvivorProximity > g_fHopActivationProximity)
+	if (fSurvivorProximity > g_fHopActivationProximity)
 		return Plugin_Continue;
 
-	if(GetEntityFlags(client) & FL_ONGROUND)
-	{
+	if (GetEntityFlags(client) & FL_ONGROUND) {
 		static float vAng[3];
 
-		if(g_bDoNormalJump[client])
-		{
-			if(buttons & IN_FORWARD)
-			{
+		if (g_bDoNormalJump[client]) {
+			if (buttons & IN_FORWARD) {
 				vAng = angles;
 				vAng[0] = GetRandomFloat(-10.0, 0.0);
 				TeleportEntity(client, NULL_VECTOR, vAng, NULL_VECTOR);
 			}
 			buttons |= IN_JUMP;
-			switch(GetRandomInt(0, 2))
-			{
+			switch (GetRandomInt(0, 2)) {
 				case 0:
 					buttons |= IN_DUCK;
 	
@@ -181,16 +175,29 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 			}
 			g_bDoNormalJump[client] = false;
 		}
-		else
-		{
+		else {
 			static float fGameTime;
-			if(g_fLeapAgainTime[client] < (fGameTime = GetGameTime()))
-			{
-				if(fSurvivorProximity < g_fJockeyLeapRange && bWithinViewAngle(client, 45.0))
-				{
-					vAng = angles;
-					vAng[0] = GetRandomFloat(-50.0, -10.0);
-					TeleportEntity(client, NULL_VECTOR, vAng, NULL_VECTOR);
+			if (g_fLeapAgainTime[client] < (fGameTime = GetGameTime())) {
+				if (fSurvivorProximity < g_fJockeyLeapRange) {
+					switch (GetRandomInt(0, 10)) {
+						case 0:
+							buttons |= IN_FORWARD;
+	
+						case 1, 5, 7:
+							buttons |= IN_BACK;
+
+						case 2:
+							buttons |= IN_MOVELEFT;
+
+						case 3:
+							buttons |= IN_MOVERIGHT;
+					}
+
+					if (GetRandomInt(0, 1) && bWithinViewAngle(client, 45.0)) {
+						vAng = angles;
+						vAng[0] = GetRandomFloat(-50.0, -10.0);
+						TeleportEntity(client, NULL_VECTOR, vAng, NULL_VECTOR);
+					}
 				}
 				buttons |= IN_ATTACK;
 				g_bDoNormalJump[client] = true;
@@ -198,8 +205,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 			}
 		}
 	}
-	else
-	{
+	else {
 		buttons &= ~IN_JUMP;
 		buttons &= ~IN_ATTACK;
 	}
@@ -223,16 +229,14 @@ float fNearestSurvivorDistance(int client)
 	iCount = 0;
 	GetClientAbsOrigin(client, vPos);
 
-	for(i = 1; i <= MaxClients; i++)
-	{
-		if(i != client && IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i))
-		{
+	for (i = 1; i <= MaxClients; i++) {
+		if (i != client && IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i)) {
 			GetClientAbsOrigin(i, vTarg);
 			fDists[iCount++] = GetVectorDistance(vPos, vTarg);
 		}
 	}
 
-	if(iCount == 0)
+	if (iCount == 0)
 		return -1.0;
 
 	SortFloats(fDists, iCount, Sort_Ascending);
@@ -243,7 +247,7 @@ bool bWithinViewAngle(int client, float fOffsetThreshold)
 {
 	static int iTarget;
 	iTarget = GetClientAimTarget(client);
-	if(!bIsAliveSurvivor(iTarget))
+	if (!bIsAliveSurvivor(iTarget))
 		return true;
 	
 	static float vSrc[3];
