@@ -249,6 +249,7 @@ bool
 	g_bGlowColorEnable,
 	g_bPZPunishHealth,
 	g_bScaleWeights,
+	g_bOnPassPlayerTank,
 	g_bOnMaterializeFromGhost,
 	g_bIsSpawnablePZSupported,
 	g_bHasAnySurvivorLeftSafeArea;
@@ -259,6 +260,7 @@ int
 	g_iRoundStart,
 	g_iPlayerSpawn,
 	g_iSpawnablePZ,
+	g_iPassTankBot,
 	g_iOff_m_hHiddenWeapon,
 	g_iOff_m_preHangingHealth,
 	g_iOff_m_preHangingHealthBuffer,
@@ -315,7 +317,7 @@ public Plugin myinfo =
 	name = "Control Zombies In Co-op",
 	author = "sorallll",
 	description = "",
-	version = "3.4.1",
+	version = "3.4.2",
 	url = "https://steamcommunity.com/id/sorallll"
 }
 
@@ -358,6 +360,7 @@ any aNative_IsSpawnablePZSupported(Handle plugin, int numParams)
 public void OnPluginStart()
 {
 	vInitGameData();
+	LoadTranslations("common.phrases");
 
 	g_hMaxTankPlayer = 				CreateConVar("cz_max_tank_player", 					"1", 					"坦克玩家达到多少后插件将不再控制玩家接管(0=不接管坦克)", CVAR_FLAGS, true, 0.0);
 	g_hSurvuivorLimit = 			CreateConVar("cz_allow_survivor_limit", 			"1", 					"至少有多少名正常生还者(未被控,未倒地,未死亡)时,才允许玩家接管坦克", CVAR_FLAGS, true, 0.0);
@@ -444,7 +447,8 @@ public void OnPluginStart()
 	RegConsoleCmd("sm_team3", cmdTeam3, "切换到Team 3.");
 	//RegConsoleCmd("sm_bp", cmdPB, "叛变为坦克.");
 	RegConsoleCmd("sm_pb", cmdPB, "提前叛变.");
-	RegConsoleCmd("sm_tt", cmdTakeTank, "接管坦克.");
+	RegConsoleCmd("sm_pt", cmdPassTank, "转交坦克.");
+	RegConsoleCmd("sm_tt", cmdTakeOverTank, "接管坦克.");
 	RegConsoleCmd("sm_class", cmdChangeClass, "更改特感类型.");
 
 	if (g_bLateLoad) {
@@ -839,7 +843,175 @@ Action cmdPB(int client, int args)
 	return Plugin_Handled;
 }
 
-Action cmdTakeTank(int client, int args)
+Action cmdPassTank(int client, int args)
+{
+	if (g_iControlled == 1) {
+		//ReplyToCommand(client, "仅支持战役模式");
+		//return Plugin_Handled;
+	}
+
+	if (!bIsRoundStarted()) {
+		//ReplyToCommand(client, "回合尚未开始");
+		return Plugin_Handled;
+	}
+
+	if (!client || !IsClientInGame(client) || IsFakeClient(client) || GetClientTeam(client) != 3 || !IsPlayerAlive(client) || GetEntProp(client, Prop_Send, "m_zombieClass") != 8)
+		return Plugin_Handled;
+
+	if (args) {
+		char arg[32];
+		GetCmdArg(1, arg, sizeof arg);
+		char target_name[MAX_TARGET_LENGTH];
+		int target_list[MAXPLAYERS], target_count;
+		bool tn_is_ml;
+		if ((target_count = ProcessTargetString(arg, client, target_list, MAXPLAYERS, COMMAND_FILTER_ALIVE, target_name, sizeof target_name, tn_is_ml)) <= 0) {
+			ReplyToTargetError(client, target_count);
+			return Plugin_Handled;
+		}
+
+		if (IsFakeClient(target_list[0]) && GetClientTeam(target_list[0]) == 3 && GetEntProp(target_list[0], Prop_Send, "m_zombieClass") == 8)
+			vOfferTankMenu(client, target_list[0]);
+	}
+	else 
+		vPassTankMenu(client);
+
+	return Plugin_Handled;
+}
+
+void vPassTankMenu(int client)
+{
+	char sUID[16];
+	char sName[MAX_NAME_LENGTH];
+	Menu menu = new Menu(iPassTankMenuHandler);
+	menu.SetTitle("选择要转交控制权的玩家");
+	for (int i = 1; i <= MaxClients; i++) {
+		if (!IsClientInGame(i) || IsFakeClient(i))
+			continue;
+		
+		FormatEx(sUID, sizeof sUID, "%d", GetClientUserId(i));
+		FormatEx(sName, sizeof sName, "%N", i);
+		menu.AddItem(sUID, sName);
+	}
+	menu.ExitBackButton = true;
+	menu.Display(client, MENU_TIME_FOREVER);
+}
+
+int iPassTankMenuHandler(Menu menu, MenuAction action, int client, int param2)
+{
+	switch (action) {
+		case MenuAction_Select: {
+			if (GetClientTeam(client) != 3 || !IsPlayerAlive(client) || GetEntProp(client, Prop_Send, "m_zombieClass") != 8)
+				ReplyToCommand(client, "你当前已不是存活的坦克");
+			else {
+				char sItem[16];
+				menu.GetItem(param2, sItem, sizeof sItem);
+				int target = GetClientOfUserId(StringToInt(sItem));
+				if (!target || !IsClientInGame(target))
+					ReplyToCommand(client, "目标玩家已失效");
+				else
+					vOfferTankMenu(client, target);
+			}
+		}
+
+		case MenuAction_End:
+			delete menu;
+	}
+
+	return 0;
+}
+
+void vOfferTankMenu(int client,int target)
+{
+	Menu menu = new Menu(iOfferTankMenuHandler);
+	menu.SetTitle("是否接受%N的坦克控制权转移?", client);
+
+	char sUID[16];
+	FormatEx(sUID, sizeof sUID, "%d", GetClientUserId(client));
+	menu.AddItem(sUID, "是");
+	menu.AddItem("no", "否");
+	menu.ExitButton = false;
+	menu.ExitBackButton = false;
+	menu.Display(target, 10);
+}
+
+int iOfferTankMenuHandler(Menu menu, MenuAction action, int client, int param2)
+{
+	switch (action) {
+		case MenuAction_Select: {
+			if (GetClientTeam(client) == 3 && IsPlayerAlive(client) && GetEntProp(client, Prop_Send, "m_zombieClass") == 8)
+				ReplyToCommand(client, "你当前已经是坦克");
+			else {
+				char sItem[16];
+				menu.GetItem(param2, sItem, sizeof sItem);
+				if (sItem[0] != 'n') {
+					int tank = GetClientOfUserId(StringToInt(sItem));
+					if (!tank || !IsClientInGame(tank) || GetClientTeam(tank) != 3 || !IsPlayerAlive(tank) || GetEntProp(tank, Prop_Send, "m_zombieClass") != 8)
+						ReplyToCommand(client, "目标玩家已不是坦克");
+					else
+						vPassTank(tank, client);
+				}
+			}
+		}
+
+		case MenuAction_End:
+			delete menu;
+	}
+
+	return 0;
+}
+
+void vPassTank(int tank, int target)
+{
+	int iTeam = GetClientTeam(target);
+	switch (iTeam) {
+		case 2: {
+				g_esData[target].Clean();
+				g_esData[target].Save(target, false);
+				ChangeClientTeam(target, 3);
+		}
+			
+		case 3: {
+			if (IsPlayerAlive(target)) {
+				SDKCall(g_hSDK_CTerrorPlayer_CleanupPlayerState, target);
+				ForcePlayerSuicide(target);
+			}
+		}
+
+		default:
+			ChangeClientTeam(target, 3);
+	}
+
+	if (GetClientTeam(target) == 3)
+		g_esPlayer[target].iLastTeamID = iTeam != 3 ? 2 : 3;
+
+	// CTerrorPlayer::UpdateZombieFrustration(CTerrorPlayer *__hidden this)函数里面的原生方法
+	Event event = CreateEvent("tank_frustrated", true);
+	event.SetInt("userid", GetClientUserId(tank));
+	event.Fire(false);
+
+	int ghost = GetEntProp(tank, Prop_Send, "m_isGhost");
+	if (ghost)
+		SetEntProp(tank, Prop_Send, "m_isGhost", 0);
+
+	g_bOnPassPlayerTank = true;
+	SDKCall(g_hSDK_CTerrorPlayer_ReplaceWithBot, tank, false);
+	g_bOnPassPlayerTank = false;
+	SDKCall(g_hSDK_CTerrorPlayer_SetPreSpawnClass, tank, 3);
+	SDKCall(g_hSDK_CCSPlayer_State_Transition, tank, 8);
+
+	if (iTakeOverZombieBot(target, g_iPassTankBot) == 8 && IsPlayerAlive(target)) {
+		if (g_iCmdEnterCooling & (1 << 0))
+			g_esPlayer[target].fCmdLastUsedTime = GetEngineTime() + g_fCmdCooldownTime;
+
+		if (ghost)
+			SDKCall(g_hSDK_CCSPlayer_State_Transition, target, 8);
+
+		CPrintToChatAll("{green}★ {default}坦克控制权已由 {red}%N {default}转交给 {olive}%N", tank, target);
+	}
+
+}
+
+Action cmdTakeOverTank(int client, int args)
 {
 	if (g_iControlled == 1) {
 		//ReplyToCommand(client, "仅支持战役模式");
@@ -892,10 +1064,26 @@ Action cmdTakeTank(int client, int args)
 	}
 
 	int iTank;
-	for (int i = 1; i <= MaxClients; i++) {
-		if (IsClientInGame(i) && IsFakeClient(i) && GetClientTeam(i) == 3 && IsPlayerAlive(i) && GetEntProp(i, Prop_Send, "m_zombieClass") == 8) {
-			iTank = i;
-			break;
+	if (args) {
+		char arg[32];
+		GetCmdArg(1, arg, sizeof arg);
+		char target_name[MAX_TARGET_LENGTH];
+		int target_list[MAXPLAYERS], target_count;
+		bool tn_is_ml;
+		if ((target_count = ProcessTargetString(arg, client, target_list, MAXPLAYERS, COMMAND_FILTER_ALIVE, target_name, sizeof target_name, tn_is_ml)) <= 0) {
+			ReplyToTargetError(client, target_count);
+			return Plugin_Handled;
+		}
+
+		if (IsFakeClient(target_list[0]) && GetClientTeam(target_list[0]) == 3 && GetEntProp(target_list[0], Prop_Send, "m_zombieClass") == 8)
+			iTank = target_list[0];
+	}
+	else {
+		for (int i = 1; i <= MaxClients; i++) {
+			if (IsClientInGame(i) && IsFakeClient(i) && GetClientTeam(i) == 3 && IsPlayerAlive(i) && GetEntProp(i, Prop_Send, "m_zombieClass") == 8) {
+				iTank = i;
+				break;
+			}
 		}
 	}
 
@@ -1386,13 +1574,14 @@ void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
 
 	int userid = event.GetInt("userid");
 	int client = GetClientOfUserId(userid);
+	g_iPassTankBot = client;
 	if (!IsPlayerAlive(client))
 		return;
 	
 	g_esPlayer[client].iTankBot = 0;
 	g_esPlayer[client].fRespawnStartTime = 0.0;
 
-	if (!g_bOnMaterializeFromGhost)
+	if (!g_bOnPassPlayerTank && !g_bOnMaterializeFromGhost)
 		RequestFrame(OnNextFrame_PlayerSpawn, userid); // player_bot_replace在player_spawn之后触发，延迟一帧进行接管判断
 }
 
