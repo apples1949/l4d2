@@ -884,7 +884,7 @@ void vPassTankMenu(int client)
 	Menu menu = new Menu(iPassTankMenuHandler);
 	menu.SetTitle("选择要转交控制权的玩家");
 	for (int i = 1; i <= MaxClients; i++) {
-		if (!IsClientInGame(i) || IsFakeClient(i))
+		if (i == client || !IsClientInGame(i) || IsFakeClient(i))
 			continue;
 		
 		FormatEx(sUID, sizeof sUID, "%d", GetClientUserId(i));
