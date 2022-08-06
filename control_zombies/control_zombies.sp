@@ -864,13 +864,12 @@ Action cmdPassTank(int client, int args)
 		char target_name[MAX_TARGET_LENGTH];
 		int target_list[MAXPLAYERS], target_count;
 		bool tn_is_ml;
-		if ((target_count = ProcessTargetString(arg, client, target_list, MAXPLAYERS, COMMAND_FILTER_ALIVE, target_name, sizeof target_name, tn_is_ml)) <= 0) {
+		if ((target_count = ProcessTargetString(arg, client, target_list, MAXPLAYERS, COMMAND_FILTER_NO_BOTS, target_name, sizeof target_name, tn_is_ml)) <= 0) {
 			ReplyToTargetError(client, target_count);
 			return Plugin_Handled;
 		}
 
-		if (IsFakeClient(target_list[0]) && GetClientTeam(target_list[0]) == 3 && GetEntProp(target_list[0], Prop_Send, "m_zombieClass") == 8)
-			vOfferTankMenu(client, target_list[0]);
+		vOfferTankMenu(client, target_list[0]);
 	}
 	else 
 		vPassTankMenu(client);
@@ -906,10 +905,10 @@ int iPassTankMenuHandler(Menu menu, MenuAction action, int client, int param2)
 				char sItem[16];
 				menu.GetItem(param2, sItem, sizeof sItem);
 				int target = GetClientOfUserId(StringToInt(sItem));
-				if (!target || !IsClientInGame(target))
-					ReplyToCommand(client, "目标玩家已失效");
-				else
+				if (target && IsClientInGame(target))
 					vOfferTankMenu(client, target);
+				else
+					ReplyToCommand(client, "目标玩家已失效");
 			}
 		}
 
@@ -923,7 +922,7 @@ int iPassTankMenuHandler(Menu menu, MenuAction action, int client, int param2)
 void vOfferTankMenu(int client,int target)
 {
 	Menu menu = new Menu(iOfferTankMenuHandler);
-	menu.SetTitle("是否接受%N的坦克控制权转移?", client);
+	menu.SetTitle("是否接受 %N 的坦克控制权转移?", client);
 
 	char sUID[16];
 	FormatEx(sUID, sizeof sUID, "%d", GetClientUserId(client));
@@ -945,10 +944,10 @@ int iOfferTankMenuHandler(Menu menu, MenuAction action, int client, int param2)
 				menu.GetItem(param2, sItem, sizeof sItem);
 				if (sItem[0] != 'n') {
 					int tank = GetClientOfUserId(StringToInt(sItem));
-					if (!tank || !IsClientInGame(tank) || GetClientTeam(tank) != 3 || !IsPlayerAlive(tank) || GetEntProp(tank, Prop_Send, "m_zombieClass") != 8)
-						ReplyToCommand(client, "目标玩家已不是坦克");
-					else
+					if (tank && IsClientInGame(tank) && GetClientTeam(tank) == 3 && IsPlayerAlive(tank) && GetEntProp(tank, Prop_Send, "m_zombieClass") == 8)
 						vPassTank(tank, client);
+					else
+						ReplyToCommand(client, "目标玩家已不是坦克");
 				}
 			}
 		}
@@ -993,13 +992,14 @@ void vPassTank(int tank, int target)
 	if (ghost)
 		SetEntProp(tank, Prop_Send, "m_isGhost", 0);
 
+	g_iPassTankBot = 0;
 	g_bOnPassPlayerTank = true;
 	SDKCall(g_hSDK_CTerrorPlayer_ReplaceWithBot, tank, false);
 	g_bOnPassPlayerTank = false;
 	SDKCall(g_hSDK_CTerrorPlayer_SetPreSpawnClass, tank, 3);
 	SDKCall(g_hSDK_CCSPlayer_State_Transition, tank, 8);
 
-	if (iTakeOverZombieBot(target, g_iPassTankBot) == 8 && IsPlayerAlive(target)) {
+	if (g_iPassTankBot && iTakeOverZombieBot(target, g_iPassTankBot) == 8 && IsPlayerAlive(target)) {
 		if (g_iCmdEnterCooling & (1 << 0))
 			g_esPlayer[target].fCmdLastUsedTime = GetEngineTime() + g_fCmdCooldownTime;
 
@@ -1008,7 +1008,6 @@ void vPassTank(int tank, int target)
 
 		CPrintToChatAll("{green}★ {default}坦克控制权已由 {red}%N {default}转交给 {olive}%N", tank, target);
 	}
-
 }
 
 Action cmdTakeOverTank(int client, int args)
@@ -1574,14 +1573,15 @@ void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
 
 	int userid = event.GetInt("userid");
 	int client = GetClientOfUserId(userid);
-	g_iPassTankBot = client;
 	if (!IsPlayerAlive(client))
 		return;
 	
 	g_esPlayer[client].iTankBot = 0;
 	g_esPlayer[client].fRespawnStartTime = 0.0;
 
-	if (!g_bOnPassPlayerTank && !g_bOnMaterializeFromGhost)
+	if (g_bOnPassPlayerTank)
+		g_iPassTankBot = client;
+	else if (!g_bOnMaterializeFromGhost)
 		RequestFrame(OnNextFrame_PlayerSpawn, userid); // player_bot_replace在player_spawn之后触发，延迟一帧进行接管判断
 }
 
