@@ -25,14 +25,13 @@ public void OnPluginStart()
 	if (!hGameData)
 		SetFailState("Failed to load \"%s.txt\" gamedata.", GAMEDATA);
 
-	Address pIncappedWeaponName = hGameData.GetMemSig("CTerrorPlayer::OnIncapacitatedAsSurvivor");
-	if (!pIncappedWeaponName)
-		SetFailState("Failed to find address: \"CTerrorPlayer::OnIncapacitatedAsSurvivor\"");
+	MemoryPatch patch = MemoryPatch.CreateFromConf(hGameData, "CTerrorPlayer::OnIncapacitatedAsSurvivor::IncappedWeapon");
+	if (!patch.Validate())
+		SetFailState("Failed to verify patch: \"CTerrorPlayer::OnIncapacitatedAsSurvivor::IncappedWeapon\"");
+	else if (patch.Enable()) {
+		StoreToAddress(patch.Address + view_as<Address>(hGameData.GetOffset("OS") ? 4 : 1), view_as<int>(GetAddressOfString("weapon_pistol_magnum")), NumberType_Int8);
+		PrintToServer("[%s] Enabled patch: \"CTerrorPlayer::OnIncapacitatedAsSurvivor::IncappedWeapon\"", GAMEDATA);
+	}
 
-	int iOffset = hGameData.GetOffset("IncappedWeaponName");
-	if (iOffset == -1)
-		SetFailState("Failed to find offset: \"IncappedWeaponName\"");
-
-	pIncappedWeaponName += view_as<Address>(iOffset);
-	StoreToAddress(pIncappedWeaponName, view_as<int>(GetAddressOfString("weapon_pistol_magnum")), NumberType_Int32);
+	delete hGameData;
 }
