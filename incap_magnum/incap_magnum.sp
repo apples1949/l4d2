@@ -9,7 +9,7 @@ public Plugin myinfo =
 {
 	name = "Incapped Magnum",
 	author = "sorallll",
-	version	= "1.0.1",
+	version	= "1.0.2",
 	description	= "将倒地武器修改为Magnum",
 	url = "https://github.com/umlka/l4d2/tree/main/incap_magnum"
 };
@@ -29,7 +29,7 @@ public void OnPluginStart()
 	if (!patch.Validate())
 		SetFailState("Failed to verify patch: \"CTerrorPlayer::OnIncapacitatedAsSurvivor::IncappedWeapon\"");
 	else if (patch.Enable()) {
-		StoreToAddress(patch.Address + view_as<Address>(hGameData.GetOffset("OS") ? 4 : 1), view_as<int>(GetAddressOfString("weapon_pistol_magnum")), NumberType_Int8);
+		StoreToAddress(patch.Address + view_as<Address>(hGameData.GetOffset("OS") ? 4 : 1), view_as<int>(GetAddressOfString("weapon_pistol_magnum")), NumberType_Int32);
 		PrintToServer("[%s] Enabled patch: \"CTerrorPlayer::OnIncapacitatedAsSurvivor::IncappedWeapon\"", GAMEDATA);
 	}
 

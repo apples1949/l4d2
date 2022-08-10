@@ -24,16 +24,16 @@
 				{
 					"offset"	"4A7h"
 					"verify"	"\xC7\x44\x24\x04"
-					"patch"		"\xC7\x44\x24\x04"
-					"preserve"	"\xFF\xFF\xFF\xFF"
+					"patch"		"\xC7\x44\x24\x04\x00\x00\x00\x00"
+					"preserve"	"\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF"
 				}
 				
 				"windows"
 				{
 					"offset"	"45Ah"
 					"verify"	"\x68"
-					"patch"		"\x68"
-					"preserve"	"\xFF"
+					"patch"		"\x68\x00\x00\x00\x00"
+					"preserve"	"\xFF\xFF\xFF\xFF\xFF"
 				}
 			}
 		}
