@@ -1,16 +1,43 @@
 "Games"
 {
-	"left4dead2" 
+	"#default"
 	{
 		"Offsets"
 		{
-			"IncappedWeaponName"
+			"OS"
 			{
-				"linux"		"1195"
-				"windows"	"1115"
+				"linux"		"1"
+				"windows"	"0"
 			}
 		}
-	
+	}
+
+	"left4dead2" 
+	{
+		"MemPatches"
+		{
+			"CTerrorPlayer::OnIncapacitatedAsSurvivor::IncappedWeapon"
+			{
+				"signature"		"CTerrorPlayer::OnIncapacitatedAsSurvivor"
+
+				"linux"
+				{
+					"offset"	"4A7h"
+					"verify"	"\xC7\x44\x24\x04"
+					"patch"		"\xC7\x44\x24\x04"
+					"preserve"	"\xFF\xFF\xFF\xFF"
+				}
+				
+				"windows"
+				{
+					"offset"	"45Ah"
+					"verify"	"\x68"
+					"patch"		"\x68"
+					"preserve"	"\xFF"
+				}
+			}
+		}
+
 		"Signatures"
 		{
 			/* CTerrorPlayer::OnIncapacitatedAsSurvivor(CTerrorPlayer *__hidden this, const CTakeDamageInfo *) */
