@@ -332,7 +332,7 @@ public void OnPluginStart()
 	g_hGiveWeaponType.AddChangeHook(vConVarChanged_Weapon);
 	g_hGiveWeaponTime.AddChangeHook(vConVarChanged_Weapon);
 	
-	//AutoExecConfig(true, "bots");
+	AutoExecConfig(true, "bots");
 
 	RegConsoleCmd("sm_teams", cmdTeamPanel, "团队菜单");
 	RegConsoleCmd("sm_spec", cmdJoinSpectator, "加入旁观者");
@@ -414,8 +414,7 @@ Action cmdJoinSurvivor(int client, int args)
 		return Plugin_Handled;
 	}
 
-	switch (GetClientTeam(client))
-	{
+	switch (GetClientTeam(client)) {
 		case TEAM_SPECTATOR: {
 			if (iGetBotOfIdlePlayer(client))
 				return Plugin_Handled;
