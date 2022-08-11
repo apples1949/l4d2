@@ -179,23 +179,17 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 			static float fGameTime;
 			if (g_fLeapAgainTime[client] < (fGameTime = GetGameTime())) {
 				if (fSurvivorProximity < g_fJockeyLeapRange) {
-					switch (GetRandomInt(0, 10)) {
+					switch (GetRandomInt(0, 1)) {
 						case 0:
 							buttons |= IN_FORWARD;
 	
-						case 1, 5, 7:
+						case 1:
 							buttons |= IN_BACK;
-
-						case 2:
-							buttons |= IN_MOVELEFT;
-
-						case 3:
-							buttons |= IN_MOVERIGHT;
 					}
 
-					if (GetRandomInt(0, 1) && bWithinViewAngle(client, 45.0)) {
+					if (GetRandomInt(0, 1) && bWithinViewAngle(client, 60.0)) {
 						vAng = angles;
-						vAng[0] = GetRandomFloat(-50.0, -10.0);
+						vAng[0] = GetRandomFloat(-30.0, -10.0);
 						TeleportEntity(client, NULL_VECTOR, vAng, NULL_VECTOR);
 					}
 				}

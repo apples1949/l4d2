@@ -66,7 +66,7 @@ void Event_AbilityUse(Event event, const char[] name, bool dontBroadcast)
 		return;
 
 	static char sAbility[16];
-	event.GetString("ability", sAbility, sizeof(sAbility));
+	event.GetString("ability", sAbility, sizeof sAbility);
 	if (strcmp(sAbility, "ability_vomit") == 0)
 		vBoomer_OnVomit(client);
 }
@@ -177,7 +177,7 @@ bool bWontFall(int client, const float vVel[3])
 
 	static bool bHit;
 	static Handle hTrace;
-	static float vEndPos[3];
+	static float vBuff[3];
 
 	bHit = false;
 	vEnd[2] += OBSTACLE_HEIGHT;
@@ -186,26 +186,29 @@ bool bWontFall(int client, const float vVel[3])
 
 	if (TR_DidHit(hTrace)) {
 		bHit = true;
-		TR_GetEndPosition(vEndPos, hTrace);
-		if (GetVectorDistance(vPos, vEndPos) < 64.0) {
-			delete hTrace;
-			return false;
+		TR_GetPlaneNormal(hTrace, vBuff);
+		if (RadToDeg(ArcCosine(GetVectorDotProduct(vVel, vBuff))) > 135.0) {
+			TR_GetEndPosition(vBuff, hTrace);
+			if (GetVectorDistance(vPos, vBuff) < 64.0) {
+				delete hTrace;
+				return false;
+			}
 		}
 	}
 	delete hTrace;
 	
 	if (!bHit)
-		vEndPos = vEnd;
+		vBuff = vEnd;
 
 	static float vDown[3];
-	vDown[0] = vEndPos[0];
-	vDown[1] = vEndPos[1];
-	vDown[2] = vEndPos[2] - 100000.0;
+	vDown[0] = vBuff[0];
+	vDown[1] = vBuff[1];
+	vDown[2] = vBuff[2] - 100000.0;
 
-	hTrace = TR_TraceHullFilterEx(vEndPos, vDown, vMins, vMaxs, MASK_PLAYERSOLID_BRUSHONLY, bTraceEntityFilter);
+	hTrace = TR_TraceHullFilterEx(vBuff, vDown, vMins, vMaxs, MASK_PLAYERSOLID_BRUSHONLY, bTraceEntityFilter);
 	if (TR_DidHit(hTrace)) {
 		TR_GetEndPosition(vEnd, hTrace);
-		if (vEndPos[2] - vEnd[2] > 120.0) {
+		if (vBuff[2] - vEnd[2] > 120.0) {
 			delete hTrace;
 			return false;
 		}
@@ -213,7 +216,7 @@ bool bWontFall(int client, const float vVel[3])
 		static int entity;
 		if ((entity = TR_GetEntityIndex(hTrace)) > MaxClients) {
 			static char classname[13];
-			GetEdictClassname(entity, classname, sizeof(classname));
+			GetEdictClassname(entity, classname, sizeof classname);
 			if (strcmp(classname, "trigger_hurt") == 0) {
 				delete hTrace;
 				return false;

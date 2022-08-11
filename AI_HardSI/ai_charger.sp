@@ -36,7 +36,7 @@ public void OnPluginStart()
 	g_hChargerBhop = CreateConVar("ai_charger_bhop", "1", "Flag to enable bhop facsimile on AI chargers");
 	g_hChargeProximity = CreateConVar("ai_charge_proximity", "300.0", "How close a client will approach before charging");
 	g_hHealthThresholdCharger = CreateConVar("ai_health_threshold_charger", "300", "Charger will charge if its health drops to this level");
-	g_hAimOffsetSensitivityCharger = CreateConVar("ai_aim_offset_sensitivity_charger", "15.0", "If the charger has a target, it will not straight charge if the target's aim on the horizontal axis is within this radius", _, true, 0.0, true, 180.0);
+	g_hAimOffsetSensitivityCharger = CreateConVar("ai_aim_offset_sensitivity_charger", "30.0", "If the charger has a target, it will not straight charge if the target's aim on the horizontal axis is within this radius", _, true, 0.0, true, 180.0);
 	g_hChargeStartSpeed = FindConVar("z_charge_start_speed");
 
 	g_hChargerBhop.AddChangeHook(vConVarChanged);
@@ -206,7 +206,7 @@ bool bWontFall(int client, const float vVel[3])
 
 	static bool bHit;
 	static Handle hTrace;
-	static float vEndPos[3];
+	static float vBuff[3];
 
 	bHit = false;
 	vEnd[2] += OBSTACLE_HEIGHT;
@@ -215,26 +215,29 @@ bool bWontFall(int client, const float vVel[3])
 
 	if (TR_DidHit(hTrace)) {
 		bHit = true;
-		TR_GetEndPosition(vEndPos, hTrace);
-		if (GetVectorDistance(vPos, vEndPos) < 64.0) {
-			delete hTrace;
-			return false;
+		TR_GetPlaneNormal(hTrace, vBuff);
+		if (RadToDeg(ArcCosine(GetVectorDotProduct(vVel, vBuff))) > 135.0) {
+			TR_GetEndPosition(vBuff, hTrace);
+			if (GetVectorDistance(vPos, vBuff) < 64.0) {
+				delete hTrace;
+				return false;
+			}
 		}
 	}
 	delete hTrace;
 	
 	if (!bHit)
-		vEndPos = vEnd;
+		vBuff = vEnd;
 
 	static float vDown[3];
-	vDown[0] = vEndPos[0];
-	vDown[1] = vEndPos[1];
-	vDown[2] = vEndPos[2] - 100000.0;
+	vDown[0] = vBuff[0];
+	vDown[1] = vBuff[1];
+	vDown[2] = vBuff[2] - 100000.0;
 
-	hTrace = TR_TraceHullFilterEx(vEndPos, vDown, vMins, vMaxs, MASK_PLAYERSOLID_BRUSHONLY, bTraceEntityFilter);
+	hTrace = TR_TraceHullFilterEx(vBuff, vDown, vMins, vMaxs, MASK_PLAYERSOLID_BRUSHONLY, bTraceEntityFilter);
 	if (TR_DidHit(hTrace)) {
 		TR_GetEndPosition(vEnd, hTrace);
-		if (vEndPos[2] - vEnd[2] > 120.0) {
+		if (vBuff[2] - vEnd[2] > 120.0) {
 			delete hTrace;
 			return false;
 		}
@@ -242,7 +245,7 @@ bool bWontFall(int client, const float vVel[3])
 		static int entity;
 		if ((entity = TR_GetEntityIndex(hTrace)) > MaxClients) {
 			static char classname[13];
-			GetEdictClassname(entity, classname, sizeof(classname));
+			GetEdictClassname(entity, classname, sizeof classname);
 			if (strcmp(classname, "trigger_hurt") == 0) {
 				delete hTrace;
 				return false;

@@ -135,11 +135,11 @@ public Action OnPlayerRunCmd(int client, int &buttons)
 	if (!IsClientInGame(client) || !IsFakeClient(client) || GetClientTeam(client) != 3 || !IsPlayerAlive(client) || GetEntProp(client, Prop_Send, "m_zombieClass") != 3 || GetEntProp(client, Prop_Send, "m_isGhost") == 1)
 		return Plugin_Continue;
 
-	//buttons &= ~IN_ATTACK2;
-	
 	static int flags;
 	flags = GetEntityFlags(client);
 	if (flags & FL_DUCKING && flags & FL_ONGROUND && GetEntProp(client, Prop_Send, "m_hasVisibleThreats")) {
+		buttons &= ~IN_ATTACK2;
+
 		static float vPos[3];
 		GetClientAbsOrigin(client, vPos);
 		if (fNearestSurvivorDistance(client, vPos) < g_fFastPounceProximity) {
@@ -228,9 +228,7 @@ bool bHitWall(int client, float vStart[3])
 	if (TR_DidHit(hTrace)) {
 		static float vPlane[3];
 		TR_GetPlaneNormal(hTrace, vPlane);
-		NegateVector(vPlane);
-		NormalizeVector(vPlane, vPlane);
-		if (RadToDeg(ArcCosine(GetVectorDotProduct(vAng, vPlane))) < 30.0) {
+		if (RadToDeg(ArcCosine(GetVectorDotProduct(vAng, vPlane))) > 135.0) {
 			delete hTrace;
 			return true;
 		}
