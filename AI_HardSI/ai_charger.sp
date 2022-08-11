@@ -6,12 +6,14 @@
 ConVar
 	g_hChargerBhop,
 	g_hChargeProximity,
+	g_hChargeMaxSpeed,
 	g_hChargeStartSpeed,
 	g_hHealthThresholdCharger,
 	g_hAimOffsetSensitivityCharger;
 
 float
 	g_fChargeProximity,
+	g_fChargeMaxSpeed,
 	g_fChargeStartSpeed,
 	g_fAimOffsetSensitivityCharger;
 
@@ -37,10 +39,12 @@ public void OnPluginStart()
 	g_hChargeProximity = CreateConVar("ai_charge_proximity", "300.0", "How close a client will approach before charging");
 	g_hHealthThresholdCharger = CreateConVar("ai_health_threshold_charger", "300", "Charger will charge if its health drops to this level");
 	g_hAimOffsetSensitivityCharger = CreateConVar("ai_aim_offset_sensitivity_charger", "30.0", "If the charger has a target, it will not straight charge if the target's aim on the horizontal axis is within this radius", _, true, 0.0, true, 180.0);
+	g_hChargeMaxSpeed = FindConVar("z_charge_max_speed");
 	g_hChargeStartSpeed = FindConVar("z_charge_start_speed");
 
 	g_hChargerBhop.AddChangeHook(vConVarChanged);
 	g_hChargeProximity.AddChangeHook(vConVarChanged);
+	g_hChargeMaxSpeed.AddChangeHook(vConVarChanged);
 	g_hChargeStartSpeed.AddChangeHook(vConVarChanged);
 	g_hHealthThresholdCharger.AddChangeHook(vConVarChanged);
 	g_hAimOffsetSensitivityCharger.AddChangeHook(vConVarChanged);
@@ -62,6 +66,7 @@ void vConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
 void vGetCvars()
 {
 	g_bChargerBhop = g_hChargerBhop.BoolValue;
+	g_fChargeMaxSpeed = g_hChargeMaxSpeed.FloatValue;
 	g_fChargeStartSpeed = g_hChargeStartSpeed.FloatValue;
 	g_fChargeProximity = g_hChargeProximity.FloatValue;
 	g_iHealthThresholdCharger = g_hHealthThresholdCharger.IntValue;
@@ -339,7 +344,7 @@ void vCharger_OnCharge(int client)
 	static int iTarget;
 	iTarget = GetClientAimTarget(client, true);
 	if (!bIsAliveSurvivor(iTarget) || bIsIncapacitated(iTarget) || bIsPinned(iTarget) || bHitWall(client, iTarget) || bWithinViewAngle(client, iTarget, g_fAimOffsetSensitivityCharger))
-		iTarget = iGetClosestSurvivor(client, iTarget, g_fChargeStartSpeed);
+		iTarget = iGetClosestSurvivor(client, iTarget, g_fChargeMaxSpeed);
 
 	if (iTarget == -1)
 		return;
@@ -363,7 +368,7 @@ void vCharger_OnCharge(int client)
 	if (GetEntityFlags(client) & FL_ONGROUND == 0) {
 		vTarg[2] += bIsGettingUp(iTarget) ? 10.0 : CROUCHING_EYE;
 
-		vLength += g_fChargeStartSpeed;
+		vLength += g_fChargeMaxSpeed;
 	}
 
 	MakeVectorFromPoints(vPos, vTarg, vVelocity);
