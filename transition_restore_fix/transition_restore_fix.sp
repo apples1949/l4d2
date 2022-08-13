@@ -4,9 +4,7 @@
 #include <dhooks>
 #include <sourcescramble>
 
-#define PLUGIN_VERSION		"1.2.0"
-
-#define DEBUG 0
+#define PLUGIN_VERSION		"1.2.1"
 
 #define GAMEDATA	"transition_restore_fix"
 
@@ -15,19 +13,20 @@ Handle
 	g_hSDK_KeyValues_SetString,
 	g_hSDK_CDirector_IsInTransition;
 
-#if DEBUG
-Handle
-	g_hSDK_CTerrorPlayer_TransitionRestore;
-#endif
-
 ConVar
 	g_hKeepIdentity,
 	g_hPrecacheAllSur;
 
+ArrayList
+	g_aUsedBotData;
+
 Address
+	g_pThis,
+	g_pData,
 	g_pDirector,
-	g_pSavedPlayerCount,
-	g_pSavedSurvivorBotCount;
+	g_pSavedPlayersCount,
+	g_pSavedSurvivorBotsCount,
+	g_pSavedLevelRestartSurvivorBotsCount;
 
 MemoryPatch
 	g_mpRestoreByUserId;
@@ -36,12 +35,8 @@ DynamicDetour
 	g_ddCDirector_Restart;
 
 bool
-	g_bCDirector_Restart;
-
-#if DEBUG
-int
-	g_iOff_m_isTransitioned;
-#endif
+	g_bCDirector_Restart,
+	g_bCTerrorPlayer_TransitionRestore;
 
 enum struct PlayerSaveData
 {
@@ -64,6 +59,7 @@ public Plugin myinfo =
 public void OnPluginStart()
 {
 	vInitGameData();
+	g_aUsedBotData = new ArrayList();
 
 	CreateConVar("transition_restore_fix_version", PLUGIN_VERSION, "Transition Restore Fix plugin version.", FCVAR_NOTIFY|FCVAR_DONTRECORD);
 	g_hKeepIdentity = CreateConVar("restart_keep_identity", "1", "Whether to keep the current character and model after the mission lost and restarts? (0=restore to pre-transition identity, 1=game default)", FCVAR_NOTIFY);
@@ -73,22 +69,13 @@ public void OnPluginStart()
 
 	AutoExecConfig(true, "transition_restore_fix");
 
-	#if DEBUG
-	RegAdminCmd("sm_restore", cmdRestore, ADMFLAG_ROOT);
-	#endif
 }
 
-#if DEBUG
-Action cmdRestore(int client, int args)
+public void OnPluginEnd()
 {
-	if (!client || !IsClientInGame(client) || IsFakeClient(client) || GetClientTeam(client) != 2)
-		return Plugin_Handled;
-
-	SetEntData(client, g_iOff_m_isTransitioned, 1);
-	SDKCall(g_hSDK_CTerrorPlayer_TransitionRestore, client);
-	return Plugin_Handled;
+	if (g_pThis)
+		StoreToAddress(g_pThis, g_pData, NumberType_Int32);
 }
-#endif
 
 public void OnConfigsExecuted()
 {
@@ -143,13 +130,17 @@ void vInitGameData()
 	if (!g_pDirector)
 		SetFailState("Failed to find address: \"CDirector\"");
 
-	g_pSavedPlayerCount = hGameData.GetAddress("SavedPlayerCount");
-	if (!g_pSavedPlayerCount)
-		SetFailState("Failed to find address: \"SavedPlayerCount\"");
+	g_pSavedPlayersCount = hGameData.GetAddress("SavedPlayersCount");
+	if (!g_pSavedPlayersCount)
+		SetFailState("Failed to find address: \"SavedPlayersCount\"");
 
-	g_pSavedSurvivorBotCount = hGameData.GetAddress("SavedSurvivorBotCount");
-	if (!g_pSavedSurvivorBotCount)
-		SetFailState("Failed to find address: \"SavedSurvivorBotCount\"");
+	g_pSavedSurvivorBotsCount = hGameData.GetAddress("SavedSurvivorBotsCount");
+	if (!g_pSavedSurvivorBotsCount)
+		SetFailState("Failed to find address: \"SavedSurvivorBotsCount\"");
+
+	g_pSavedLevelRestartSurvivorBotsCount = hGameData.GetAddress("SavedLevelRestartSurvivorBotsCount");
+	if (!g_pSavedSurvivorBotsCount)
+		SetFailState("Failed to find address: \"SavedLevelRestartSurvivorBotsCount\"");
 
 	StartPrepSDKCall(SDKCall_Raw);
 	if (!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "KeyValues::GetString"))
@@ -174,18 +165,6 @@ void vInitGameData()
 	PrepSDKCall_SetReturnInfo(SDKType_Bool, SDKPass_Plain);
 	if (!(g_hSDK_CDirector_IsInTransition = EndPrepSDKCall()))
 		SetFailState("Failed to create SDKCall: \"CDirector::IsInTransition\"");
-
-	#if DEBUG
-	g_iOff_m_isTransitioned = hGameData.GetOffset("CTerrorPlayer::IsTransitioned::m_isTransitioned");
-	if (g_iOff_m_isTransitioned == -1)
-		SetFailState("Failed to find offset: \"CTerrorPlayer::IsTransitioned::m_isTransitioned\"");
-
-	StartPrepSDKCall(SDKCall_Player);
-	if (!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorPlayer::TransitionRestore"))
-		SetFailState("Failed to find signature: \"CTerrorPlayer::TransitionRestore\"");
-	if (!(g_hSDK_CTerrorPlayer_TransitionRestore = EndPrepSDKCall()))
-		SetFailState("Failed to create SDKCall: \"CTerrorPlayer::TransitionRestore\"");
-	#endif
 
 	vInitPatchs(hGameData);
 	vSetupDetours(hGameData);
@@ -224,6 +203,16 @@ void vSetupDetours(GameData hGameData = null)
 	if (!dDetour.Enable(Hook_Post, DD_CTerrorPlayer_TransitionRestore_Post))
 		SetFailState("Failed to detour post: \"DD::CTerrorPlayer::TransitionRestore\"");
 
+	dDetour = DynamicDetour.FromConf(hGameData, "DD::PlayerSaveData::Restore");
+	if (!dDetour)
+		SetFailState("Failed to create DynamicDetour: \"DD::PlayerSaveData::Restore\"");
+
+	if (!dDetour.Enable(Hook_Pre, DD_PlayerSaveData_Restore_Pre))
+		SetFailState("Failed to detour pre: \"DD::PlayerSaveData::Restore\"");
+
+	if (!dDetour.Enable(Hook_Post, DD_PlayerSaveData_Restore_Post))
+		SetFailState("Failed to detour post: \"DD::PlayerSaveData::Restore\"");
+
 	dDetour = DynamicDetour.FromConf(hGameData, "DD::CDirector::IsHumanSpectatorValid");
 	if (!dDetour)
 		SetFailState("Failed to create DynamicDetour: \"DD::CDirector::IsHumanSpectatorValid\"");
@@ -241,18 +230,22 @@ void vSetupDetours(GameData hGameData = null)
 
 MRESReturn DD_CDirector_Restart_Pre(Address pThis, DHookReturn hReturn)
 {
+	g_aUsedBotData.Clear();
 	g_bCDirector_Restart = true;
 	return MRES_Ignored;
 }
 
 MRESReturn DD_CDirector_Restart_Post(Address pThis, DHookReturn hReturn)
 {
+	g_aUsedBotData.Clear();
 	g_bCDirector_Restart = false;
 	return MRES_Ignored;
 }
 
 MRESReturn DD_CTerrorPlayer_TransitionRestore_Pre(int pThis, DHookReturn hReturn)
 {
+	g_bCTerrorPlayer_TransitionRestore = true;
+
 	if (IsFakeClient(pThis))
 		return MRES_Ignored;
 
@@ -260,50 +253,93 @@ MRESReturn DD_CTerrorPlayer_TransitionRestore_Pre(int pThis, DHookReturn hReturn
 	if (iTeam > 2)
 		return MRES_Ignored;
 
-	Address pSavedData = pFindSavedDataByUserId(GetClientUserId(pThis));
-	if (!pSavedData)
+	Address pData = pFindPlayerDataByUserId(GetClientUserId(pThis));
+	if (!pData)
 		return MRES_Ignored;
 
 	char teamNumber[4];
-	SDKCall(g_hSDK_KeyValues_GetString, pSavedData, teamNumber, sizeof teamNumber, "teamNumber", "0");
-	if (StringToInt(teamNumber) != 2)
-		return MRES_Ignored;
+	SDKCall(g_hSDK_KeyValues_GetString, pData, teamNumber, sizeof teamNumber, "teamNumber", "0");
+	if (StringToInt(teamNumber) == 2)
+		g_mpRestoreByUserId.Enable();
 
-	char ModelName[PLATFORM_MAX_PATH];
-	SDKCall(g_hSDK_KeyValues_GetString, pSavedData, ModelName, sizeof ModelName, "ModelName", "");
-	if (!IsModelPrecached(ModelName))
-		PrecacheModel(ModelName, true);
-
-	if (g_bCDirector_Restart && iTeam == 2) {
-		char character[4];
-		SDKCall(g_hSDK_KeyValues_GetString, pSavedData, character, sizeof character, "character", "0");
-		strcopy(g_esSavedData.ModelName, sizeof PlayerSaveData::ModelName, ModelName);
-		strcopy(g_esSavedData.character, sizeof PlayerSaveData::character, character);
-
-		GetClientModel(pThis, ModelName, sizeof ModelName);
-		SDKCall(g_hSDK_KeyValues_SetString, pSavedData, "ModelName", ModelName);
-
-		IntToString(GetEntProp(pThis, Prop_Send, "m_survivorCharacter"), character, sizeof character);
-		SDKCall(g_hSDK_KeyValues_SetString, pSavedData, "character", character);
-	}
-
-	g_mpRestoreByUserId.Enable();
 	return MRES_Ignored;
 }
 
 MRESReturn DD_CTerrorPlayer_TransitionRestore_Post(int pThis, DHookReturn hReturn)
 {
-	if (g_esSavedData.character[0]) {
-		Address pSavedData = pFindSavedDataByUserId(GetClientUserId(pThis));
-		if (pSavedData) {
-			SDKCall(g_hSDK_KeyValues_SetString, pSavedData, "ModelName", g_esSavedData.ModelName);
-			SDKCall(g_hSDK_KeyValues_SetString, pSavedData, "character", g_esSavedData.character);
+	g_mpRestoreByUserId.Disable();
+	g_bCTerrorPlayer_TransitionRestore = false;
+	return MRES_Ignored;
+}
+
+MRESReturn DD_PlayerSaveData_Restore_Pre(Address pThis, DHookParam hParams)
+{
+	if (!g_bCDirector_Restart || !g_bCTerrorPlayer_TransitionRestore)
+		return MRES_Ignored;
+
+	int player = hParams.Get(1);
+	if (GetClientTeam(player) != 2)
+		return MRES_Ignored;
+
+	Address pData;
+	char teamNumber[4];
+	char ModelName[PLATFORM_MAX_PATH];
+	if (IsFakeClient(player)) {
+		GetClientModel(player, ModelName, sizeof ModelName);
+		pData = pFindBotDataByModelName(ModelName);
+		if (pData) {
+			SDKCall(g_hSDK_KeyValues_GetString, pData, teamNumber, sizeof teamNumber, "teamNumber", "0");
+			if (StringToInt(teamNumber) == 2) {
+				g_pThis = pThis;
+				g_pData = LoadFromAddress(pThis, NumberType_Int32);
+				StoreToAddress(pThis, pData, NumberType_Int32);
+			}
 		}
 	}
 
-	g_mpRestoreByUserId.Disable();
-	g_esSavedData.ModelName[0] = '\0';
-	g_esSavedData.character[0] = '\0';
+	if (!pData) {
+		pData = LoadFromAddress(pThis, NumberType_Int32);
+		SDKCall(g_hSDK_KeyValues_GetString, pData, teamNumber, sizeof teamNumber, "teamNumber", "0");
+		if (StringToInt(teamNumber) != 2)
+			return MRES_Ignored;
+	}
+
+	char character[4];
+	SDKCall(g_hSDK_KeyValues_GetString, pData, ModelName, sizeof ModelName, "ModelName", "");
+	SDKCall(g_hSDK_KeyValues_GetString, pData, character, sizeof character, "character", "0");
+	strcopy(g_esSavedData.ModelName, sizeof PlayerSaveData::ModelName, ModelName);
+	strcopy(g_esSavedData.character, sizeof PlayerSaveData::character, character);
+
+	GetClientModel(player, ModelName, sizeof ModelName);
+	SDKCall(g_hSDK_KeyValues_SetString, pData, "ModelName", ModelName);
+
+	IntToString(GetEntProp(player, Prop_Send, "m_survivorCharacter"), character, sizeof character);
+	SDKCall(g_hSDK_KeyValues_SetString, pData, "character", character);
+
+	return MRES_Ignored;
+}
+
+MRESReturn DD_PlayerSaveData_Restore_Post(Address pThis, DHookParam hParams)
+{
+	if (!g_bCDirector_Restart || !g_bCTerrorPlayer_TransitionRestore)
+		return MRES_Ignored;
+
+	if (g_esSavedData.character[0]) {
+		Address pData = LoadFromAddress(pThis, NumberType_Int32);
+		if (pData) {
+			SDKCall(g_hSDK_KeyValues_SetString, pData, "ModelName", g_esSavedData.ModelName);
+			SDKCall(g_hSDK_KeyValues_SetString, pData, "character", g_esSavedData.character);
+		}
+
+		g_esSavedData.ModelName[0] = '\0';
+		g_esSavedData.character[0] = '\0';
+	}
+
+	if (g_pThis)
+		StoreToAddress(g_pThis, g_pData, NumberType_Int32);
+
+	g_pThis = Address_Null;
+	g_pData = Address_Null;
 	return MRES_Ignored;
 }
 
@@ -327,7 +363,7 @@ MRESReturn DD_CDSManager_FillRemainingSurvivorTeamSlotsWithBots_Pre(Address pThi
 	if (!SDKCall(g_hSDK_CDirector_IsInTransition, g_pDirector))
 		return MRES_Ignored;
 
-	if (!LoadFromAddress(g_pSavedSurvivorBotCount, NumberType_Int32))
+	if (!LoadFromAddress(g_pSavedSurvivorBotsCount, NumberType_Int32))
 		return MRES_Ignored;
 
 	hReturn.Value = 0;
@@ -335,19 +371,19 @@ MRESReturn DD_CDSManager_FillRemainingSurvivorTeamSlotsWithBots_Pre(Address pThi
 }
 
 // 读取玩家过关时保存的userID
-Address pFindSavedDataByUserId(int userid)
+Address pFindPlayerDataByUserId(int userid)
 {
-	int iSavedPlayerCount = LoadFromAddress(g_pSavedPlayerCount, NumberType_Int32);
-	if (!iSavedPlayerCount)
+	int iSavedPlayersCount = LoadFromAddress(g_pSavedPlayersCount, NumberType_Int32);
+	if (!iSavedPlayersCount)
 		return Address_Null;
 
-	Address pSavedPlayers = view_as<Address>(LoadFromAddress(g_pSavedPlayerCount + view_as<Address>(4), NumberType_Int32));
+	Address pSavedPlayers = view_as<Address>(LoadFromAddress(g_pSavedPlayersCount + view_as<Address>(4), NumberType_Int32));
 	if (!pSavedPlayers)
 		return Address_Null;
 
 	Address pThis;
 	char userID[12];
-	for (int i; i < iSavedPlayerCount; i++) {
+	for (int i; i < iSavedPlayersCount; i++) {
 		pThis = view_as<Address>(LoadFromAddress(pSavedPlayers + view_as<Address>(4 * i), NumberType_Int32));
 		if (!pThis)
 			continue;
@@ -355,6 +391,37 @@ Address pFindSavedDataByUserId(int userid)
 		SDKCall(g_hSDK_KeyValues_GetString, pThis, userID, sizeof userID, "userID", "0");
 		if (StringToInt(userID) == userid)
 			return pThis;
+	}
+
+	return Address_Null;
+}
+
+Address pFindBotDataByModelName(const char[] sModel)
+{
+	int iSavedLevelRestartSurvivorBotsCount = LoadFromAddress(g_pSavedLevelRestartSurvivorBotsCount, NumberType_Int32);
+	if (!iSavedLevelRestartSurvivorBotsCount)
+		return Address_Null;
+
+	Address pSavedLevelRestartSurvivorBots = view_as<Address>(LoadFromAddress(g_pSavedLevelRestartSurvivorBotsCount + view_as<Address>(4), NumberType_Int32));
+	if (!pSavedLevelRestartSurvivorBots)
+		return Address_Null;
+
+	Address pThis;
+	char ModelName[PLATFORM_MAX_PATH];
+	for (int i; i < iSavedLevelRestartSurvivorBotsCount; i++) {
+		pThis = view_as<Address>(LoadFromAddress(pSavedLevelRestartSurvivorBots + view_as<Address>(4 * i), NumberType_Int32));
+		if (!pThis)
+			continue;
+
+		if (g_aUsedBotData.FindValue(pThis) != -1)
+			continue;
+
+		SDKCall(g_hSDK_KeyValues_GetString, pThis, ModelName, sizeof ModelName, "ModelName", "");
+		if (strcmp(ModelName, sModel, false) != 0)
+			continue;
+	
+		g_aUsedBotData.Push(pThis);
+		return pThis;
 	}
 
 	return Address_Null;
