@@ -161,7 +161,7 @@ bool bClientPush(int client, int &buttons, float vVec[3], float fForce)
 	return false;
 }
 
-#define OBSTACLE_HEIGHT 18.0
+#define OBSTACLE_HEIGHT 10.0
 bool bWontFall(int client, const float vVel[3])
 {
 	static float vPos[3];
@@ -189,7 +189,7 @@ bool bWontFall(int client, const float vVel[3])
 		TR_GetPlaneNormal(hTrace, vBuff);
 		if (RadToDeg(ArcCosine(GetVectorDotProduct(vVel, vBuff))) > 135.0) {
 			TR_GetEndPosition(vBuff, hTrace);
-			if (GetVectorDistance(vPos, vBuff) < 64.0) {
+			if (33.0 < GetVectorDistance(vPos, vBuff) < 64.0) {
 				delete hTrace;
 				return false;
 			}
