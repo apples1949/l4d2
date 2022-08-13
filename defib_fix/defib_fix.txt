@@ -11,6 +11,7 @@
 				"return"		"cbaseentity"
 				"this"			"entity"
 			}
+
 			"DH::CItemDefibrillator::OnStartAction"
 			{
 				"offset"		"CItemDefibrillator::OnStartAction"
@@ -37,6 +38,7 @@
 					}
 				}
 			}
+
 			"DH::CItemDefibrillator::OnActionComplete"
 			{
 				"offset"		"CItemDefibrillator::OnActionComplete"
@@ -55,6 +57,7 @@
 					}
 				}
 			}
+
 			"DD::CTerrorPlayer::GetPlayerByCharacter"
 			{
 				"signature"		"CTerrorPlayer::GetPlayerByCharacter"
@@ -69,6 +72,7 @@
 				}
 			}
 		}
+
 		"Offsets"
 		{
 			/* CItemDefibrillator::OnStartAction(int, int, CBaseEntity *, void *lpsrc) */
@@ -77,6 +81,7 @@
 				"linux"		"451"
 				"windows"	"449"
 			}
+	
 			/* CItemDefibrillator::OnActionComplete(CItemDefibrillator *__hidden this, CTerrorPlayer *, CBaseEntity *lpsrc */
 			"CItemDefibrillator::OnActionComplete"
 			{
@@ -84,6 +89,7 @@
 				"windows"	"454"
 			}
 		}
+
 		"Signatures"
 		{
 			/* CSurvivorDeathModel::Create(CSurvivorDeathModel *__hidden this, CTerrorPlayer *) */
@@ -94,6 +100,7 @@
 				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x85\x2A\x75\x2A\x33\x2A\x5F\x5D\xC3\x8B"
 				/* ? ? ? ? ? ? ? 85 ? 75 ? 33 ? 5F 5D C3 8B */
 			}
+	
 			/* CTerrorPlayer::GetPlayerByCharacter(SurvivorCharacterType) */
 			"CTerrorPlayer::GetPlayerByCharacter"
 			{
