@@ -89,8 +89,8 @@ public void OnPluginStart()
 	if (!dDetour)
 		SetFailState("Failed to create DynamicDetour: DD::CTerrorPlayer::GetPlayerByCharacter");
 
-	if (!dDetour.Enable(Hook_Pre, DD_CTerrorPlayer_GetPlayerByCharacter_Pre))
-		SetFailState("Failed to detour pre: DD::CTerrorPlayer::GetPlayerByCharacter");
+	if (!dDetour.Enable(Hook_Post, DD_CTerrorPlayer_GetPlayerByCharacter_Post))
+		SetFailState("Failed to detour post: DD::CTerrorPlayer::GetPlayerByCharacter");
 	
 	g_dDH_OnStartAction = DynamicHook.FromConf(hGameData, "DH::CItemDefibrillator::OnStartAction");
 	if (!g_dDH_OnStartAction)
@@ -262,16 +262,16 @@ MRESReturn DH_CItemDefibrillator_OnActionComplete_Post(DHookReturn hReturn, DHoo
 	return MRES_Ignored;
 }
 
-MRESReturn DD_CTerrorPlayer_GetPlayerByCharacter_Pre(DHookReturn hReturn, DHookParam hParams)
+MRESReturn DD_CTerrorPlayer_GetPlayerByCharacter_Post(DHookReturn hReturn, DHookParam hParams)
 {
 	if (!g_bOnActionComplete)
 		return MRES_Ignored;
 
 	g_iOwner = iFindDeathModelOwner(EntIndexToEntRef(g_iDeathModel));
 	if (!g_iOwner) {
-		hParams.Set(1, 8);
 		RemoveEntity(g_iDeathModel);
-		return MRES_ChangedHandled;
+		hReturn.Value = 0;
+		return MRES_Supercede;
 	}
 
 	hReturn.Value = g_iOwner;
