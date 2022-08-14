@@ -66,7 +66,7 @@ public void OnPluginStart()
 
 	g_hKeepIdentity.AddChangeHook(vConVarChanged);
 
-	//AutoExecConfig(true, "transition_restore_fix");
+	AutoExecConfig(true, "transition_restore_fix");
 
 }
 
