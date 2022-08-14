@@ -155,7 +155,7 @@
 				"windows"
 				{
 					"signature"	"CTerrorPlayer::TransitionRestore"
-					"read"		"241"
+					"read"		"225"
 				}
 			}
 
