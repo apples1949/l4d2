@@ -25,16 +25,17 @@
 				"this"		"entity"
 			}
 
-			"DD::CTerrorPlayer::GetPlayerByCharacter"
+			"DD::SurvivorBot::SetHumanSpectator"
 			{
-				"signature"		"CTerrorPlayer::GetPlayerByCharacter"
-				"callconv"		"cdecl"
-				"return"		"cbaseentity"
+				"signature"	"SurvivorBot::SetHumanSpectator"
+				"callconv"	"thiscall"
+				"return"	"void"
+				"this"		"entity"
 				"arguments"
 				{
-					"CharacterIndex"
+					"AFKPlayer"
 					{
-						"type"	"int"
+						"type"	"cbaseentity"
 					}
 				}
 			}
@@ -181,15 +182,6 @@
 				"linux"		"@_ZN9CCSPlayer16State_TransitionE13CSPlayerState"
 				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x8B\x86\x2A\x2A\x2A\x2A\x57\x8B\x2A\x2A\x85\x2A\x74\x2A\x83"
 				/* ? ? ? ? ? ? 8B 86 ? ? ? ? 57 8B ? ? 85 ? 74 ? 83 */
-			}
-
-			/* CTerrorPlayer::GetPlayerByCharacter(SurvivorCharacterType) */
-			"CTerrorPlayer::GetPlayerByCharacter"
-			{
-				"library"	"server"
-				"linux"		"@_ZN13CTerrorPlayer20GetPlayerByCharacterE21SurvivorCharacterType"
-				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x83\x2A\x2A\x83\x2A\x2A\x75\x2A\x33\x2A\x8B\x2A\x5D\xC3\x50\xE8\x2A\x2A\x2A\x2A\x89"
-				/* ? ? ? ? ? ? 83 ? ? 83 ? ? 75 ? 33 ? 8B ? 5D C3 50 E8 ? ? ? ? 89 */
 			}
 
 			/* SurvivorBot::SetHumanSpectator(SurvivorBot *__hidden this, CTerrorPlayer *) */
