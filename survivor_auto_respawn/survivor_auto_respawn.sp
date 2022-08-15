@@ -163,20 +163,30 @@ Address
 ConVar
 	g_hRespawnTime,
 	g_hRespawnLimit,
-	g_hAllowSurvivorBot,
-	g_hAllowSurvivorIdle,
-	g_hGiveWeaponType,
+	g_hRespawnBot,
+	g_hRespawnIdle,
+	g_hGiveType,
+	g_hPunishType,
+	g_hPunishTime,
+	g_hPunishBot,
 	g_hSbAllBotGame,
 	g_hAllowAllBotSur;
 
 bool
-	g_bGiveWeaponType,
-	g_bAllowSurvivorBot,
-	g_bAllowSurvivorIdle;
+	g_bGiveType,
+	g_bPunishType,
+	g_bPunishBot,
+	g_bRespawnBot,
+	g_bRespawnIdle;
 
 int
 	g_iRespawnTime,
-	g_iRespawnLimit;
+	g_iRespawnLimit,
+	g_iPunishTime,
+	g_iMaxRespawned;
+
+float
+	g_fCmdCooldown[MAXPLAYERS + 1];
 
 enum struct esWeapon
 {
@@ -370,45 +380,101 @@ public Plugin myinfo =
 	name = "Survivor Auto Respawn",
 	author = "sorallll",
 	description = "",
-	version = "1.3.5",
+	version = "1.3.6",
 	url = "https://steamcommunity.com/id/sorallll"
 }
 
 public void OnPluginStart()
 {
 	vLoadGameData();
-
 	g_aMeleeScripts = new ArrayList(64);
 
 	g_hRespawnTime =		CreateConVar("sar_respawn_time", 	"15", 		"玩家自动复活时间(秒).", CVAR_FLAGS);
 	g_hRespawnLimit =		CreateConVar("sar_respawn_limit", 	"5", 		"玩家每回合自动复活次数.", CVAR_FLAGS);
-	g_hAllowSurvivorBot =	CreateConVar("sar_respawn_bot",		"1", 		"是否允许Bot自动复活 \n0=否,1=是.", CVAR_FLAGS);
-	g_hAllowSurvivorIdle =	CreateConVar("sar_respawn_idle",	"1", 		"是否允许闲置玩家自动复活 \n0=否,1=是.", CVAR_FLAGS);
-
+	g_hPunishType =			CreateConVar("sar_punish_type", 	"1", 		"玩家复活惩罚类型 \n0=每个人单独计算,1=按本回合内最高已复活次数计算.", CVAR_FLAGS);
+	g_hPunishTime =			CreateConVar("sar_punish_time", 	"5", 		"每次复活一次的惩罚时间 \n0=不惩罚.", CVAR_FLAGS);
+	g_hPunishBot =			CreateConVar("sar_punish_bot", 		"0", 		"是否对Bot进行复活惩罚 \n0=否,1=是.", CVAR_FLAGS);
+	g_hRespawnBot =			CreateConVar("sar_respawn_bot",		"1", 		"是否允许Bot自动复活 \n0=否,1=是.", CVAR_FLAGS);
+	g_hRespawnIdle =		CreateConVar("sar_respawn_idle",	"1", 		"是否允许闲置玩家自动复活 \n0=否,1=是.", CVAR_FLAGS);
 	g_esWeapon[0].cFlags =	CreateConVar("sar_respawn_slot0", 	"131071", 	"主武器给什么 \n0=不给,131071=所有,7=微冲,1560=霰弹,30720=狙击,31=Tier1,32736=Tier2,98304=Tier0.");
 	g_esWeapon[1].cFlags =	CreateConVar("sar_respawn_slot1", 	"5160", 	"副武器给什么 \n0=不给,131071=所有.如果选中了近战且该近战在当前地图上未解锁,则会随机给一把.");
 	g_esWeapon[2].cFlags =	CreateConVar("sar_respawn_slot2", 	"7", 		"投掷物给什么 \n0=不给,7=所有.", CVAR_FLAGS);
 	g_esWeapon[3].cFlags =	CreateConVar("sar_respawn_slot3", 	"1", 		"槽位3给什么 \n0=不给,15=所有.", CVAR_FLAGS);
 	g_esWeapon[4].cFlags =	CreateConVar("sar_respawn_slot4", 	"3", 		"槽位4给什么 \n0=不给,3=所有.", CVAR_FLAGS);
-	g_hGiveWeaponType =		CreateConVar("sar_give_type", 		"0", 		"根据什么来给玩家装备. \n0=不给,1=根据每个槽位的设置,2=根据当前所有生还者的平均装备质量(仅主副武器).");
+	g_hGiveType =			CreateConVar("sar_give_type", 		"0", 		"根据什么来给玩家装备. \n0=不给,1=根据每个槽位的设置,2=根据当前所有生还者的平均装备质量(仅主副武器).");
 
 	g_hSbAllBotGame = FindConVar("sb_all_bot_game");
 	g_hAllowAllBotSur = FindConVar("allow_all_bot_survivor_team");
 
 	g_hRespawnTime.AddChangeHook(vConVarChanged);
 	g_hRespawnLimit.AddChangeHook(vConVarChanged);
-	g_hAllowSurvivorBot.AddChangeHook(vConVarChanged);
-	g_hAllowSurvivorIdle.AddChangeHook(vConVarChanged);
+	g_hPunishType.AddChangeHook(vConVarChanged);
+	g_hPunishTime.AddChangeHook(vConVarChanged);
+	g_hPunishBot.AddChangeHook(vConVarChanged);
+	g_hRespawnBot.AddChangeHook(vConVarChanged);
+	g_hRespawnIdle.AddChangeHook(vConVarChanged);
 
 	for (int i; i < MAX_SLOTS; i++)
 		g_esWeapon[i].cFlags.AddChangeHook(vWeaponConVarChanged);
 		
 	AutoExecConfig(true, "survivor_auto_respawn");
+
+	RegConsoleCmd("sm_respawn", cmdRespawn, "复活");
 }
 
 public void OnPluginEnd()
 {
 	vStatsConditionPatch(false);
+}
+
+Action CommandListener_SpecNext(int client, char[] command, int argc)
+{
+	if (!g_iRespawnTime || !g_iRespawnLimit)
+		return Plugin_Handled;
+
+	if (!client || !IsClientInGame(client) || IsFakeClient(client))
+		return Plugin_Handled;
+
+	if (GetClientTeam(client) != 2 || IsPlayerAlive(client) || g_esPlayer[client].hTimer)
+		return Plugin_Continue;
+
+	float fTime = GetEngineTime();
+	if (g_fCmdCooldown[client] > fTime)
+		return Plugin_Handled;
+
+	g_fCmdCooldown[client] = fTime + 5.0;
+
+	PrintHintText(client, "聊天栏输入 !respawn 进行复活");
+	PrintToChat(client, "\x01聊天栏输入 \x05!respawn \x01进行复活.");
+	return Plugin_Continue;
+}
+
+Action cmdRespawn(int client, int args)
+{
+	if (!client || !IsClientInGame(client) || IsFakeClient(client))
+		return Plugin_Handled;
+
+	if (!g_iRespawnTime || !g_iRespawnLimit) {
+		PrintToChat(client, "复活功能已禁用.");
+		return Plugin_Handled;
+	}
+
+	if (g_esPlayer[client].hTimer) {
+		PrintToChat(client, "复活倒计时已在运行中");
+		return Plugin_Handled;
+	}
+
+	if (GetClientTeam(client) != 2 || IsPlayerAlive(client)) {
+		PrintToChat(client, "只有死亡的生还者才能使用该指令");
+		return Plugin_Handled;
+	}
+
+	if (bCalculateRespawnLimit(client)) {
+		delete g_esPlayer[client].hTimer;
+		g_esPlayer[client].hTimer = CreateTimer(1.0, tmrRespawnSurvivor, GetClientUserId(client), TIMER_REPEAT);
+	}
+
+	return Plugin_Handled;
 }
 
 public void OnConfigsExecuted()
@@ -431,9 +497,12 @@ void vGetCvars()
 {
 	g_iRespawnTime = g_hRespawnTime.IntValue;
 	g_iRespawnLimit = g_hRespawnLimit.IntValue;
+	g_iPunishTime = g_hPunishTime.IntValue;
 	vToggle(g_iRespawnTime && g_iRespawnLimit);
-	g_bAllowSurvivorBot = g_hAllowSurvivorBot.BoolValue;
-	g_bAllowSurvivorIdle = g_hAllowSurvivorIdle.BoolValue;
+	g_bPunishType = g_hPunishType.BoolValue;
+	g_bPunishBot = g_hPunishBot.BoolValue;
+	g_bRespawnBot = g_hRespawnBot.BoolValue;
+	g_bRespawnIdle = g_hRespawnIdle.BoolValue;
 }
 
 void vToggle(bool bEnable)
@@ -451,6 +520,8 @@ void vToggle(bool bEnable)
 		HookEvent("player_bot_replace", Event_PlayerBotReplace);
 		HookEvent("bot_player_replace", Event_BotPlayerReplace);
 
+		AddCommandListener(CommandListener_SpecNext, "spec_next");
+
 	}
 	else if (bEnabled && !bEnable) {
 		bEnabled = false;
@@ -463,6 +534,8 @@ void vToggle(bool bEnable)
 		UnhookEvent("player_death", Event_PlayerDeath, EventHookMode_Pre);
 		UnhookEvent("player_bot_replace", Event_PlayerBotReplace);
 		UnhookEvent("bot_player_replace", Event_BotPlayerReplace);
+
+		RemoveCommandListener(CommandListener_SpecNext, "spec_next");
 
 		for (int i = 1; i <= MaxClients; i++) {
 			g_esPlayer[i].iRespawned = 0;
@@ -480,7 +553,7 @@ void vGetWeaponCvars()
 			iNullSlot++;
 	}
 
-	g_bGiveWeaponType = iNullSlot < MAX_SLOTS ? g_hGiveWeaponType.BoolValue : false;
+	g_bGiveType = iNullSlot < MAX_SLOTS ? g_hGiveType.BoolValue : false;
 }
 
 int iGetSlotAllowed(int iSlot)
@@ -500,7 +573,7 @@ public void L4D2_OnSurvivorDeathModelCreated(int iClient, int iDeathModel)
 	g_esPlayer[iClient].iDeathModel = EntIndexToEntRef(iDeathModel);
 }
 
-public void OnClientDisconnect(int client)
+public void OnClientDisconnect_Post(int client)
 {
 	delete g_esPlayer[client].hTimer;
 	g_esPlayer[client].iRespawned = 0;
@@ -509,6 +582,7 @@ public void OnClientDisconnect(int client)
 
 public void OnMapEnd()
 {
+	g_iMaxRespawned = 0;
 	for (int i = 1; i <= MaxClients; i++) {
 		g_esPlayer[i].iRespawned = 0;
 		delete g_esPlayer[i].hTimer;
@@ -537,7 +611,14 @@ void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
 		return;
 	}
 
-	if (g_esPlayer[client].hTimer != null || (!g_bAllowSurvivorBot && IsFakeClient(client)) || GetClientTeam(client) != 2)
+	if (g_esPlayer[client].hTimer || GetClientTeam(client) != 2)
+		return;
+
+	bool bIsBot = IsFakeClient(client);
+	if ((!g_bRespawnBot && bIsBot))
+		return;
+
+	if (!g_bRespawnIdle && !bIsBot && iGetBotOfIdlePlayer(client))
 		return;
 
 	if (bCalculateRespawnLimit(client)) {
@@ -546,10 +627,28 @@ void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
 	}
 }
 
+int iGetBotOfIdlePlayer(int client)
+{
+	for (int i = 1; i <= MaxClients; i++) {
+		if (IsClientInGame(i) && IsFakeClient(i) && iGetIdlePlayerOfBot(i) == client)
+			return i;
+	}
+	return 0;
+}
+
+int iGetIdlePlayerOfBot(int client)
+{
+	if (!HasEntProp(client, Prop_Send, "m_humanSpectatorUserID"))
+		return 0;
+
+	client = GetClientOfUserId(GetEntProp(client, Prop_Send, "m_humanSpectatorUserID"));
+	return client && IsClientInGame(client);
+}
+
 void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientOfUserId(event.GetInt("userid"));
-	if (!client || !IsClientInGame(client) || (!g_bAllowSurvivorBot && IsFakeClient(client)) || GetClientTeam(client) != 2)
+	if (!client || g_esPlayer[client].hTimer || !IsClientInGame(client) || (!g_bRespawnBot && IsFakeClient(client)) || GetClientTeam(client) != 2)
 		return;
 
 	if (bCalculateRespawnLimit(client)) {
@@ -561,7 +660,7 @@ void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast)
 void Event_PlayerBotReplace(Event event, char[] name, bool dontBroadcast)
 {
 	int bot = GetClientOfUserId(event.GetInt("bot"));
-	if (!bot || !IsClientInGame(bot) || (!g_bAllowSurvivorBot && IsFakeClient(bot)) || GetClientTeam(bot) != 2 || IsPlayerAlive(bot))
+	if (!bot || g_esPlayer[bot].hTimer || !IsClientInGame(bot) || (!g_bRespawnBot && IsFakeClient(bot)) || GetClientTeam(bot) != 2 || IsPlayerAlive(bot))
 		return;
 
 	if (bCalculateRespawnLimit(bot)) {
@@ -572,11 +671,11 @@ void Event_PlayerBotReplace(Event event, char[] name, bool dontBroadcast)
 
 void Event_BotPlayerReplace(Event event, const char[] name, bool dontBroadcast)
 {
-	if (!g_bAllowSurvivorIdle)
+	if (!g_bRespawnIdle)
 		return;
 
 	int player = GetClientOfUserId(event.GetInt("player"));
-	if (!player || !IsClientInGame(player) || GetClientTeam(player) != 2 || IsPlayerAlive(player))
+	if (!player || g_esPlayer[player].hTimer || !IsClientInGame(player) || GetClientTeam(player) != 2 || IsPlayerAlive(player))
 		return;
 
 	if (bCalculateRespawnLimit(player)) {
@@ -587,14 +686,15 @@ void Event_BotPlayerReplace(Event event, const char[] name, bool dontBroadcast)
 
 bool bCalculateRespawnLimit(int client)
 {
+	bool bIsBot = IsFakeClient(client);
 	if (g_esPlayer[client].iRespawned >= g_iRespawnLimit) {
-		if (!IsFakeClient(client))
+		if (!bIsBot)
 			PrintHintText(client, "复活次数已耗尽, 请等待队友救援");
 
 		return false;
 	}
 
-	g_esPlayer[client].iCountdown = g_iRespawnTime;
+	g_esPlayer[client].iCountdown = g_iRespawnTime + ((!g_bPunishBot && bIsBot) ? 0 : g_iPunishTime * (g_bPunishType ? g_iMaxRespawned : g_esPlayer[client].iRespawned));
 	return true;
 }
 
@@ -630,11 +730,14 @@ void vRespawnSurvivor(int client)
 	vTeleportToSurvivor(client);
 	g_esPlayer[client].iRespawned++;
 
+	if (g_esPlayer[client].iRespawned > g_iMaxRespawned)
+		g_iMaxRespawned = g_esPlayer[client].iRespawned;
+
 	if (!IsFakeClient(client)) {
 		if (bCanIdle(client))
 			vGoAFKTimer(client, 0.1);	//SDKCall(g_hSDK_CTerrorPlayer_GoAwayFromKeyboard, client);
 
-		CPrintToChat(client, "{olive}剩余复活次数 {default}-> {blue}%d", g_iRespawnLimit - g_esPlayer[client].iRespawned);
+		CPrintToChat(client, "{olive}剩余复活次数 {default}-> {blue}%d {olive}本回合单人最高已复活次数 {default}-> {blue}%d", g_iRespawnLimit - g_esPlayer[client].iRespawned, g_iMaxRespawned);
 	}
 }
 
@@ -667,7 +770,7 @@ bool bIsValidEntRef(int entity)
 
 void vGiveWeapon(int client)
 {
-	if (!g_bGiveWeaponType)
+	if (!g_bGiveType)
 		return;
 
 	vRemovePlayerWeapons(client);
@@ -681,7 +784,7 @@ void vGiveWeapon(int client)
 
 	vGiveSecondary(client);
 
-	switch(g_hGiveWeaponType.IntValue) {
+	switch(g_hGiveType.IntValue) {
 		case 1:
 			vGivePresetPrimary(client);
 		
@@ -723,7 +826,7 @@ bool bIsWeaponTier1(int iWeapon)
 	char sWeapon[32];
 	GetEntityClassname(iWeapon, sWeapon, sizeof sWeapon);
 	for (int i; i < 5; i++) {
-		if (strcmp(sWeapon[7], g_sWeaponName[0][i]) == 0)
+		if (strcmp(sWeapon, g_sWeaponName[0][i], false) == 0)
 			return true;
 	}
 	return false;
@@ -793,6 +896,7 @@ void vTeleportToSurvivor(int client, bool bRandom = true)
 	delete aClients;
 
 	if (iSurvivor) {
+		vSetInvincibilityTime(client, 1.5);
 		SetEntProp(client, Prop_Send, "m_bDucked", 1);
 		SetEntProp(client, Prop_Send, "m_fFlags", GetEntProp(client, Prop_Send, "m_fFlags") | FL_DUCKING);
 
@@ -927,4 +1031,14 @@ void vGoAFKTimer(int client, float flDuration)
 
 	SetEntDataFloat(client, m_GoAFKTimer + 4, flDuration);
 	SetEntDataFloat(client, m_GoAFKTimer + 8, GetGameTime() + flDuration);
+}
+
+void vSetInvincibilityTime(int client, float flDuration)
+{
+	static int m_invulnerabilityTimer = -1;
+	if (m_invulnerabilityTimer == -1)
+		m_invulnerabilityTimer = FindSendPropInfo("CTerrorPlayer", "m_noAvoidanceTimer") - 12;
+
+	SetEntDataFloat(client, m_invulnerabilityTimer + 4, flDuration);
+	SetEntDataFloat(client, m_invulnerabilityTimer + 8, GetGameTime() + flDuration);
 }
