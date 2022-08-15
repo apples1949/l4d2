@@ -7,7 +7,7 @@
 #include <adminmenu>
 #include <dhooks>
 
-#define PLUGIN_VERSION "1.6.8"
+#define PLUGIN_VERSION "1.6.9"
 #define PLUGIN_NAME 	"Survivor Chat Select"
 #define PLUGIN_PREFIX	"\x01[\x04SCS\x01]"
 
@@ -154,12 +154,10 @@ public void OnPluginStart()
 public void OnAdminMenuReady(Handle aTopMenu)
 {
 	TopMenu topmenu = TopMenu.FromHandle(aTopMenu);
-
 	if (topmenu == hTopMenu)
 		return;
 
 	hTopMenu = topmenu;
-
 	TopMenuObject player_commands = hTopMenu.FindCategory(ADMINMENU_PLAYERCOMMANDS);
 
 	if (player_commands != INVALID_TOPMENUOBJECT)
@@ -212,10 +210,12 @@ int iCscMenuHandler(Menu menu, MenuAction action, int client, int param2)
 
 			vShowMenuAdmin(client);
 		}
+	
 		case MenuAction_Cancel: {
 			if (param2 == MenuCancel_ExitBack && hTopMenu != null)
 				DisplayTopMenu(hTopMenu, client, TopMenuPosition_LastCategory);
 		}
+	
 		case MenuAction_End:
 			delete menu;
 	}
@@ -248,22 +248,30 @@ int iShowMenuAdminMenuHandler(Menu menu, MenuAction action, int client, int para
 			switch (param2) {
 				case 0:
 					vSetCharacter(GetClientOfUserId(g_iSelectedClient[client]), NICK, false);
+
 				case 1:
 					vSetCharacter(GetClientOfUserId(g_iSelectedClient[client]), ROCHELLE, false);
+
 				case 2:
 					vSetCharacter(GetClientOfUserId(g_iSelectedClient[client]), COACH, false);
+
 				case 3:
 					vSetCharacter(GetClientOfUserId(g_iSelectedClient[client]), ELLIS, false);
+
 				case 4:
 					vSetCharacter(GetClientOfUserId(g_iSelectedClient[client]), BILL, false);
+
 				case 5:
 					vSetCharacter(GetClientOfUserId(g_iSelectedClient[client]), ZOEY, false);
+
 				case 6:
 					vSetCharacter(GetClientOfUserId(g_iSelectedClient[client]), FRANCIS, false);
+
 				case 7:
 					vSetCharacter(GetClientOfUserId(g_iSelectedClient[client]), LOUIS, false);
 			}
 		}
+	
 		case MenuAction_End:
 			delete menu;
 	}
@@ -300,22 +308,30 @@ int iCsmMenuHandler(Menu menu, MenuAction action, int client, int param2)
 			switch (param2) {
 				case 0:
 					vSetCharacter(client, NICK);
+
 				case 1:
 					vSetCharacter(client, ROCHELLE);
+
 				case 2:
 					vSetCharacter(client, COACH);
+
 				case 3:
 					vSetCharacter(client, ELLIS);
+
 				case 4:
 					vSetCharacter(client, BILL);
+
 				case 5:
 					vSetCharacter(client, ZOEY);
+
 				case 6:
 					vSetCharacter(client, FRANCIS);
+
 				case 7:
 					vSetCharacter(client, LOUIS);
 			}
 		}
+
 		case MenuAction_End:
 			delete menu;
 	}
@@ -363,24 +379,17 @@ bool bCanUse(int client, bool bCheckAdmin = true)
 stock bool L4D_IsPlayerStaggering(int client)
 {
 	static int m_iQueuedStaggerType = -1;
-	if ( m_iQueuedStaggerType == -1 )
-	m_iQueuedStaggerType = FindSendPropInfo("CTerrorPlayer", "m_staggerDist") + 4;
+	if (m_iQueuedStaggerType == -1)
+		m_iQueuedStaggerType = FindSendPropInfo("CTerrorPlayer", "m_staggerDist") + 4;
 
-	if ( GetEntData(client, m_iQueuedStaggerType, 4) == -1 )
-	{
+	if (GetEntData(client, m_iQueuedStaggerType, 4) == -1) {
 		if ( GetGameTime() >= GetEntPropFloat(client, Prop_Send, "m_staggerTimer", 1) )
-		{
 			return false;
-		}
 
 		static float vStgDist[3], vOrigin[3];
 		GetEntPropVector(client, Prop_Send, "m_staggerStart", vStgDist);
 		GetEntPropVector(client, Prop_Send, "m_vecOrigin", vOrigin);
-
-		static float fStgDist2;
-		fStgDist2 = GetEntPropFloat(client, Prop_Send, "m_staggerDist");
-
-		return GetVectorDistance(vStgDist, vOrigin) <= fStgDist2;
+		return GetVectorDistance(vStgDist, vOrigin) <= GetEntPropFloat(client, Prop_Send, "m_staggerDist");
 	}
 
 	return true;
@@ -626,8 +635,7 @@ void vSetCharacter(int client, int iCharacter, int iModelIndex, bool bSave = tru
 
 	vSetCharacterInfo(client, iCharacter, iModelIndex);
 
-	if (bSave && g_bCookie)
-	{
+	if (bSave && g_bCookie) {
 		char sProp[2];
 		IntToString(iCharacter, sProp, sizeof sProp);
 		g_ckClientID.Set(client, sProp);
@@ -640,7 +648,7 @@ void vSetCharacter(int client, int iCharacter, int iModelIndex, bool bSave = tru
 bool bIsGettingUp(int client)
 {
 	static char sModel[31];
-	GetEntPropString(client, Prop_Data, "m_ModelName", sModel, sizeof sModel);
+	GetClientModel(client, sModel, sizeof sModel);
 	switch (sModel[29]) {
 		case 'b': {	//nick
 			switch (GetEntProp(client, Prop_Send, "m_nSequence")) {
@@ -648,48 +656,56 @@ bool bIsGettingUp(int client)
 					return true;
 			}
 		}
+
 		case 'd': {	//rochelle
 			switch (GetEntProp(client, Prop_Send, "m_nSequence")) {
 				case 687, 679, 678, 674, 638, 635, 629:
 					return true;
 			}
 		}
+
 		case 'c': {	//coach
 			switch (GetEntProp(client, Prop_Send, "m_nSequence")) {
 				case 669, 661, 660, 656, 630, 627, 621:
 					return true;
 			}
 		}
+
 		case 'h': {	//ellis
 			switch (GetEntProp(client, Prop_Send, "m_nSequence")) {
 				case 684, 676, 675, 671, 625, 635, 632:
 					return true;
 			}
 		}
+
 		case 'v': {	//bill
 			switch (GetEntProp(client, Prop_Send, "m_nSequence")) {
 				case 772, 764, 763, 759, 538, 535, 528:
 					return true;
 			}
 		}
+
 		case 'n': {	//zoey
 			switch (GetEntProp(client, Prop_Send, "m_nSequence")) {
 				case 824, 823, 819, 809, 547, 544, 537:
 					return true;
 			}
 		}
+
 		case 'e': {	//francis
 			switch (GetEntProp(client, Prop_Send, "m_nSequence")) {
 				case 775, 767, 766, 762, 541, 539, 531:
 					return true;
 			}
 		}
+
 		case 'a': {	//louis
 			switch (GetEntProp(client, Prop_Send, "m_nSequence")) {
 				case 772, 764, 763, 759, 538, 535, 528:
 					return true;
 			}
 		}
+
 		case 'w': {	//adawong
 			switch (GetEntProp(client, Prop_Send, "m_nSequence")) {
 				case 687, 679, 678, 674, 638, 635, 629:
@@ -747,18 +763,25 @@ void vSetLeastUsedCharacter(int client)
 	switch (iCheckLeastUsedSurvivor(client)) {
 		case 0:
 			vSetCharacterInfo(client, NICK);
+
 		case 1:
 			vSetCharacterInfo(client, ROCHELLE);
+
 		case 2:
 			vSetCharacterInfo(client, COACH);
+
 		case 3:
 			vSetCharacterInfo(client, ELLIS);
+
 		case 4:
 			vSetCharacterInfo(client, BILL);
+
 		case 5:
 			vSetCharacterInfo(client, ZOEY);
+
 		case 6:
 			vSetCharacterInfo(client, FRANCIS);
+
 		case 7:
 			vSetCharacterInfo(client, LOUIS);	
 	}
@@ -770,7 +793,6 @@ int iCheckLeastUsedSurvivor(int client)
 	int iCharBuff;
 	int iLeastChar[8];
 	char sModel[PLATFORM_MAX_PATH];
-	GetClientModel(client, sModel, sizeof sModel);
 	for (; i <= MaxClients; i++) {
 		if (i == client || !IsClientInGame(i) || GetClientTeam(i) != 2)
 			continue;
@@ -837,7 +859,7 @@ void vSetCharacterInfo(int client, int iCharacter, int iModelIndex)
 
 	if (IsFakeClient(client)) {
 		g_bHideNameChange = true;
-		SetClientName(client, g_sSurvivorNames[iModelIndex]);
+		SetClientInfo(client, "name", g_sSurvivorNames[iModelIndex]);
 		g_bHideNameChange = false;
 	}
 		
