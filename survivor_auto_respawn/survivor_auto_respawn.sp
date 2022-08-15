@@ -168,6 +168,7 @@ ConVar
 	g_hGiveType,
 	g_hPunishType,
 	g_hPunishTime,
+	g_hBotSpawned,
 	g_hPunishBot,
 	g_hSbAllBotGame,
 	g_hAllowAllBotSur;
@@ -176,6 +177,7 @@ bool
 	g_bGiveType,
 	g_bPunishType,
 	g_bPunishBot,
+	g_bBotSpawned,
 	g_bRespawnBot,
 	g_bRespawnIdle;
 
@@ -394,6 +396,7 @@ public void OnPluginStart()
 	g_hPunishType =			CreateConVar("sar_punish_type", 	"1", 		"玩家复活惩罚类型 \n0=每个人单独计算,1=按本回合内最高已复活次数计算.", CVAR_FLAGS);
 	g_hPunishTime =			CreateConVar("sar_punish_time", 	"5", 		"每次复活一次的惩罚时间 \n0=不惩罚.", CVAR_FLAGS);
 	g_hPunishBot =			CreateConVar("sar_punish_bot", 		"0", 		"是否对Bot进行复活惩罚 \n0=否,1=是.", CVAR_FLAGS);
+	g_hBotSpawned =			CreateConVar("sar_bot_spawned", 	"0", 		"是否将Bot的复活次数计入最高已复活次数 \n0=否,1=是.", CVAR_FLAGS);
 	g_hRespawnBot =			CreateConVar("sar_respawn_bot",		"1", 		"是否允许Bot自动复活 \n0=否,1=是.", CVAR_FLAGS);
 	g_hRespawnIdle =		CreateConVar("sar_respawn_idle",	"1", 		"是否允许闲置玩家自动复活 \n0=否,1=是.", CVAR_FLAGS);
 	g_esWeapon[0].cFlags =	CreateConVar("sar_respawn_slot0", 	"131071", 	"主武器给什么 \n0=不给,131071=所有,7=微冲,1560=霰弹,30720=狙击,31=Tier1,32736=Tier2,98304=Tier0.");
@@ -411,6 +414,7 @@ public void OnPluginStart()
 	g_hPunishType.AddChangeHook(vConVarChanged);
 	g_hPunishTime.AddChangeHook(vConVarChanged);
 	g_hPunishBot.AddChangeHook(vConVarChanged);
+	g_hBotSpawned.AddChangeHook(vConVarChanged);
 	g_hRespawnBot.AddChangeHook(vConVarChanged);
 	g_hRespawnIdle.AddChangeHook(vConVarChanged);
 
@@ -501,6 +505,7 @@ void vGetCvars()
 	vToggle(g_iRespawnTime && g_iRespawnLimit);
 	g_bPunishType = g_hPunishType.BoolValue;
 	g_bPunishBot = g_hPunishBot.BoolValue;
+	g_bBotSpawned = g_hBotSpawned.BoolValue;
 	g_bRespawnBot = g_hRespawnBot.BoolValue;
 	g_bRespawnIdle = g_hRespawnIdle.BoolValue;
 }
@@ -730,10 +735,11 @@ void vRespawnSurvivor(int client)
 	vTeleportToSurvivor(client);
 	g_esPlayer[client].iRespawned++;
 
-	if (g_esPlayer[client].iRespawned > g_iMaxRespawned)
+	bool bIsBot = IsFakeClient(client);
+	if ((!bIsBot || g_bBotSpawned) && g_esPlayer[client].iRespawned > g_iMaxRespawned)
 		g_iMaxRespawned = g_esPlayer[client].iRespawned;
 
-	if (!IsFakeClient(client)) {
+	if (!bIsBot) {
 		if (bCanIdle(client))
 			vGoAFKTimer(client, 0.1);	//SDKCall(g_hSDK_CTerrorPlayer_GoAwayFromKeyboard, client);
 
