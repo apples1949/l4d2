@@ -394,15 +394,15 @@ Action tmrForceSuicide(Handle timer)
 		if (!IsClientInGame(i) || !IsFakeClient(i) || GetClientTeam(i) != 3 || !IsPlayerAlive(i))
 			continue;
 
+		iClass = GetEntProp(i, Prop_Send, "m_zombieClass");
+		if (iClass < 1 || iClass > 6)
+			continue;
+
 		if (GetEntProp(i, Prop_Send, "m_hasVisibleThreats")) {
 			g_fSpecialActionTime[i] = fEngineTime;
 			continue;
 		}
 
-		iClass = GetEntProp(i, Prop_Send, "m_zombieClass");
-		if (iClass < 1 || iClass > 6)
-			continue;
-	
 		victim = iGetSurVictim(i, iClass);
 		if (victim > 0) {
 			if (GetEntProp(victim, Prop_Send, "m_isIncapacitated"))
