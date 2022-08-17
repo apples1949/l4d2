@@ -279,7 +279,6 @@ void vInitData()
 void vInitPatchs(GameData hGameData = null)
 {
 	Address pAddr = hGameData.GetMemSig("ZombieManager::GetRandomPZSpawnPosition");
-	pAddr = hGameData.GetMemSig("ZombieManager::GetRandomPZSpawnPosition");
 	if (!pAddr)
 		SetFailState("Failed to find address: \"ZombieManager::GetRandomPZSpawnPosition\"");
 
