@@ -12,7 +12,7 @@
 	Profiler g_profiler;
 #endif
 
-#define GAMEDATA "specialspawner"
+#define GAMEDATA	"specialspawner"
 
 #define SI_SMOKER		0
 #define SI_BOOMER		1
@@ -329,9 +329,8 @@ void vStaticDirectionPatch(bool bPatch)
 public Action L4D_OnGetScriptValueInt(const char[] key, int &retVal)
 {
 	static int iValue;
-
 	if (!g_bInSpawnTime) {
-		if (retVal != 0 && strcmp(key, "MaxSpecials", false) == 0) {
+		if (strcmp(key, "MaxSpecials", false) == 0) {
 			retVal = 0;
 			return Plugin_Handled;
 		}
@@ -344,6 +343,10 @@ public Action L4D_OnGetScriptValueInt(const char[] key, int &retVal)
 		iValue = g_iSILimit;
 	else if (strcmp(key, "PreferredSpecialDirection", false) == 0)
 		iValue = g_iPreferredDirection;
+	else if (strcmp(key, "ShouldIgnoreClearStateForSpawn", false) == 0)
+		iValue = 1;
+	else if (strcmp(key, "ShouldConstrainLargeVolumeSpawn", false) == 0)
+		iValue = 1;
 
 	if (iValue != retVal) {
 		retVal = iValue;
