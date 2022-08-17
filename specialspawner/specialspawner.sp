@@ -291,7 +291,6 @@ void vInitPatchs(GameData hGameData = null)
 		SetFailState("Failed to find byte: \"StaticDirection_Byte_1\"");
 
 	g_pStaticDirection[0] = pAddr + view_as<Address>(iOffset);
-	
 	int iByteOrigin = LoadFromAddress(g_pStaticDirection[0], NumberType_Int8);
 	if (iByteOrigin != iByteMatch)
 		SetFailState("Failed to load \"CTerrorPlayer::StaticDirection\", byte mis-match @ %d (0x%02X != 0x%02X)", iOffset, iByteOrigin, iByteMatch);
@@ -305,7 +304,6 @@ void vInitPatchs(GameData hGameData = null)
 		SetFailState("Failed to find byte: \"StaticDirection_Byte_2\"");
 
 	g_pStaticDirection[1] = pAddr + view_as<Address>(iOffset);
-	
 	iByteOrigin = LoadFromAddress(g_pStaticDirection[0], NumberType_Int8);
 	if (iByteOrigin != iByteMatch)
 		SetFailState("Failed to load \"CTerrorPlayer::StaticDirection\", byte mis-match @ %d (0x%02X != 0x%02X)", iOffset, iByteOrigin, iByteMatch);
@@ -387,51 +385,72 @@ bool bHasAnySurvivorLeftSafeArea()
 Action tmrForceSuicide(Handle timer)
 {
 	static int i;
+	static int victim;
 	static int iClass;
 	static float fEngineTime;
 
 	fEngineTime = GetEngineTime();
 	for (i = 1; i <= MaxClients; i++) {
-		
-		if (fEngineTime - g_fSpecialActionTime[i] < g_fForceSuicideTime)
-			continue;
-
 		if (!IsClientInGame(i) || !IsFakeClient(i) || GetClientTeam(i) != 3 || !IsPlayerAlive(i))
 			continue;
+
+		if (GetEntProp(i, Prop_Send, "m_hasVisibleThreats")) {
+			g_fSpecialActionTime[i] = fEngineTime;
+			continue;
+		}
 
 		iClass = GetEntProp(i, Prop_Send, "m_zombieClass");
 		if (iClass < 1 || iClass > 6)
 			continue;
-
-		if (!GetEntProp(i, Prop_Send, "m_hasVisibleThreats") && (!(iClass = iGetSurVictim(i, iClass)) || GetEntProp(iClass, Prop_Send, "m_isIncapacitated"))) {
-			#if DEBUG
-			PrintToServer("[SS] Kill Inactive SI: %N", i);
-			#endif
-			ForcePlayerSuicide(i);
-			g_aSpawnQueue.Push(iClass - 1);
-			CreateTimer(0.1, tmrRetrySpawn, _, TIMER_FLAG_NO_MAPCHANGE);
+	
+		victim = iGetSurVictim(i, iClass);
+		if (victim > 0) {
+			if (GetEntProp(victim, Prop_Send, "m_isIncapacitated"))
+				vKillInactiveSI(i, iClass);
+			else
+				g_fSpecialActionTime[i] = fEngineTime;
 		}
-		else
-			g_fSpecialActionTime[i] = fEngineTime;
+		else if (fEngineTime - g_fSpecialActionTime[i] > g_fForceSuicideTime)
+			vKillInactiveSI(i, iClass);
 	}
 
 	return Plugin_Continue;
+}
+
+void vKillInactiveSI(int client, int iClass)
+{
+	#if DEBUG
+	PrintToServer("[SS] Kill Inactive SI: %N", client);
+	#endif
+	ForcePlayerSuicide(client);
+	g_aSpawnQueue.Push(iClass - 1);
+	CreateTimer(0.1, tmrRetrySpawn, _, TIMER_FLAG_NO_MAPCHANGE);
 }
 
 int iGetSurVictim(int client, int iClass)
 {
 	switch (iClass) {
 		case 1:
-			return GetEntPropEnt(client, Prop_Send, "m_tongueVictim") > 0;
+			return GetEntPropEnt(client, Prop_Send, "m_tongueVictim");
+
 		case 3:
-			return GetEntPropEnt(client, Prop_Send, "m_pounceVictim") > 0;
+			return GetEntPropEnt(client, Prop_Send, "m_pounceVictim");
+
 		case 5:
-			return GetEntPropEnt(client, Prop_Send, "m_jockeyVictim") > 0;
-		case 6:
-			return GetEntPropEnt(client, Prop_Send, "m_pummelVictim") > 0 || GetEntPropEnt(client, Prop_Send, "m_carryVictim") > 0;
+			return GetEntPropEnt(client, Prop_Send, "m_jockeyVictim");
+
+		case 6: {
+			iClass = GetEntPropEnt(client, Prop_Send, "m_pummelVictim");
+			if (iClass > 0)
+				return iClass;
+
+			iClass = GetEntPropEnt(client, Prop_Send, "m_carryVictim");
+			if (iClass > 0)
+				return iClass;
+		}
 	}
 
-	return false;
+	return -1;
 }
 
 public void OnConfigsExecuted()
@@ -683,10 +702,13 @@ void vSetMaxSpecialsCount()
 void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientOfUserId(event.GetInt("userid"));
-	if (!client || !IsClientInGame(client) || GetClientTeam(client) != 3 || GetEntProp(client, Prop_Send, "m_zombieClass") != 8)
+	if (!client || !IsClientInGame(client) || GetClientTeam(client) != 3)
 		return;
 
-	CreateTimer(0.1, tmrTankSpawn, event.GetInt("userid"), TIMER_FLAG_NO_MAPCHANGE);
+	if (GetEntProp(client, Prop_Send, "m_zombieClass") != 8)
+		g_fSpecialActionTime[client] = GetEngineTime();
+	else
+		CreateTimer(0.1, tmrTankSpawn, event.GetInt("userid"), TIMER_FLAG_NO_MAPCHANGE);
 }
 
 void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast)
@@ -1168,8 +1190,7 @@ void vGenerateAndExecuteSpawnQueue(int iTotalSI)
 		if (L4D_GetRandomPZSpawnPosition(client, iClass + 1, 10, vPos))
 			bFind = true;
 
-		if (bFind && (iClass = L4D2_SpawnSpecial(iClass + 1, vPos, NULL_VECTOR)) > 0) {
-			g_fSpecialActionTime[iClass] = flow;
+		if (bFind && L4D2_SpawnSpecial(iClass + 1, vPos, NULL_VECTOR) > 0) {
 			g_aSpawnQueue.Erase(i);
 			iSize--;
 			continue;
@@ -1196,7 +1217,6 @@ Action tmrRetrySpawn(Handle timer)
 	static int client;
 	static bool bFind;
 	static int iClass;
-	static float fTime;
 	static float vPos[3];
 
 	if (!g_bLeftSafeArea)
@@ -1212,7 +1232,6 @@ Action tmrRetrySpawn(Handle timer)
 
 	bFind = false;
 	g_bInSpawnTime = true;
-	fTime = GetEngineTime();
 	g_iPreferredDirection = SPAWN_IN_FRONT_OF_SURVIVORS;
 	//vStaticDirectionPatch(true);
 
@@ -1221,8 +1240,7 @@ Action tmrRetrySpawn(Handle timer)
 		if (L4D_GetRandomPZSpawnPosition(client, iClass + 1, 10, vPos))
 			bFind = true;
 
-		if (bFind && (iClass = L4D2_SpawnSpecial(iClass + 1, vPos, NULL_VECTOR)) > 0) {
-			g_fSpecialActionTime[iClass] = fTime;
+		if (bFind && L4D2_SpawnSpecial(iClass + 1, vPos, NULL_VECTOR) > 0) {
 			g_aSpawnQueue.Erase(i);
 			iSize--;
 			continue;
