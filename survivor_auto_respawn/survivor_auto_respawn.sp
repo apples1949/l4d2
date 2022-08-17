@@ -151,7 +151,6 @@ stock void CSayText2(int client, int author, const char[] szMessage)
 
 Handle
 	g_hSDK_CTerrorPlayer_RoundRespawn;
-	//g_hSDK_CTerrorPlayer_GoAwayFromKeyboard;
 
 ArrayList
 	g_aMeleeScripts;
@@ -388,7 +387,7 @@ public Plugin myinfo =
 
 public void OnPluginStart()
 {
-	vLoadGameData();
+	vInitData();
 	g_aMeleeScripts = new ArrayList(64);
 
 	g_hRespawnTime =		CreateConVar("sar_respawn_time", 	"15", 		"玩家自动复活时间(秒).", CVAR_FLAGS);
@@ -741,9 +740,9 @@ void vRespawnSurvivor(int client)
 
 	if (!bIsBot) {
 		if (bCanIdle(client))
-			vGoAFKTimer(client, 0.1);	//SDKCall(g_hSDK_CTerrorPlayer_GoAwayFromKeyboard, client);
+			vGoAFKTimer(client, 0.1);
 
-		CPrintToChat(client, "{olive}剩余复活次数 {default}-> {blue}%d {olive}本回合单人最高已复活次数 {default}-> {blue}%d", g_iRespawnLimit - g_esPlayer[client].iRespawned, g_iMaxRespawned);
+		CPrintToChat(client, "{olive}剩余复活次数 {default}-> {blue}%d", g_iRespawnLimit - g_esPlayer[client].iRespawned);
 	}
 }
 
@@ -958,7 +957,7 @@ void vGiveMelee(int client, const char[] sMeleeName)
 	vCheatCommand(client, "give", sScriptName);
 }
 
-void vLoadGameData()
+void vInitData()
 {
 	char sPath[PLATFORM_MAX_PATH];
 	BuildPath(Path_SM, sPath, sizeof sPath, "gamedata/%s.txt", GAMEDATA);
@@ -975,13 +974,6 @@ void vLoadGameData()
 	if (!(g_hSDK_CTerrorPlayer_RoundRespawn = EndPrepSDKCall()))
 		SetFailState("Failed to create SDKCall: \"CTerrorPlayer::RoundRespawn\"");
 
-	/**StartPrepSDKCall(SDKCall_Player);
-	if (!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorPlayer::GoAwayFromKeyboard"))
-		SetFailState("Failed to find signature: \"CTerrorPlayer::GoAwayFromKeyboard\"");
-	PrepSDKCall_SetReturnInfo(SDKType_Bool, SDKPass_Plain);
-	if (!(g_hSDK_CTerrorPlayer_GoAwayFromKeyboard = EndPrepSDKCall()))
-		SetFailState("Failed to create SDKCall: \"CTerrorPlayer::GoAwayFromKeyboard\"");*/
-
 	vInitPatchs(hGameData);
 
 	delete hGameData;
@@ -997,7 +989,7 @@ void vInitPatchs(GameData hGameData = null)
 	if (iByteMatch == -1)
 		SetFailState("Failed to find byte: \"RoundRespawn_Byte\"");
 
-	g_pStatsCondition = hGameData.GetAddress("CTerrorPlayer::RoundRespawn");
+	g_pStatsCondition = hGameData.GetMemSig("CTerrorPlayer::RoundRespawn");
 	if (!g_pStatsCondition)
 		SetFailState("Failed to find address: \"CTerrorPlayer::RoundRespawn\"");
 	
