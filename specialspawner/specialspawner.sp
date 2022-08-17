@@ -1165,8 +1165,8 @@ void vGenerateAndExecuteSpawnQueue(int iTotalSI)
 		if (L4D_GetRandomPZSpawnPosition(client, iClass + 1, 10, vPos))
 			bFind = true;
 
-		if (bFind && (client = L4D2_SpawnSpecial(iClass + 1, vPos, NULL_VECTOR)) > 0) {
-			g_fSpecialActionTime[client] = flow;
+		if (bFind && (iClass = L4D2_SpawnSpecial(iClass + 1, vPos, NULL_VECTOR)) > 0) {
+			g_fSpecialActionTime[iClass] = flow;
 			g_aSpawnQueue.Erase(i);
 			iSize--;
 			continue;
@@ -1182,18 +1182,20 @@ void vGenerateAndExecuteSpawnQueue(int iTotalSI)
 		#if DEBUG
 		PrintToServer("[SS] Retry Spawn SI");
 		#endif
-		CreateTimer(0.1, tmrRetrySpawn, GetClientUserId(client), TIMER_FLAG_NO_MAPCHANGE);
+		CreateTimer(0.1, tmrRetrySpawn, _, TIMER_FLAG_NO_MAPCHANGE);
 	}
 }
 
-Action tmrRetrySpawn(Handle timer, int client)
+Action tmrRetrySpawn(Handle timer)
 {
 	static int i;
 	static int iSize;
+	static int client;
 	static bool bFind;
 	static int iClass;
 	static float fTime;
 	static float vPos[3];
+
 	if (!g_bLeftSafeArea)
 		return Plugin_Stop;
 
@@ -1201,10 +1203,7 @@ Action tmrRetrySpawn(Handle timer, int client)
 	if (!iSize)
 		return Plugin_Stop;
 
-	client = GetClientOfUserId(client);
-	if (!client || !(client = GetClientOfUserId(client)) || !IsClientInGame(client))
-		client = L4D_GetHighestFlowSurvivor();
-
+	client = L4D_GetHighestFlowSurvivor();
 	if (!client)
 		return Plugin_Stop;
 
