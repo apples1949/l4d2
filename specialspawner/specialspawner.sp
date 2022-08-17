@@ -321,8 +321,8 @@ void vStaticDirectionPatch(bool bPatch)
 	}
 	else if (bPatched && !bPatch) {
 		bPatched = false;
-		StoreToAddress(g_pStaticDirection[0], 4, g_bIsLinux ? NumberType_Int32 : NumberType_Int8);
-		StoreToAddress(g_pStaticDirection[1], 4, g_bIsLinux ? NumberType_Int32 : NumberType_Int8);
+		StoreToAddress(g_pStaticDirection[0], SPAWN_SPECIALS_ANYWHERE, g_bIsLinux ? NumberType_Int32 : NumberType_Int8);
+		StoreToAddress(g_pStaticDirection[1], SPAWN_SPECIALS_ANYWHERE, g_bIsLinux ? NumberType_Int32 : NumberType_Int8);
 	}
 }
 
@@ -573,8 +573,8 @@ void vGetTankCustomCvars()
 
 void vSetDirectorConvars()
 {
-	g_hSpawnRange.IntValue = 1500;
-	g_hDiscardRange.IntValue = 2000;
+	g_hSpawnRange.IntValue = 1000;
+	g_hDiscardRange.IntValue = 1500;
 
 	FindConVar("z_spawn_flow_limit").IntValue = 999999;
 	FindConVar("z_attack_flow_range").IntValue = 999999;
