@@ -344,7 +344,7 @@ public Action L4D_OnGetScriptValueInt(const char[] key, int &retVal)
 	else if (strcmp(key, "ShouldIgnoreClearStateForSpawn", false) == 0)
 		iValue = 1;
 	else if (strcmp(key, "ShouldConstrainLargeVolumeSpawn", false) == 0)
-		iValue = 1;
+		iValue = 0;
 
 	if (iValue != retVal) {
 		retVal = iValue;
