@@ -359,7 +359,7 @@ any aNative_IsSpawnablePZSupported(Handle plugin, int numParams)
 
 public void OnPluginStart()
 {
-	vInitGameData();
+	vInitData();
 	LoadTranslations("common.phrases");
 
 	g_hMaxTankPlayer = 				CreateConVar("cz_max_tank_player", 					"1", 					"坦克玩家达到多少后插件将不再控制玩家接管(0=不接管坦克)", CVAR_FLAGS, true, 0.0);
@@ -2642,7 +2642,7 @@ bool bRespawnPZ(int client, int iZombieClass)
 
 // ------------------------------------------------------------------------------
 //SDKCall
-void vInitGameData()
+void vInitData()
 {
 	char sPath[PLATFORM_MAX_PATH];
 	BuildPath(Path_SM, sPath, sizeof sPath, "gamedata/%s.txt", GAMEDATA);
@@ -2799,7 +2799,7 @@ void vInitPatchs(GameData hGameData = null)
 	if (iByteMatch == -1)
 		SetFailState("Failed to find byte: \"RoundRespawn_Byte\"");
 
-	g_pStatsCondition = hGameData.GetAddress("CTerrorPlayer::RoundRespawn");
+	g_pStatsCondition = hGameData.GetMemSig("CTerrorPlayer::RoundRespawn");
 	if (!g_pStatsCondition)
 		SetFailState("Failed to find address: \"CTerrorPlayer::RoundRespawn\"");
 
@@ -2825,7 +2825,7 @@ void vSetupDetours(GameData hGameData = null)
 		SetFailState("Failed to create DynamicDetour: \"DD::CTerrorPlayer::PlayerZombieAbortControl\"");
 
 	//Method from MicroLeo (https://forums.alliedmods.net/showthread.php?t=329183)
-	Address pAddr = hGameData.GetAddress("ForEachTerrorPlayer<SpawnablePZScan>");
+	Address pAddr = hGameData.GetMemSig("ForEachTerrorPlayer<SpawnablePZScan>");
 	if (!pAddr)
 		SetFailState("Failed to find address: \"ForEachTerrorPlayer<SpawnablePZScan>\" in \"z_spawn_old(CCommand const&)\"");
 	if (!hGameData.GetOffset("OS")) {

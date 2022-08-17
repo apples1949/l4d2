@@ -41,19 +41,6 @@
 			}
 		}
 
-		"Addresses"
-		{
-			"CTerrorPlayer::RoundRespawn"
-			{
-				"signature"	"CTerrorPlayer::RoundRespawn"
-			}
-
-			"ForEachTerrorPlayer<SpawnablePZScan>"
-			{
-				"signature"	"ForEachTerrorPlayer<SpawnablePZScan>"
-			}
-		}
-
 		"Offsets"
 		{
 			/* CBaseEntity::IsInStasis(CBaseEntity *__hidden this) */
