@@ -1,0 +1,56 @@
+"Games"
+{
+	"#default"
+	{
+		"Offsets"
+		{
+			"OS"
+			{
+				"linux"		"1"
+				"windows"	"0"
+			}
+		}
+	}
+
+	"left4dead2"
+	{
+		"Offsets"
+		{
+			"StaticDirection_Offset_1"
+			{
+				"linux"		"783"
+				"windows"	"286"
+			}
+
+			"StaticDirection_Byte_1"
+			{
+				"linux"		"4"
+				"windows"	"4"
+			}
+
+			"StaticDirection_Offset_2"
+			{
+				"linux"		"647"
+				"windows"	"411"
+			}
+
+			"StaticDirection_Byte_2"
+			{
+				"linux"		"4"
+				"windows"	"4"
+			}
+		}
+
+		"Signatures"
+		{
+			/* ZombieManager::GetRandomPZSpawnPosition(TerrorNavArea *, int, int, int, int) */
+			"ZombieManager::GetRandomPZSpawnPosition"
+			{
+				"library"	"server"
+				"linux"		"@_ZNK13ZombieManager24GetRandomPZSpawnPositionE15ZombieClassTypeiP13CTerrorPlayerP6Vector"
+				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x53\x57\x8B\x2A\x2A\x8B\x2A\x89\x2A\x2A\x85\x2A\x75\x2A\x5F"
+				/* ? ? ? ? ? ? 53 57 8B ? ? 8B ? 89 ? ? 85 ? 75 ? 5F */
+			}
+		}
+	}
+}
