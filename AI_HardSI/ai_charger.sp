@@ -146,31 +146,9 @@ bool bBhop(int client, int &buttons, float vAng[3])
 	}
 
 	if (buttons & IN_MOVELEFT || buttons & IN_MOVERIGHT) {
-		static float vPos[3];
-		static float vVec[3];
 		GetAngleVectors(vAng, NULL_VECTOR, vAng, NULL_VECTOR);
-
-		vVec = vAng;
-		vVec[0] = vVec[2] = 0.0;
-		GetAngleVectors(vVec, vVec, NULL_VECTOR, NULL_VECTOR);
-		GetClientAbsOrigin(client, vPos);
-		NormalizeVector(vVec, vVec);
-		ScaleVector(vVec, 33.0);
-		AddVectors(vPos, vVec, vVec);
-
-		static float vMins[3];
-		static float vMaxs[3];
-		GetClientMins(client, vMins);
-		GetClientMaxs(client, vMaxs);
-
-		static Handle hTrace;
-		hTrace = TR_TraceHullFilterEx(vPos, vVec, vMins, vMaxs, MASK_PLAYERSOLID_BRUSHONLY, bTraceEntityFilter);
-		if (!TR_DidHit(hTrace)) {
-			if (bClientPush(client, buttons, vAng, buttons & IN_MOVELEFT ? -90.0 : 90.0))
-				bJumped = true;
-		}
-
-		delete hTrace;
+		if (bClientPush(client, buttons, vAng, buttons & IN_MOVELEFT ? -90.0 : 90.0))
+			bJumped = true;
 	}
 
 	return bJumped;
