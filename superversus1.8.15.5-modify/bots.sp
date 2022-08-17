@@ -290,8 +290,7 @@ public Plugin myinfo =
 
 public void OnPluginStart()
 {
-	vInitGameData();
-
+	vInitData();
 	g_aSteamIDs = new StringMap();
 	g_aMeleeScripts = new ArrayList(64);
 
@@ -1363,7 +1362,7 @@ int iGetTempHealth(int client)
 	return iHealth < 0 ? 0 : iHealth;
 }
 
-void vInitGameData()
+void vInitData()
 {
 	char sPath[PLATFORM_MAX_PATH];
 	BuildPath(Path_SM, sPath, sizeof sPath, "gamedata/%s.txt", GAMEDATA);
@@ -1395,7 +1394,7 @@ void vInitGameData()
 		SetFailState("Failed to find offset: \"CTerrorPlayer::OnIncapacitatedAsSurvivor::m_hHiddenWeapon\" (%s)", PLUGIN_VERSION);
 
 	StartPrepSDKCall(SDKCall_Static);
-	Address pAddr = hGameData.GetAddress("NextBotCreatePlayerBot<SurvivorBot>");
+	Address pAddr = hGameData.GetMemSig("NextBotCreatePlayerBot<SurvivorBot>");
 	if (!pAddr)
 		SetFailState("Failed to find address: \"NextBotCreatePlayerBot<SurvivorBot>\" in \"CDirector::AddSurvivorBot\" (%s)", PLUGIN_VERSION);
 	if (!hGameData.GetOffset("OS")) {
@@ -1469,7 +1468,7 @@ void vInitPatchs(GameData hGameData = null)
 	if (iByteMatch == -1)
 		SetFailState("Failed to find byte: \"RoundRespawn_Byte\" (%s)", PLUGIN_VERSION);
 
-	g_pStatsCondition = hGameData.GetAddress("CTerrorPlayer::RoundRespawn");
+	g_pStatsCondition = hGameData.GetMemSig("CTerrorPlayer::RoundRespawn");
 	if (!g_pStatsCondition)
 		SetFailState("Failed to find address: \"CTerrorPlayer::RoundRespawn\" (%s)", PLUGIN_VERSION);
 	

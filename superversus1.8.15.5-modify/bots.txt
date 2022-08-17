@@ -79,16 +79,6 @@
 				}
 				"read"	"0"
 			}
-
-			"NextBotCreatePlayerBot<SurvivorBot>"
-			{
-				"signature"	"NextBotCreatePlayerBot<SurvivorBot>"
-			}
-
-			"CTerrorPlayer::RoundRespawn"
-			{
-				"signature"	"CTerrorPlayer::RoundRespawn"
-			}
 		}
 
 		"Offsets"
@@ -184,6 +174,15 @@
 				/* ? ? ? ? ? ? 8B 86 ? ? ? ? 57 8B ? ? 85 ? 74 ? 83 */
 			}
 
+			/* CTerrorPlayer::GoAwayFromKeyboard(CTerrorPlayer *__hidden this) */
+			"CTerrorPlayer::GoAwayFromKeyboard"
+			{
+				"library"	"server"
+				"linux"		"@_ZN13CTerrorPlayer18GoAwayFromKeyboardEv"
+				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x53\x56\x57\x8B\x2A\x8B\x2A\x8B\x90\x2A\x2A\x2A\x2A\x8B"
+				/* ? ? ? ? ? ? 53 56 57 8B ? 8B ? 8B 90 ? ? ? ? 8B */
+			}
+
 			/* SurvivorBot::SetHumanSpectator(SurvivorBot *__hidden this, CTerrorPlayer *) */
 			"SurvivorBot::SetHumanSpectator"
 			{
@@ -200,15 +199,6 @@
 				"linux"    "@_ZN13CTerrorPlayer11TakeOverBotEb"
 				"windows"  "\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\xA1\x2A\x2A\x2A\x2A\x33\x2A\x89\x2A\x2A\x53\x56\x8D"
 				/* ? ? ? ? ? ? ? ? ? A1 ? ? ? ? 33 ? 89 ? ? 53 56 8D */
-			}
-
-			/* CTerrorPlayer::GoAwayFromKeyboard(CTerrorPlayer *__hidden this) */
-			"CTerrorPlayer::GoAwayFromKeyboard"
-			{
-				"library"	"server"
-				"linux"		"@_ZN13CTerrorPlayer18GoAwayFromKeyboardEv"
-				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x53\x56\x57\x8B\x2A\x8B\x2A\x8B\x90\x2A\x2A\x2A\x2A\x8B"
-				/* ? ? ? ? ? ? 53 56 57 8B ? 8B ? 8B 90 ? ? ? ? 8B */
 			}
 
 			/* CBasePlayer::SetModel(CBasePlayer *__hidden this, const char *) */
