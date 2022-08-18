@@ -1773,7 +1773,7 @@ Action tmrPlayerStatus(Handle timer)
 // 与Silvers的[L4D & L4D2] Coop Markers - Flow Distance插件进行兼容 (https://forums.alliedmods.net/showthread.php?p=2682584)
 void queryMpGamemode(QueryCookie cookie, int client, ConVarQueryResult result, const char[] cvarName, const char[] cvarValue, any value)
 {
-    if (result == ConVarQuery_Okay && GetClientFromSerial(value) == client && strcmp(cvarValue, "versus") != 0)
+    if (result == ConVarQuery_Okay && GetClientFromSerial(value) == client && strcmp(cvarValue, "versus", false) != 0)
 		g_hGameMode.ReplicateToClient(client, "versus");
 }
 
@@ -2013,7 +2013,7 @@ int iTakeOverTank(int tank)
 	if (!aClients.Length)
 		client = 0;
 	else {
-		SetRandomSeed(GetGameTickCount());
+		SetRandomSeed(GetSysTickCount());
 		if (aClients.FindValue(0) != -1) {
 			aClients.Sort(Sort_Descending, Sort_Integer);
 			client = aClients.Get(GetRandomInt(aClients.FindValue(0), aClients.Length - 1), 1);
@@ -2581,7 +2581,7 @@ bool bAttemptRespawnPZ(int client)
 		}
 	}
 
-	SetRandomSeed(GetGameTickCount());
+	SetRandomSeed(GetSysTickCount());
 
 	if (iCount >= g_iSILimit) {
 		CPrintToChat(client, "{olive}当前存活特感数量{default}-> {red}%d {olive}达到设置总数上限{default}-> {red}%d {olive}将以随机特感类型复活", iCount, g_iSILimit);
@@ -2620,7 +2620,7 @@ bool bAttemptRespawnPZ(int client)
 	}
 
 	if (iClass == -1) {
-		CPrintToChat(client, "当前无满足要求的特感类型可供复活 将以随机特感类型复活");
+		CPrintToChat(client, "当前无满足要求的特感类型可供复活, 将以随机特感类型复活");
 		return bRespawnPZ(client, GetRandomInt(1, 6));
 	}
 
