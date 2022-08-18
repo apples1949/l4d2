@@ -953,7 +953,7 @@ void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast)
 			PrintToServer("[SS] Died Respawn SI -> %s", g_sZombieClass[iClass - 1]);
 			#endif
 			if (!g_hRetrySpawnTimer)
-				CreateTimer(0.1, tmrRetrySpawn, _, TIMER_FLAG_NO_MAPCHANGE);
+				CreateTimer(0.1, tmrRetrySpawn, true, TIMER_FLAG_NO_MAPCHANGE);
 		}
 	}
 
@@ -1213,11 +1213,11 @@ void vGenerateAndExecuteSpawnQueue(int iTotalSI)
 		#if DEBUG
 		PrintToServer("[SS] Retry Spawn SI: %d", g_aSpawnQueue.Length);
 		#endif
-		g_hRetrySpawnTimer = CreateTimer(0.1, tmrRetrySpawn, _, TIMER_FLAG_NO_MAPCHANGE);
+		g_hRetrySpawnTimer = CreateTimer(0.1, tmrRetrySpawn, false, TIMER_FLAG_NO_MAPCHANGE);
 	}
 }
 
-Action tmrRetrySpawn(Handle timer)
+Action tmrRetrySpawn(Handle timer, bool bPatch)
 {
 	static int i;
 	static int iSize;
@@ -1227,8 +1227,15 @@ Action tmrRetrySpawn(Handle timer)
 	static float vPos[3];
 
 	g_hRetrySpawnTimer = null;
+
 	if (!g_bLeftSafeArea)
 		return Plugin_Stop;
+
+	iClass = iGetTotalSI();
+	if (bPatch) {
+		vGenerateAndExecuteSpawnQueue(iClass);
+		return Plugin_Stop;
+	}
 
 	iSize = g_aSpawnQueue.Length;
 	if (!iSize)
@@ -1238,13 +1245,12 @@ Action tmrRetrySpawn(Handle timer)
 	if (!client)
 		return Plugin_Stop;
 
-	if (iGetTotalSI() >= g_iSILimit)
+	if (iClass >= g_iSILimit)
 		return Plugin_Stop;
 
 	bFind = false;
 	g_bInSpawnTime = true;
 	g_iPreferredDirection = SPAWN_IN_FRONT_OF_SURVIVORS;
-	//vStaticDirectionPatch(true);
 
 	for (i = 0; i < iSize;) {
 		iClass = g_aSpawnQueue.Get(i);
@@ -1261,7 +1267,6 @@ Action tmrRetrySpawn(Handle timer)
 	}
 
 	g_bInSpawnTime = false;
-	//vStaticDirectionPatch(false);
 	return Plugin_Continue;
 }
 
