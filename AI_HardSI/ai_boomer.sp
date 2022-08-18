@@ -139,7 +139,7 @@ bool bClientPush(int client, int &buttons, float vVec[3], float fForce)
 	return false;
 }
 
-#define OBSTACLE_HEIGHT 10.0
+#define OBSTACLE_HEIGHT 18.0
 bool bWontFall(int client, const float vVel[3])
 {
 	static float vPos[3];
