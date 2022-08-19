@@ -37,13 +37,30 @@
 ArrayList
 	g_aSpawnQueue;
 
-Address
-	g_pStaticDirection[2];
-
 Handle
 	g_hSpawnTimer,
 	g_hRetrySpawnTimer,
-	g_hForceSuicideTimer;
+	g_hForceSuicideTimer,
+	g_hSDK_TerrorNavArea_FindRandomSpot,
+	g_hSDK_IsVisibleToPlayer,
+	//g_hSDK_TerrorNavArea_IsEntirelyVisible,
+	g_hSDK_TerrorNavArea_IsPartiallyVisible;
+
+enum struct SurData
+{
+	float flow;
+	float vPos[3];
+}
+
+enum struct SpawnData
+{
+	float fDist;
+	float vPos[3];
+}
+
+ArrayList
+	g_aSurData,
+	g_aSpawnData;
 
 ConVar
 	g_hSILimit,
@@ -136,14 +153,30 @@ int
 	g_iSIextra,
 	g_iGroupbase,
 	g_iGroupextra,
-	g_iCurrentClass = -1;
+	g_iCurrentClass = -1,
+	g_iMaxSurData,
+	g_iOff_NavCount,
+	g_iOff_m_flow,
+	g_iOff_m_attributeFlags,
+	g_iOff_m_spawnAttributes;
 
 bool
-	g_bIsLinux,
 	g_bLateLoad,
 	g_bInSpawnTime,
 	g_bScaleWeights,
 	g_bLeftSafeArea;
+
+TheNavAreas
+	g_pTheNavAreas;
+
+ArrayList
+	g_aAreas;
+
+bool
+	g_bIsFinalMap;
+
+float
+	g_fSpawnDist;
 
 public Plugin myinfo =
 {
@@ -164,6 +197,9 @@ public void OnPluginStart()
 {
 	vInitData();
 	g_aSpawnQueue = new ArrayList();
+	g_aAreas = new ArrayList(2);
+	g_aSurData = new ArrayList(sizeof SurData);
+	g_aSpawnData = new ArrayList(sizeof SpawnData);
 
 	g_hSILimit = CreateConVar("ss_si_limit", "12", "同时存在的最大特感数量", _, true, 1.0, true, 32.0);
 	g_hSpawnSize = CreateConVar("ss_spawn_size", "4", "一次产生多少只特感", _, true, 1.0, true, 32.0);
@@ -189,7 +225,7 @@ public void OnPluginStart()
 	g_hSIextra = CreateConVar("ss_extra_limit", "1", "生还者团队玩家每增加一个可增加多少个特感", _, true, 0.0, true, 32.0);
 	g_hGroupbase = CreateConVar("ss_groupbase_limit", "4", "生还者团队玩家不超过4人时一次产生多少只特感", _, true, 0.0, true, 32.0);
 	g_hGroupextra = CreateConVar("ss_groupextra_limit", "2", "生还者团队玩家每增加多少玩家一次多产生一只", _, true, 1.0, true, 32.0);
-	g_hRusherDistance = CreateConVar("ss_rusher_distance", "1200.0", "路程超过多少算跑图", _, true, 500.0);
+	g_hRusherDistance = CreateConVar("ss_rusher_distance", "1500.0", "路程超过多少算跑图", _, true, 500.0);
 	g_hTankSpawnAction = CreateConVar("ss_tankspawn_action", "1", "坦克产生后是否对当前刷特参数进行修改, 坦克死完后恢复?[ 0 = 忽略(保持原有的刷特状态) | 1 = 自定义 ]", _, true, 0.0, true, 1.0);
 	g_hTankSpawnLimits = CreateConVar("ss_tankspawn_limits", "4;1;4;1;4;4", "坦克产生后每种特感数量的自定义参数");
 	g_hTankSpawnWeights = CreateConVar("ss_tankspawn_weights", "80;300;100;80;100;100", "坦克产生后每种特感比重的自定义参数");
@@ -244,8 +280,6 @@ public void OnPluginStart()
 
 public void OnPluginEnd()
 {
-	vStaticDirectionPatch(false);
-
 	g_hSpawnRange.RestoreDefault();
 	g_hDiscardRange.RestoreDefault();
 
@@ -257,72 +291,6 @@ public void OnPluginEnd()
 
 	FindConVar("z_finale_spawn_safety_range").RestoreDefault();
 	FindConVar("z_finale_spawn_tank_safety_range").RestoreDefault();
-}
-
-void vInitData()
-{
-	char sPath[PLATFORM_MAX_PATH];
-	BuildPath(Path_SM, sPath, sizeof(sPath), "gamedata/%s.txt", GAMEDATA);
-	if (!FileExists(sPath))
-		SetFailState("\n==========\nMissing required file: \"%s\".\n==========", sPath);
-
-	GameData hGameData = new GameData(GAMEDATA);
-	if (!hGameData)
-		SetFailState("Failed to load \"%s.txt\" gamedata.", GAMEDATA);
-
-	g_bIsLinux = hGameData.GetOffset("OS") == 1;
-
-	vInitPatchs(hGameData);
-
-	delete hGameData;
-}
-
-void vInitPatchs(GameData hGameData = null)
-{
-	Address pAddr = hGameData.GetMemSig("ZombieManager::GetRandomPZSpawnPosition");
-	if (!pAddr)
-		SetFailState("Failed to find address: \"ZombieManager::GetRandomPZSpawnPosition\"");
-
-	int iOffset = hGameData.GetOffset("StaticDirection_Offset_1");
-	if (iOffset == -1)
-		SetFailState("Failed to find offset: \"StaticDirection_Offset_1\"");
-
-	int iByteMatch = hGameData.GetOffset("StaticDirection_Byte_1");
-	if (iByteMatch == -1)
-		SetFailState("Failed to find byte: \"StaticDirection_Byte_1\"");
-
-	g_pStaticDirection[0] = pAddr + view_as<Address>(iOffset);
-	int iByteOrigin = LoadFromAddress(g_pStaticDirection[0], NumberType_Int8);
-	if (iByteOrigin != iByteMatch)
-		SetFailState("Failed to load \"CTerrorPlayer::StaticDirection\", byte mis-match @ %d (0x%02X != 0x%02X)", iOffset, iByteOrigin, iByteMatch);
-
-	iOffset = hGameData.GetOffset("StaticDirection_Offset_2");
-	if (iOffset == -1)
-		SetFailState("Failed to find offset: \"StaticDirection_Offset_2\"");
-
-	iByteMatch = hGameData.GetOffset("StaticDirection_Byte_2");
-	if (iByteMatch == -1)
-		SetFailState("Failed to find byte: \"StaticDirection_Byte_2\"");
-
-	g_pStaticDirection[1] = pAddr + view_as<Address>(iOffset);
-	iByteOrigin = LoadFromAddress(g_pStaticDirection[0], NumberType_Int8);
-	if (iByteOrigin != iByteMatch)
-		SetFailState("Failed to load \"CTerrorPlayer::StaticDirection\", byte mis-match @ %d (0x%02X != 0x%02X)", iOffset, iByteOrigin, iByteMatch);
-}
-
-void vStaticDirectionPatch(bool bPatch)
-{
-	static bool bPatched;
-	if (!bPatched && bPatch) {
-		bPatched = true;
-		StoreToAddress(g_pStaticDirection[0], g_iPreferredDirection, g_bIsLinux ? NumberType_Int32 : NumberType_Int8);
-		StoreToAddress(g_pStaticDirection[1], g_iPreferredDirection, g_bIsLinux ? NumberType_Int32 : NumberType_Int8);
-	}
-	else if (bPatched && !bPatch) {
-		bPatched = false;
-		StoreToAddress(g_pStaticDirection[0], SPAWN_SPECIALS_ANYWHERE, g_bIsLinux ? NumberType_Int32 : NumberType_Int8);
-		StoreToAddress(g_pStaticDirection[1], SPAWN_SPECIALS_ANYWHERE, g_bIsLinux ? NumberType_Int32 : NumberType_Int8);
-	}
 }
 
 public Action L4D_OnGetScriptValueInt(const char[] key, int &retVal)
@@ -401,23 +369,26 @@ Action tmrForceSuicide(Handle timer)
 		victim = iGetSurVictim(i, iClass);
 		if (victim > 0) {
 			if (GetEntProp(victim, Prop_Send, "m_isIncapacitated"))
-				vKillInactiveSI(i);
+				vKillInactiveSI(i, iClass);
 			else
 				g_fSpecialActionTime[i] = fEngineTime;
 		}
 		else if (fEngineTime - g_fSpecialActionTime[i] > g_fForceSuicideTime)
-			vKillInactiveSI(i);
+			vKillInactiveSI(i, iClass);
 	}
 
 	return Plugin_Continue;
 }
 
-void vKillInactiveSI(int client)
+void vKillInactiveSI(int client, int iClass)
 {
 	#if DEBUG
 	PrintToServer("[SS] Kill Inactive SI -> %N", client);
 	#endif
 	ForcePlayerSuicide(client);
+	g_aSpawnQueue.Push(iClass - 1);
+	if (!g_hRetrySpawnTimer)
+		CreateTimer(0.1, tmrRetrySpawn, true, TIMER_FLAG_NO_MAPCHANGE);
 }
 
 int iGetSurVictim(int client, int iClass)
@@ -815,7 +786,7 @@ void vGetTankCustomCvars()
 void vSetDirectorConvars()
 {
 	g_hSpawnRange.IntValue = 1000;
-	g_hDiscardRange.IntValue = 1500;
+	g_hDiscardRange.IntValue = 2500;
 
 	FindConVar("z_spawn_flow_limit").IntValue = 999999;
 	FindConVar("z_attack_flow_range").IntValue = 999999;
@@ -835,8 +806,37 @@ public void OnClientDisconnect(int client)
 	CreateTimer(0.1, tmrTankDisconnectCheck, _, TIMER_FLAG_NO_MAPCHANGE);
 }
 
+public void OnMapStart()
+{
+	g_bIsFinalMap = L4D_IsMissionFinalMap();
+
+	g_aAreas.Clear();
+
+	NavArea pArea;
+	float flow;
+	int iNavAreaCount = g_pTheNavAreas.Count;
+	if (!iNavAreaCount)
+		SetFailState("当前地图Nav区域数量为0, 可能是某些测试地图");
+
+	TheNavAreas pTheNavAreas = view_as<TheNavAreas>(g_pTheNavAreas.Dereference);
+	for (int i; i < iNavAreaCount; i++) {
+		pArea = pTheNavAreas.GetArea(i, false);
+		if (pArea.IsNull())
+			continue;
+
+		flow = pArea.m_flow;
+		if (flow == -9999.0)
+			continue;
+
+		g_aAreas.Set(g_aAreas.Push(flow), pArea, 1);
+	}
+
+	g_aAreas.Sort(Sort_Ascending, Sort_Float);
+}
+
 public void OnMapEnd()
 {
+	g_fSpawnDist = g_fRusherDistance;
 	g_bLeftSafeArea = false;
 
 	vEndSpawnTimer();
@@ -941,21 +941,8 @@ void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast)
 		return;
 
 	iClass = GetEntProp(client, Prop_Send, "m_zombieClass");
-	if (iClass == 8) {
-		if (!bFindTank(client))
-			vTankSpawnDeathActoin(false);
-	}
-	else {
-		if (GetClientOfUserId(event.GetInt("attacker")) == client) {
-			g_aSpawnQueue.Push(iClass - 1);
-
-			#if DEBUG
-			PrintToServer("[SS] Died Respawn SI -> %s", g_sZombieClass[iClass - 1]);
-			#endif
-			if (!g_hRetrySpawnTimer)
-				CreateTimer(0.1, tmrRetrySpawn, true, TIMER_FLAG_NO_MAPCHANGE);
-		}
-	}
+	if (iClass == 8 && !bFindTank(client))
+		vTankSpawnDeathActoin(false);
 
 	if (iClass != 4 && IsFakeClient(client))
 		RequestFrame(OnNextFrame_KickBot, userid);
@@ -1131,33 +1118,42 @@ void vGenerateAndExecuteSpawnQueue(int iTotalSI)
 	static int i;
 	static int client;
 	static int iCount;
-	static int iClass;
+	static int iIndex;
+	static bool bRush;
 	static bool bFind;
 	static float flow;
 	static float vPos[3];
+	static NavArea area;
 	static ArrayList aList;
 
 	iGetSIClass();
 	g_aSpawnQueue.Clear();
 	for (i = 0; i < iSize; i++) {
-		iClass = iGenerateIndex();
-		if (iClass == -1)
+		iIndex = iGenerateIndex();
+		if (iIndex == -1)
 			break;
 
-		g_aSpawnQueue.Push(iClass);
-		g_iSpawnCounts[iClass]++;
+		g_aSpawnQueue.Push(iIndex);
+		g_iSpawnCounts[iIndex]++;
 	}
 
 	iSize = g_aSpawnQueue.Length;
 	if (!iSize)
 		return;
 
-	aList = new ArrayList(2);
+	aList = new ArrayList(3);
 	for (i = 1; i <= MaxClients; i++) {
-		if (IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i)) {
-			flow = L4D2Direct_GetFlowDistance(i);
-			if (flow && flow != -9999.0)
-				aList.Set(aList.Push(flow), i, 1);
+		if (IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i) && !GetEntProp(i, Prop_Send, "m_isIncapacitated")) {
+			GetClientAbsOrigin(i, vPos);
+			area = view_as<NavArea>(L4D_GetNearestNavArea(vPos, 1000.0));
+			if (!area)
+				continue;
+
+			flow = area.m_flow;
+			if (flow != -9999.0) {
+				aList.Set((iIndex = aList.Push(flow)), i, 1);
+				aList.Set(iIndex, area, 2);
+			}
 		}
 	}
 
@@ -1167,37 +1163,37 @@ void vGenerateAndExecuteSpawnQueue(int iTotalSI)
 		return;
 	}
 
+	static float lastFlow;
 	aList.Sort(Sort_Descending, Sort_Float);
 	client = aList.Get(0, 1);
-	bFind = false;
+	bRush = false;
 
+	flow = aList.Get(0, 0);
+	lastFlow = 0.0;
 	if (iCount >= 2) {
-		flow = aList.Get(0, 0);
-
-		static float lastFlow;
 		lastFlow = aList.Get(iCount - 1, 0);
 		if (flow - lastFlow > g_fRusherDistance) {
 			#if DEBUG
 			PrintToServer("[SS] Rusher -> %N", client);
 			#endif
 
-			bFind = true;
+			bRush = true;
+			lastFlow = flow - g_fRusherDistance;
 		}
 	}
 
-	delete aList;
 	bFind = false;
 	g_bInSpawnTime = true;
-	flow = GetEngineTime();
-	g_iPreferredDirection = bFind ? SPAWN_IN_FRONT_OF_SURVIVORS : SPAWN_ANYWHERE;
-	vStaticDirectionPatch(true);
+	vCollectSpawnAreas(bRush ? client : 0, aList.Get(0, 2), lastFlow, flow + g_fRusherDistance); //if (bRush) vCollectSpawnAreas(client);
+	delete aList;
+	//g_iPreferredDirection = bRush ? SPAWN_IN_FRONT_OF_SURVIVORS : SPAWN_ANYWHERE;
 
 	for (i = 0; i < iSize;) {
-		iClass = g_aSpawnQueue.Get(i);
-		if (L4D_GetRandomPZSpawnPosition(client, iClass + 1, 10, vPos))
+		iIndex = g_aSpawnQueue.Get(i);
+		if (bGetRandomSpawnPos(vPos)/*bRush ? bGetRandomSpawnPos(vPos) : L4D_GetRandomPZSpawnPosition(client, iIndex + 1, 10, vPos)*/)
 			bFind = true;
 
-		if (bFind && L4D2_SpawnSpecial(iClass + 1, vPos, NULL_VECTOR) > 0) {
+		if (bFind && L4D2_SpawnSpecial(iIndex + 1, vPos, NULL_VECTOR) > 0) {
 			g_aSpawnQueue.Erase(i);
 			iSize--;
 			continue;
@@ -1207,17 +1203,16 @@ void vGenerateAndExecuteSpawnQueue(int iTotalSI)
 	}
 
 	g_bInSpawnTime = false;
-	vStaticDirectionPatch(false);
 
 	if (g_aSpawnQueue.Length) {
 		#if DEBUG
-		PrintToServer("[SS] Retry Spawn SI: %d", g_aSpawnQueue.Length);
+		PrintToServer("[SS] Retry Spawn SI -> %d", g_aSpawnQueue.Length);
 		#endif
 		g_hRetrySpawnTimer = CreateTimer(0.1, tmrRetrySpawn, false, TIMER_FLAG_NO_MAPCHANGE);
 	}
 }
 
-Action tmrRetrySpawn(Handle timer, bool bPatch)
+Action tmrRetrySpawn(Handle timer, bool bCheckRush)
 {
 	static int i;
 	static int iSize;
@@ -1232,7 +1227,7 @@ Action tmrRetrySpawn(Handle timer, bool bPatch)
 		return Plugin_Stop;
 
 	iClass = iGetTotalSI();
-	if (bPatch) {
+	if (bCheckRush) {
 		vGenerateAndExecuteSpawnQueue(iClass);
 		return Plugin_Stop;
 	}
@@ -1250,7 +1245,7 @@ Action tmrRetrySpawn(Handle timer, bool bPatch)
 
 	bFind = false;
 	g_bInSpawnTime = true;
-	g_iPreferredDirection = SPAWN_IN_FRONT_OF_SURVIVORS;
+	g_iPreferredDirection = SPAWN_SPECIALS_IN_FRONT_OF_SURVIVORS;
 
 	for (i = 0; i < iSize;) {
 		iClass = g_aSpawnQueue.Get(i);
@@ -1352,4 +1347,422 @@ int iGenerateIndex()
 	}
 
 	return -1;
+}
+
+// https://github.com/fdxx/l4d2_plugins/blob/main/l4d2_si_spawn_control.sp
+void vInitData()
+{
+	char sPath[PLATFORM_MAX_PATH];
+	BuildPath(Path_SM, sPath, sizeof(sPath), "gamedata/%s.txt", GAMEDATA);
+	if (!FileExists(sPath))
+		SetFailState("\n==========\nMissing required file: \"%s\".\n==========", sPath);
+
+	GameData hGameData = new GameData(GAMEDATA);
+	if (!hGameData)
+		SetFailState("Failed to load \"%s.txt\" gamedata.", GAMEDATA);
+
+	g_iOff_NavCount = hGameData.GetOffset("TheNavAreas::Count");
+	if(g_iOff_NavCount == -1)
+		SetFailState("Failed to find offset: TheNavAreas::Count");
+
+	g_pTheNavAreas = view_as<TheNavAreas>(hGameData.GetAddress("TheNavAreas"));
+	if (!g_pTheNavAreas)
+		SetFailState("Failed to find address: TheNavAreas");	
+
+	g_iOff_m_flow = hGameData.GetOffset("CTerrorPlayer::GetFlowDistance::m_flow");
+	if (g_iOff_m_flow == -1)
+		SetFailState("Failed to find offset: CTerrorPlayer::GetFlowDistance::m_flow");
+
+	g_iOff_m_attributeFlags = hGameData.GetOffset("CNavArea::InheritAttributes::m_attributeFlags");
+	if (g_iOff_m_attributeFlags == -1)
+		SetFailState("Failed to find offset: CNavArea::InheritAttributes::m_attributeFlags");
+
+	g_iOff_m_spawnAttributes = hGameData.GetOffset("TerrorNavArea::SetSpawnAttributes::m_spawnAttributes");
+	if (g_iOff_m_spawnAttributes == -1)
+		SetFailState("Failed to find offset: TerrorNavArea::SetSpawnAttributes::m_spawnAttributes");
+
+	StartPrepSDKCall(SDKCall_Raw);
+	if(!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "TerrorNavArea::FindRandomSpot"))
+		SetFailState("Failed to find signature: TerrorNavArea::FindRandomSpot");
+	PrepSDKCall_SetReturnInfo(SDKType_Vector, SDKPass_ByValue);
+	if (!(g_hSDK_TerrorNavArea_FindRandomSpot = EndPrepSDKCall()))
+		SetFailState("Failed to create SDKCall: TerrorNavArea::FindRandomSpot");
+
+	StartPrepSDKCall(SDKCall_Static);
+	if (!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "IsVisibleToPlayer"))
+		SetFailState("Failed to find signature: IsVisibleToPlayer");
+	PrepSDKCall_AddParameter(SDKType_Vector, SDKPass_ByRef);									// 目标点位
+	PrepSDKCall_AddParameter(SDKType_CBasePlayer, SDKPass_Pointer);								// 客户端
+	PrepSDKCall_AddParameter(SDKType_PlainOldData, SDKPass_Plain);								// 客户端团队
+	PrepSDKCall_AddParameter(SDKType_PlainOldData, SDKPass_Plain);								// 目标点位团队, 如果为0将考虑客户端的角度
+	PrepSDKCall_AddParameter(SDKType_Float, SDKPass_Plain);										// 不清楚
+	PrepSDKCall_AddParameter(SDKType_CBaseEntity, SDKPass_Pointer, VDECODE_FLAG_ALLOWWORLD);	// 不清楚
+	PrepSDKCall_AddParameter(SDKType_PlainOldData, SDKPass_Pointer);							// 目标点位 NavArea 区域
+	PrepSDKCall_AddParameter(SDKType_Bool, SDKPass_Pointer);									// 如果为 false，将自动获取目标点位的 NavArea (GetNearestNavArea)
+	PrepSDKCall_SetReturnInfo(SDKType_Bool, SDKPass_Plain);
+	if (!(g_hSDK_IsVisibleToPlayer = EndPrepSDKCall()))
+		SetFailState("Failed to create SDKCall: IsVisibleToPlayer");
+
+	/*StartPrepSDKCall(SDKCall_Raw);
+	if(!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "TerrorNavArea::IsEntirelyVisible"))
+		SetFailState("Failed to find signature: TerrorNavArea::IsEntirelyVisible");
+	PrepSDKCall_AddParameter(SDKType_Vector, SDKPass_ByRef);
+	PrepSDKCall_SetReturnInfo(SDKType_Bool, SDKPass_Plain);
+	if (!(g_hSDK_TerrorNavArea_IsEntirelyVisible = EndPrepSDKCall()))
+		SetFailState("Failed to create SDKCall: TerrorNavArea::IsEntirelyVisible");*/
+
+	StartPrepSDKCall(SDKCall_Raw);
+	if(!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "TerrorNavArea::IsPartiallyVisible"))
+		SetFailState("Failed to find signature: TerrorNavArea::IsPartiallyVisible");
+	PrepSDKCall_AddParameter(SDKType_Vector, SDKPass_ByRef);
+	PrepSDKCall_SetReturnInfo(SDKType_Bool, SDKPass_Plain);
+	if (!(g_hSDK_TerrorNavArea_IsPartiallyVisible = EndPrepSDKCall()))
+		SetFailState("Failed to create SDKCall: TerrorNavArea::IsPartiallyVisible");
+
+	delete hGameData;
+}
+
+methodmap TheNavAreas < Handle
+{
+	property int Count {
+		public get() {
+			return LoadFromAddress(view_as<Address>(this) + view_as<Address>(g_iOff_NavCount), NumberType_Int32);
+		}
+	}
+
+	property Address Dereference {
+		public get() {
+			return LoadFromAddress(view_as<Address>(this), NumberType_Int32);
+		}
+	}
+
+	public NavArea GetArea(int i, bool bDereference = true) {
+		if (!bDereference)
+			return LoadFromAddress(view_as<Address>(this) + view_as<Address>(i * 4), NumberType_Int32);
+
+		return LoadFromAddress(this.Dereference + view_as<Address>(i * 4), NumberType_Int32);
+	}
+}
+
+methodmap NavArea < Handle
+{
+	public bool IsNull() {
+		return view_as<Address>(this) == Address_Null;
+	}
+
+	property float m_flow {
+		public get() {
+			return LoadFromAddress(view_as<Address>(this) + view_as<Address>(g_iOff_m_flow), NumberType_Int32);
+		}
+	}
+
+	property int m_attributeFlags {
+		public get() {
+			return LoadFromAddress(view_as<Address>(this) + view_as<Address>(g_iOff_m_attributeFlags), NumberType_Int32);
+		}
+
+		/*public set(int value) {
+			StoreToAddress(view_as<Address>(this) + view_as<Address>(g_iOff_m_attributeFlags), value, NumberType_Int32);
+		}*/
+	}
+	
+	property int m_spawnAttributes {
+		public get() {
+			return LoadFromAddress(view_as<Address>(this) + view_as<Address>(g_iOff_m_spawnAttributes), NumberType_Int32);
+		}
+
+		/*public set(int value) {
+			StoreToAddress(view_as<Address>(this) + view_as<Address>(g_iOff_m_spawnAttributes), value, NumberType_Int32);
+		}*/
+	}
+
+	public void FindRandomSpot(float result[3]) {
+		SDKCall(g_hSDK_TerrorNavArea_FindRandomSpot, this, result, sizeof result);
+	}
+}
+
+void vCollectSpawnAreas(int client = 0, int endArea, float minFlow, float maxFlow)
+{
+	#if DEBUG
+	PrintToServer("[SS] NavArea Spawn");
+	#endif
+
+	static int i;
+	static int iState;
+	static int iLength;
+	static NavArea pArea;
+	static SpawnData data;
+	static float fDist;
+	static float fFlow;
+	static float vPos[3];
+
+	g_aSpawnData.Clear();
+	vGetSurPosData(client);
+
+	#if DEBUG
+	int iCount;
+	PrintToServer("[SS] NvaCount -> %d", g_aAreas.Length);
+	#endif
+
+	iState = g_aAreas.FindValue(endArea, 1);
+	if (iState == -1)
+		return;
+
+	for (i = iState; i >= 0; i--) {
+		pArea = g_aAreas.Get(i, 1);
+		fFlow = pArea.m_flow;
+		if (fFlow == -9999.0)
+			continue;
+
+		if (fFlow < minFlow)
+			break;
+
+		#if DEBUG
+		iCount++;
+		#endif
+		if (!bIsValidAttributeFlags(pArea.m_attributeFlags))
+			continue;
+
+		if (!bIsValidSpawnFlags(pArea.m_spawnAttributes))
+			continue;
+
+		pArea.FindRandomSpot(vPos);
+		if (bIsWillStuck(vPos))
+			continue;
+	
+		if (!bIsNearPlayer(vPos, fDist))
+			continue;
+
+		if (/*bIsSurVisibleTo(vPos, pArea)*/bIsPartiallyVisible(pArea))
+			continue;
+
+		data.fDist = fDist;
+		data.vPos = vPos;
+		g_aSpawnData.PushArray(data);
+	}
+
+	iLength = g_aAreas.Length;
+	for (i = iState + 1; i < iLength; i++) {
+		pArea = g_aAreas.Get(i, 1);
+		fFlow = pArea.m_flow;
+		if (fFlow == -9999.0)
+			continue;
+
+		if (fFlow > maxFlow)
+			break;
+
+		#if DEBUG
+		iCount++;
+		#endif
+		if (!bIsValidAttributeFlags(pArea.m_attributeFlags))
+			continue;
+
+		if (!bIsValidSpawnFlags(pArea.m_spawnAttributes))
+			continue;
+
+		pArea.FindRandomSpot(vPos);
+		if (bIsWillStuck(vPos))
+			continue;
+	
+		if (!bIsNearPlayer(vPos, fDist))
+			continue;
+
+		if (/*bIsSurVisibleTo(vPos, pArea)*/bIsPartiallyVisible(pArea))
+			continue;
+
+		data.fDist = fDist;
+		data.vPos = vPos;
+		g_aSpawnData.PushArray(data);
+	}
+
+	#if DEBUG
+	PrintToServer("[SS] iCount -> %d", iCount);
+	#endif
+}
+
+bool bGetRandomSpawnPos(float vPos[3])
+{
+	static int iLength;
+	static bool bSuccess;
+	static SpawnData data;
+
+	bSuccess = false;
+	iLength = g_aSpawnData.Length;
+	if (!iLength)
+		g_fSpawnDist = g_fRusherDistance;
+	else
+	{
+		#if DEBUG
+		PrintToServer("[SS] SpawnData -> %d", iLength);
+		#endif
+		bSuccess = true;
+		g_aSpawnData.Sort(Sort_Ascending, Sort_Float);
+		//g_aSpawnData.GetArray(iLength >= 6 ? GetRandomInt(0, 5) : iLength >= 2 ? GetRandomInt(0, 1) : 0, data);
+
+		g_aSpawnData.GetArray(GetRandomInt(0, iLength - 1), data);
+		vPos = data.vPos;
+		g_fSpawnDist = data.fDist + 400.0;
+	}
+
+	return bSuccess;
+}
+
+#define NAV_MESH_JUMP			(1 << 1)
+#define NAV_MESH_PLAYERCLIP		(1 << 18)
+#define NAV_MESH_FLOW_BLOCKED	(1 << 27)
+bool bIsValidAttributeFlags(int iFlags)
+{
+	if (iFlags & NAV_MESH_JUMP || iFlags & NAV_MESH_PLAYERCLIP || iFlags & NAV_MESH_FLOW_BLOCKED)
+		return false;
+
+	return true;
+}
+
+// https://developer.valvesoftware.com/wiki/List_of_L4D_Series_Nav_Mesh_Attributes:zh-cn
+#define	TERROR_NAV_NO_NAME1				(1 << 0)
+#define	TERROR_NAV_EMPTY				(1 << 1)
+#define	TERROR_NAV_STOP_SCAN			(1 << 2)
+#define	TERROR_NAV_NO_NAME2				(1 << 3)
+#define	TERROR_NAV_NO_NAME3				(1 << 4)
+#define	TERROR_NAV_BATTLESTATION		(1 << 5)
+#define	TERROR_NAV_FINALE				(1 << 6)
+#define	TERROR_NAV_PLAYER_START			(1 << 7)
+#define	TERROR_NAV_BATTLEFIELD			(1 << 8)
+#define	TERROR_NAV_IGNORE_VISIBILITY	(1 << 9)
+#define	TERROR_NAV_NOT_CLEARABLE		(1 << 10)
+#define	TERROR_NAV_CHECKPOINT			(1 << 11)
+#define	TERROR_NAV_OBSCURED				(1 << 12)
+#define	TERROR_NAV_NO_MOBS				(1 << 13)
+#define	TERROR_NAV_THREAT				(1 << 14)
+#define	TERROR_NAV_RESCUE_VEHICLE		(1 << 15)
+#define	TERROR_NAV_RESCUE_CLOSET		(1 << 16)
+#define	TERROR_NAV_ESCAPE_ROUTE			(1 << 17)
+#define	TERROR_NAV_DOOR					(1 << 18)
+#define	TERROR_NAV_NOTHREAT				(1 << 19)
+#define	TERROR_NAV_LYINGDOWN			(1 << 20)
+#define	TERROR_NAV_COMPASS_NORTH		(1 << 24)
+#define	TERROR_NAV_COMPASS_NORTHEAST	(1 << 25)
+#define	TERROR_NAV_COMPASS_EAST			(1 << 26)
+#define	TERROR_NAV_COMPASS_EASTSOUTH	(1 << 27)
+#define	TERROR_NAV_COMPASS_SOUTH		(1 << 28)
+#define	TERROR_NAV_COMPASS_SOUTHWEST	(1 << 29)
+#define	TERROR_NAV_COMPASS_WEST			(1 << 30)
+#define	TERROR_NAV_COMPASS_WESTNORTH	(1 << 31)
+bool bIsValidSpawnFlags(int iFlags)
+{
+	if (!iFlags)
+		return false;
+
+	if (iFlags & TERROR_NAV_STOP_SCAN || iFlags & TERROR_NAV_RESCUE_CLOSET)
+		return false;
+
+	if (g_bIsFinalMap && L4D2_GetCurrentFinaleStage() != 18) //防止结局地图特感产生在结局区域之外
+		return iFlags & TERROR_NAV_FINALE != 0;
+
+	return true;
+}
+
+void vGetSurPosData(int client = 0)
+{
+	static int i;
+	static SurData data;
+
+	g_aSurData.Clear();
+
+	if (client) {
+		data.flow = L4D2Direct_GetFlowDistance(client);
+		GetClientEyePosition(client, data.vPos);
+		g_aSurData.PushArray(data);
+	}
+	else {
+		for (i = 1; i <= MaxClients; i++) {
+			if (IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i) && !GetEntProp(i, Prop_Send, "m_isIncapacitated")) {
+				data.flow = L4D2Direct_GetFlowDistance(i);
+				GetClientEyePosition(i, data.vPos);
+				g_aSurData.PushArray(data);
+			}
+		}
+	}
+	
+	g_iMaxSurData = g_aSurData.Length;
+}
+
+bool bIsNearPlayer(float vPos[3], float &fDist)
+{
+	static int i;
+	static SurData data;
+	for (i = 0; i < g_iMaxSurData; i++) {
+		g_aSurData.GetArray(i, data);
+		fDist = GetVectorDistance(data.vPos, vPos);
+		if (fDist <= g_fSpawnDist)
+			return true;
+	}
+	return false;
+}
+
+stock bool bIsSurVisibleTo(const float vPos[3], NavArea pArea)
+{
+	static int i;
+	static float vTarget[3];
+
+	vTarget = vPos;
+	vTarget[2] += 62.0; //眼睛位置
+	for (i = 1; i <= MaxClients; i++) {
+		if (IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i) && !GetEntProp(i, Prop_Send, "m_isIncapacitated") && SDKCall(g_hSDK_IsVisibleToPlayer, vTarget, i, 2, 3, 0.0, 0, pArea, true))
+			return true;
+	}
+
+	return false;
+}
+/*
+stock bool bIsEntirelyVisible(NavArea pArea)
+{
+	static int i;
+	static float vPos[3];
+	for (i = 1; i <= MaxClients; i++) {
+		if (!IsClientInGame(i) || GetClientTeam(i) != 2 || !IsPlayerAlive(i) || GetEntProp(i, Prop_Send, "m_isIncapacitated"))
+			continue;
+	
+		GetClientEyePosition(i, vPos);
+		if (SDKCall(g_hSDK_TerrorNavArea_IsEntirelyVisible, pArea, vPos))
+			return true;
+	}
+
+	return false;
+}*/
+
+stock bool bIsPartiallyVisible(NavArea pArea)
+{
+	static int i;
+	static float vPos[3];
+	for (i = 1; i <= MaxClients; i++) {
+		if (!IsClientInGame(i) || GetClientTeam(i) != 2 || !IsPlayerAlive(i) || GetEntProp(i, Prop_Send, "m_isIncapacitated"))
+			continue;
+	
+		GetClientEyePosition(i, vPos);
+		if (SDKCall(g_hSDK_TerrorNavArea_IsPartiallyVisible, pArea, vPos))
+			return true;
+	}
+
+	return false;
+}
+
+bool bIsWillStuck(const float vPos[3])
+{
+	//似乎所有客户端的尺寸都一样
+	static const float vMins[3] = {-16.0, -16.0, 0.0};
+	static const float vMaxs[3] = {16.0, 16.0, 71.0};
+
+	static bool bHit;
+	static Handle hTrace;
+	hTrace = TR_TraceHullFilterEx(vPos, vPos, vMins, vMaxs, MASK_SOLID_BRUSHONLY, bTraceEntityFilter);
+	bHit = TR_DidHit(hTrace);
+
+	delete hTrace;
+	return bHit;
+}
+
+bool bTraceEntityFilter(int entity, int contentsMask)
+{
+	return entity > MaxClients;
 }
