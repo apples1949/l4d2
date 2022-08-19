@@ -418,10 +418,9 @@ Address pFindBotDataByModelName(const char[] sModel)
 		aKeyValues.Sort(Sort_Ascending, Sort_Integer);
 
 		pThis = aKeyValues.Get(0, 1);
+		if (aKeyValues.Get(0, 0) < 2)
+			g_aUsedBotData.Push(pThis);
 	}
-
-	if (aKeyValues.Get(0, 0) < 2)
-		g_aUsedBotData.Push(pThis);
 
 	delete aKeyValues;
 	return pThis;
