@@ -940,7 +940,7 @@ Action tmrJoinSurvivorTeam(Handle timer, int client)
 	if (!(g_iJoinSurvivor & JOIN_AUTOMATIC) || !(client = GetClientOfUserId(client)) || !IsClientInGame(client) || IsFakeClient(client) || GetClientTeam(client) > TEAM_SPECTATOR || iGetBotOfIdlePlayer(client)) 
 		return Plugin_Stop;
 
-	if (!g_iRoundStart || GetClientTeam(client) <= TEAM_NOTEAM || SDKCall(g_hSDK_CDirector_IsInTransition, g_pDirector))
+	if (!g_iRoundStart || GetClientTeam(client) <= TEAM_NOTEAM/* || SDKCall(g_hSDK_CDirector_IsInTransition, g_pDirector)*/)
 		return Plugin_Continue;
 
 	JoinSurvivor(client);
@@ -1224,7 +1224,7 @@ void vGiveMelee(int client, const char[] sMeleeName)
 	else
 		g_aMeleeScripts.GetString(GetRandomInt(0, g_aMeleeScripts.Length - 1), sScriptName, sizeof sScriptName);
 	
-	vCheatCommand(client, "give", sScriptName);
+	GivePlayerItem(client, sScriptName);	//vCheatCommand(client, "give", sScriptName);
 }
 
 void vDisplayTeamPanel(int client)
@@ -1710,7 +1710,7 @@ void vGiveDefaultItems(int client)
 		if (!g_esWeapon[i].iCount)
 			continue;
 
-		vCheatCommand(client, "give", g_sWeaponName[i][g_esWeapon[i].iAllowed[GetRandomInt(0, g_esWeapon[i].iCount - 1)]]);
+		GivePlayerItem(client, g_sWeaponName[i][g_esWeapon[i].iAllowed[GetRandomInt(0, g_esWeapon[i].iCount - 1)]]);	//vCheatCommand(client, "give", g_sWeaponName[i][g_esWeapon[i].iAllowed[GetRandomInt(0, g_esWeapon[i].iCount - 1)]]);
 	}
 
 	vGiveSecondary(client);
@@ -1731,14 +1731,14 @@ void vGiveSecondary(int client)
 		if (iRandom > 2)
 			vGiveMelee(client, g_sWeaponName[1][iRandom]);
 		else
-			vCheatCommand(client, "give", g_sWeaponName[1][iRandom]);
+			GivePlayerItem(client, g_sWeaponName[1][iRandom]);	//vCheatCommand(client, "give", g_sWeaponName[1][iRandom]);
 	}
 }
 
 void vGivePresetPrimary(int client)
 {
 	if (g_esWeapon[0].iCount)
-		vCheatCommand(client, "give", g_sWeaponName[0][g_esWeapon[0].iAllowed[GetRandomInt(0, g_esWeapon[0].iCount - 1)]]);
+		GivePlayerItem(client, g_sWeaponName[0][g_esWeapon[0].iAllowed[GetRandomInt(0, g_esWeapon[0].iCount - 1)]]);	//vCheatCommand(client, "give", g_sWeaponName[0][g_esWeapon[0].iAllowed[GetRandomInt(0, g_esWeapon[0].iCount - 1)]]);
 }
 
 bool bIsWeaponTier1(int iWeapon)
@@ -1769,10 +1769,10 @@ void vGiveAveragePrimary(int client)
 
 	switch (iTotal > 0 ? RoundToNearest(float(iTier) / float(iTotal)) : 0) {
 		case 1:
-			vCheatCommand(client, "give", g_sWeaponName[0][GetRandomInt(0, 4)]); // 随机给一把tier1武器
+			GivePlayerItem(client, g_sWeaponName[0][GetRandomInt(0, 4)]);	//vCheatCommand(client, "give", g_sWeaponName[0][GetRandomInt(0, 4)]); // 随机给一把tier1武器
 
 		case 2:
-			vCheatCommand(client, "give", g_sWeaponName[0][GetRandomInt(5, 14)]); // 随机给一把tier2武器	
+			GivePlayerItem(client, g_sWeaponName[0][GetRandomInt(5, 14)]);	//vCheatCommand(client, "give", g_sWeaponName[0][GetRandomInt(5, 14)]); // 随机给一把tier2武器	
 	}
 }
 
@@ -1794,7 +1794,7 @@ void vRemovePlayerWeapons(int client)
 		RemoveEntity(iWeapon);
 	}
 }
-
+/*
 void vCheatCommand(int client, const char[] sCommand, const char[] sArguments = "")
 {
 	static int iFlagBits, iCmdFlags;
@@ -1805,4 +1805,4 @@ void vCheatCommand(int client, const char[] sCommand, const char[] sArguments = 
 	FakeClientCommand(client, "%s %s", sCommand, sArguments);
 	SetUserFlagBits(client, iFlagBits);
 	SetCommandFlags(sCommand, iCmdFlags);
-}
+}*/
