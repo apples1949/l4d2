@@ -98,25 +98,6 @@
 					"patch"		"\xEB\x0F"
 				}
 			}
-
-			"ZombieManager::AccumulateSpawnAreaCollection::JockeyTankCondition"
-			{
-				"signature"		"ZombieManager::AccumulateSpawnAreaCollection"
-
-				"linux"
-				{
-					"offset"	"8CAh"
-					"verify"	"\x0F\x84\x66\x01\x00\x00"
-					"patch"		"\x90\xE9\x66\x01\x00\x00"
-				}
-				
-				"windows"
-				{
-					"offset"	"45Ah"
-					"verify"	"\x0F\x84\x21\x01\x00\x00"
-					"patch"		"\x90\xE9\x21\x01\x00\x00"
-				}
-			}
 		}
 
 		"Signatures"
