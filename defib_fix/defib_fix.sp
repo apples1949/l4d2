@@ -162,7 +162,7 @@ void Event_PlayerBotReplace(Event event, char[] name, bool dontBroadcast)
 		else {
 			g_aTempArray = g_aDeathModel[bot];
 			g_aDeathModel[bot] = g_aDeathModel[player];
-			g_aDeathModel[bot] = g_aTempArray;
+			g_aDeathModel[player] = g_aTempArray;
 		}
 
 		g_aDeathModel[player].Clear();
