@@ -824,10 +824,6 @@ public void OnMapStart()
 		if (pArea.IsNull())
 			continue;
 
-		flow = pArea.m_flow;
-		if (flow == -9999.0)
-			continue;
-
 		g_aAreas.Set(g_aAreas.Push(flow), pArea, 1);
 	}
 
@@ -1119,7 +1115,7 @@ void vGenerateAndExecuteSpawnQueue(int iTotalSI)
 	static int client;
 	static int iCount;
 	static int iIndex;
-	static bool bRush;
+	//static bool bRush;
 	static bool bFind;
 	static float flow;
 	static float vPos[3];
@@ -1169,22 +1165,19 @@ void vGenerateAndExecuteSpawnQueue(int iTotalSI)
 	bRush = false;
 
 	flow = aList.Get(0, 0);
-	lastFlow = 0.0;
-	if (iCount >= 2) {
-		lastFlow = aList.Get(iCount - 1, 0);
-		if (flow - lastFlow > g_fRusherDistance) {
-			#if DEBUG
-			PrintToServer("[SS] Rusher -> %N", client);
-			#endif
+	lastFlow = aList.Get(iCount - 1, 0);
+	if (flow - lastFlow > g_fRusherDistance) {
+		#if DEBUG
+		PrintToServer("[SS] Rusher -> %N", client);
+		#endif
 
-			bRush = true;
-			lastFlow = flow - g_fRusherDistance;
-		}
+		//bRush = true;
+		lastFlow = flow;
 	}
 
 	bFind = false;
 	g_bInSpawnTime = true;
-	vCollectSpawnAreas(bRush ? client : 0, aList.Get(0, 2), lastFlow, flow + g_fRusherDistance); //if (bRush) vCollectSpawnAreas(client);
+	vCollectSpawnAreas(/*bRush ? client : 0, */aList.Get(0, 2), lastFlow - g_fRusherDistance, flow + g_fRusherDistance); //if (bRush) vCollectSpawnAreas(client);
 	delete aList;
 	//g_iPreferredDirection = bRush ? SPAWN_IN_FRONT_OF_SURVIVORS : SPAWN_ANYWHERE;
 
@@ -1481,7 +1474,7 @@ methodmap NavArea < Handle
 	}
 }
 
-void vCollectSpawnAreas(int client = 0, int endArea, float minFlow, float maxFlow)
+void vCollectSpawnAreas(/*int client = 0, */int endArea, float minFlow, float maxFlow)
 {
 	#if DEBUG
 	PrintToServer("[SS] NavArea Spawn");
@@ -1497,7 +1490,7 @@ void vCollectSpawnAreas(int client = 0, int endArea, float minFlow, float maxFlo
 	static float vPos[3];
 
 	g_aSpawnData.Clear();
-	vGetSurPosData(client);
+	vGetSurPosData(/*client*/);
 
 	#if DEBUG
 	int iCount;
@@ -1597,9 +1590,9 @@ bool bGetRandomSpawnPos(float vPos[3])
 		#endif
 		bSuccess = true;
 		g_aSpawnData.Sort(Sort_Ascending, Sort_Float);
-		//g_aSpawnData.GetArray(iLength >= 6 ? GetRandomInt(0, 5) : iLength >= 2 ? GetRandomInt(0, 1) : 0, data);
+		g_aSpawnData.GetArray(iLength >= 6 ? GetRandomInt(0, 5) : iLength >= 2 ? GetRandomInt(0, 1) : 0, data);
 
-		g_aSpawnData.GetArray(GetRandomInt(0, iLength - 1), data);
+		//g_aSpawnData.GetArray(GetRandomInt(0, iLength - 1), data);
 		vPos = data.vPos;
 		g_fSpawnDist = data.fDist + 400.0;
 	}
@@ -1662,14 +1655,21 @@ bool bIsValidSpawnFlags(int iFlags)
 	return true;
 }
 
-void vGetSurPosData(int client = 0)
+void vGetSurPosData(/*int client = 0*/)
 {
 	static int i;
 	static SurData data;
 
 	g_aSurData.Clear();
+	for (i = 1; i <= MaxClients; i++) {
+		if (IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i) && !GetEntProp(i, Prop_Send, "m_isIncapacitated")) {
+			data.flow = L4D2Direct_GetFlowDistance(i);
+			GetClientEyePosition(i, data.vPos);
+			g_aSurData.PushArray(data);
+		}
+	}
 
-	if (client) {
+	/*if (client) {
 		data.flow = L4D2Direct_GetFlowDistance(client);
 		GetClientEyePosition(client, data.vPos);
 		g_aSurData.PushArray(data);
@@ -1682,7 +1682,7 @@ void vGetSurPosData(int client = 0)
 				g_aSurData.PushArray(data);
 			}
 		}
-	}
+	}*/
 	
 	g_iMaxSurData = g_aSurData.Length;
 }
