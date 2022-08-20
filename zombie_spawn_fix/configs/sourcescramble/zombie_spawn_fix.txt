@@ -23,5 +23,4 @@
 	"zombie_spawn_fix"	"CTerrorPlayer::OnPreThinkGhostState::SpawnDisabledCondition"
 	"zombie_spawn_fix"	"ZombieManager::AccumulateSpawnAreaCollection::EnforceFinaleNavSpawnRulesCondition"
 	"zombie_spawn_fix"	"ZombieManager::AccumulateSpawnAreaCollection::IgnoreClearState"
-	"zombie_spawn_fix"	"ZombieManager::AccumulateSpawnAreaCollection::JockeyTankCondition"
 }
