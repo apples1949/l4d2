@@ -352,7 +352,6 @@ int iGetSurVictim(int client, int iClass) {
 	return -1;
 }
 
-
 Action cmdSetLimit(int client, int args) {
 	if (args == 1) {
 		char sArg[16];
@@ -1042,7 +1041,7 @@ void vExecuteSpawnQueue(int iTotalSI, bool bRetry) {
 		count = g_aSpawnQueue.Length - count;
 		if (count > 0) {
 			#if DEBUG
-			PrintToServer("[SS] Retry Spawn SI -> %d", g_aSpawnQueue.Length - count);
+			PrintToServer("[SS] Retry Spawn SI -> %d", count);
 			#endif
 			g_hRetryTimer = CreateTimer(1.0, tmrRetrySpawn, false);
 		}
