@@ -8,17 +8,14 @@
 int
 	g_iOff_m_hHiddenWeapon;
 
-public Plugin myinfo =
-{
+public Plugin myinfo = {
 	name = "L4D2 Drop Secondary",
-	author = "Jahze, Visor, NoBody & HarryPotter, sorallll",
-	version	= "2.0",
-	description	= "Survivor players will drop their secondary weapon when they die",
-	url = "https://github.com/Attano/Equilibrium"
+	author = "sorallll",
+	version	= "1.0.0",
+	url = "https://github.com/umlka/l4d2/tree/main/drop_secondary"
 };
 
-public void OnPluginStart()
-{
+public void OnPluginStart() {
 	char sPath[PLATFORM_MAX_PATH];
 	BuildPath(Path_SM, sPath, sizeof sPath, "gamedata/%s.txt", GAMEDATA);
 	if (!FileExists(sPath))
@@ -30,15 +27,14 @@ public void OnPluginStart()
 
 	g_iOff_m_hHiddenWeapon = hGameData.GetOffset("CTerrorPlayer::OnIncapacitatedAsSurvivor::m_hHiddenWeapon");
 	if (g_iOff_m_hHiddenWeapon == -1)
-		SetFailState("Failed to find offset: CTerrorPlayer::OnIncapacitatedAsSurvivor::m_hHiddenWeapon");
+		SetFailState("Failed to find offset: \"CTerrorPlayer::OnIncapacitatedAsSurvivor::m_hHiddenWeapon\"");
 	
 	delete hGameData;
 
 	HookEvent("player_death", Event_PlayerDeath, EventHookMode_Pre);
 }
 
-void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast)
-{
+void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast) {
 	int client = GetClientOfUserId(event.GetInt("userid"));
 	if (!client || !IsClientInGame(client) || GetClientTeam(client) != 2)
 		return;
