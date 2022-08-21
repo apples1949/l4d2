@@ -1203,11 +1203,11 @@ void vDisplayTeamPanel(int client) {
 	FormatEx(text, sizeof text, "生还者 (%d/%d) - %d Bot(s)", iGetTeamPlayers(TEAM_SURVIVOR, false), g_iSurvivorLimitSet, iCountSurvivorBots());
 	panel.DrawItem(text);
 
-	static ConVar hSurvivorMaxInc;
-	if (!hSurvivorMaxInc)
-		hSurvivorMaxInc = FindConVar("survivor_max_incapacitated_count");
+	static ConVar cvSurvivorMaxInc;
+	if (!cvSurvivorMaxInc)
+		cvSurvivorMaxInc = FindConVar("survivor_max_incapacitated_count");
 
-	int iSurvivorMaxInc = hSurvivorMaxInc.IntValue;
+	int iSurvivorMaxInc = cvSurvivorMaxInc.IntValue;
 	for (i = 1; i <= MaxClients; i++) {
 		if (!IsClientInGame(i) || GetClientTeam(i) != TEAM_SURVIVOR)
 			continue;
@@ -1285,11 +1285,11 @@ int iCountSurvivorBots() {
 }
 
 int iGetTempHealth(int client) {
-	static ConVar hPainPillsDecay;
-	if (!hPainPillsDecay)
-		hPainPillsDecay = FindConVar("pain_pills_decay_rate");
+	static ConVar cvPainPillsDecay;
+	if (!cvPainPillsDecay)
+		cvPainPillsDecay = FindConVar("pain_pills_decay_rate");
 
-	int iHealth = RoundToFloor(GetEntPropFloat(client, Prop_Send, "m_healthBuffer") - (GetGameTime() - GetEntPropFloat(client, Prop_Send, "m_healthBufferTime")) * hPainPillsDecay.FloatValue);
+	int iHealth = RoundToFloor(GetEntPropFloat(client, Prop_Send, "m_healthBuffer") - (GetGameTime() - GetEntPropFloat(client, Prop_Send, "m_healthBufferTime")) * cvPainPillsDecay.FloatValue);
 	return iHealth < 0 ? 0 : iHealth;
 }
 
