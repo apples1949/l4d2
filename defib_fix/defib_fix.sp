@@ -29,7 +29,6 @@ GlobalForward
 	g_FWD_SurvivorDeathModelCreated;
 
 ArrayList
-	g_aTempArray,
 	g_aDeathModel[MAXPLAYERS + 1];
 
 DynamicHook
@@ -119,7 +118,7 @@ public void OnMapEnd()
 		g_aDeathModel[i].Clear();
 }
 
-public void OnClientDisconnect_Post(int client)
+public void OnClientDisconnect(int client)
 {
 	g_aDeathModel[client].Clear();
 }
@@ -140,9 +139,9 @@ void Event_BotPlayerReplace(Event event, char[] name, bool dontBroadcast)
 		if (!g_aDeathModel[bot].Length)
 			g_aDeathModel[player].Clear();
 		else {
-			g_aTempArray = g_aDeathModel[player];
+			ArrayList aTempArray = g_aDeathModel[player];
 			g_aDeathModel[player] = g_aDeathModel[bot];
-			g_aDeathModel[bot] = g_aTempArray;
+			g_aDeathModel[bot] = aTempArray;
 		}
 
 		g_aDeathModel[bot].Clear();
@@ -160,9 +159,9 @@ void Event_PlayerBotReplace(Event event, char[] name, bool dontBroadcast)
 		if (!g_aDeathModel[player].Length)
 			g_aDeathModel[bot].Clear();
 		else {
-			g_aTempArray = g_aDeathModel[bot];
+			ArrayList aTempArray = g_aDeathModel[bot];
 			g_aDeathModel[bot] = g_aDeathModel[player];
-			g_aDeathModel[player] = g_aTempArray;
+			g_aDeathModel[player] = aTempArray;
 		}
 
 		g_aDeathModel[player].Clear();
