@@ -1266,7 +1266,8 @@ void vResetInfectedAbility(int client, float fTime) {
 		//SetEntPropFloat(iAbility, Prop_Send, "m_timestamp", GetGameTime() + fTime);
 		SetEntPropFloat(iAbility, Prop_Send, "m_nextActivationTimer", fTime, 0);
 		SetEntPropFloat(iAbility, Prop_Send, "m_nextActivationTimer", GetGameTime() + fTime, 1);
-		SetEntProp(iAbility, Prop_Send, "m_bHasBeenActivated", false);
+		if (HasEntProp(client, Prop_Send, "m_bHasBeenActivated"))
+			SetEntProp(iAbility, Prop_Send, "m_bHasBeenActivated", false);
 	}
 }
 
