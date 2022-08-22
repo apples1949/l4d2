@@ -234,7 +234,7 @@ public void OnPluginEnd() {
 	g_cvSpawnRange.RestoreDefault();
 	g_cvDiscardRange.RestoreDefault();
 
-	FindConVar("director_no_specials").RestoreDefault();
+	//FindConVar("director_no_specials").RestoreDefault();
 
 	FindConVar("z_spawn_flow_limit").RestoreDefault();
 	FindConVar("z_attack_flow_range").RestoreDefault();
@@ -248,9 +248,15 @@ public void OnPluginEnd() {
 
 public Action L4D_OnGetScriptValueInt(const char[] key, int &retVal) {
 	static int value;
-	if (!g_bInSpawnTime)
-		return Plugin_Continue;
+	if (!g_bInSpawnTime) {
+		if (strcmp(key, "MaxSpecials", false) == 0) {
+			retVal = 0;
+			return Plugin_Handled;
+		}
 
+		return Plugin_Continue;	
+	}
+	
 	value = retVal;
 	if (strcmp(key, "MaxSpecials", false) == 0)
 		value = g_iSILimit;
@@ -696,7 +702,7 @@ void vSetDirectorConvars() {
 	g_cvSpawnRange.IntValue = 1000;
 	//g_cvDiscardRange.IntValue = 2500;
 
-	FindConVar("director_no_specials").IntValue = 1;
+	//FindConVar("director_no_specials").IntValue = 1;
 
 	FindConVar("z_spawn_flow_limit").IntValue = 999999;
 	FindConVar("z_attack_flow_range").IntValue = 999999;
