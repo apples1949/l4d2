@@ -325,7 +325,7 @@ Action tmrForceSuicide(Handle timer) {
 
 void vKillInactiveSI(int client) {
 	#if DEBUG
-	PrintToServer("[SS] Kill Inactive SI -> %N", client);
+	PrintToServer("[SS] Kill inactive SI -> %N", client);
 	#endif
 	ForcePlayerSuicide(client);
 
@@ -1044,14 +1044,19 @@ void vExecuteSpawnQueue(int iTotalSI, bool bRetry) {
 	#endif
 
 	if (bRetry) {
-		count = g_aSpawnQueue.Length - count;
-		if (count > 0) {
+		if (!count) {
 			#if DEBUG
-			PrintToServer("[SS] Retry Spawn SI -> %d", count);
+			PrintToServer("[SS] Retry spawn SI! spawned:%d failed:%d", count, g_aSpawnQueue.Length - count);
 			#endif
 			g_hRetryTimer = CreateTimer(1.0, tmrRetrySpawn, false);
 		}
 	}
+	#if DEBUG
+	else {
+		if (!count)
+			PrintToServer("[SS] Spawn SI failed! spawned:%d failed:%d", count, g_aSpawnQueue.Length - count);
+	}
+	#endif
 }
 
 Action tmrRetrySpawn(Handle timer, bool bRetry) {
