@@ -20,8 +20,7 @@ float
 	g_fTankThrowForce,
 	g_fAimOffsetSensitivityTank;
 
-public Plugin myinfo =
-{
+public Plugin myinfo = {
 	name = "AI TANK",
 	author = "Breezy",
 	description = "Improves the AI behaviour of special infected",
@@ -29,31 +28,27 @@ public Plugin myinfo =
 	url = "github.com/breezyplease"
 };
 
-public void OnPluginStart()
-{
+public void OnPluginStart() {
 	g_hTankBhop = CreateConVar("ai_tank_bhop", "1", "Flag to enable bhop facsimile on AI tanks");
 	g_hAimOffsetSensitivityTank = CreateConVar("ai_aim_offset_sensitivity_tank", "15.0", "If the tank has a target, it will not straight throw if the target's aim on the horizontal axis is within this radius", _, true, 0.0, true, 180.0);
 	g_hTankAttackRange = FindConVar("tank_attack_range");
 	g_hTankThrowForce = FindConVar("z_tank_throw_force");
 
-	g_hTankBhop.AddChangeHook(vConVarChanged);
-	g_hTankAttackRange.AddChangeHook(vConVarChanged);
-	g_hTankThrowForce.AddChangeHook(vConVarChanged);
-	g_hAimOffsetSensitivityTank.AddChangeHook(vConVarChanged);
+	g_hTankBhop.AddChangeHook(vCvarChanged);
+	g_hTankAttackRange.AddChangeHook(vCvarChanged);
+	g_hTankThrowForce.AddChangeHook(vCvarChanged);
+	g_hAimOffsetSensitivityTank.AddChangeHook(vCvarChanged);
 }
 
-public void OnConfigsExecuted()
-{
+public void OnConfigsExecuted() {
 	vGetCvars();
 }
 
-void vConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
-{
+void vCvarChanged(ConVar convar, const char[] oldValue, const char[] newValue) {
 	vGetCvars();
 }
 
-void vGetCvars()
-{
+void vGetCvars() {
 	g_bTankBhop = g_hTankBhop.BoolValue;
 	g_fTankAttackRange = g_hTankAttackRange.FloatValue;
 	g_fTankThrowForce = g_hTankThrowForce.FloatValue;
@@ -61,22 +56,19 @@ void vGetCvars()
 }
 
 int g_iCurTarget[MAXPLAYERS + 1];
-public Action L4D2_OnChooseVictim(int specialInfected, int &curTarget)
-{
+public Action L4D2_OnChooseVictim(int specialInfected, int &curTarget) {
 	g_iCurTarget[specialInfected] = curTarget;
 	return Plugin_Continue;
 }
 
 float g_fRunTopSpeed[MAXPLAYERS + 1];
-public Action L4D_OnGetRunTopSpeed(int target, float &retVal)
-{
+public Action L4D_OnGetRunTopSpeed(int target, float &retVal) {
 	g_fRunTopSpeed[target] = retVal;
 	return Plugin_Continue;
 }
 
 bool g_bModify[MAXPLAYERS + 1];
-public Action OnPlayerRunCmd(int client, int &buttons)
-{
+public Action OnPlayerRunCmd(int client, int &buttons) {
 	if (!g_bTankBhop)
 		return Plugin_Continue;
 
@@ -98,10 +90,9 @@ public Action OnPlayerRunCmd(int client, int &buttons)
 	if (GetEntityFlags(client) & FL_ONGROUND) {
 		g_bModify[client] = false;
 
-		if (g_fTankAttackRange < fNearestSurvivorDistance(client) < 1000.0) {
+		if (g_fTankAttackRange < fNearestSurDistance(client) < 1000.0) {
 			GetClientEyeAngles(client, vAng);
-			if (bBhop(client, buttons, vAng))
-				return Plugin_Changed;
+			return aBunnyHop(client, buttons, vAng);
 		}
 	}
 	else {
@@ -110,10 +101,10 @@ public Action OnPlayerRunCmd(int client, int &buttons)
 
 		static int iTarget;
 		iTarget = GetClientAimTarget(client, true);
-		if (!bIsAliveSurvivor(iTarget))
+		if (!bIsAliveSur(iTarget))
 			iTarget = g_iCurTarget[client];
 
-		if (!bIsAliveSurvivor(iTarget))
+		if (!bIsAliveSur(iTarget))
 			return Plugin_Continue;
 
 		static float vPos[3];
@@ -136,115 +127,106 @@ public Action OnPlayerRunCmd(int client, int &buttons)
 		vPos[2] = vTarg[2] = 0.0;
 		MakeVectorFromPoints(vPos, vTarg, vPos);
 		NormalizeVector(vPos, vPos);
-
 		if (RadToDeg(ArcCosine(GetVectorDotProduct(vAng, vPos))) < 90.0)
 			return Plugin_Continue;
 
 		MakeVectorFromPoints(vDir[0], vDir[1], vDir[0]);
 		TeleportEntity(client, NULL_VECTOR, vVel, vDir[0]);
-
 		g_bModify[client] = true;
 	}
 	
 	return Plugin_Continue;
 }
 
-bool bBhop(int client, int &buttons, float vAng[3])
-{
-	static bool bJumped;
-	bJumped = false;
+Action aBunnyHop(int client, int &buttons, float vAng[3]) {
+	Action aResult = Plugin_Continue;
 
 	if (buttons & IN_FORWARD || buttons & IN_BACK) {
 		GetAngleVectors(vAng, vAng, NULL_VECTOR, NULL_VECTOR);
 		if (bClientPush(client, buttons, vAng, buttons & IN_FORWARD ? 2.0 * SPEEDBOOST : -SPEEDBOOST))
-			bJumped = true;
+			aResult = Plugin_Changed;
 	}
 
 	if (buttons & IN_MOVELEFT || buttons & IN_MOVERIGHT) {
 		GetAngleVectors(vAng, NULL_VECTOR, vAng, NULL_VECTOR);
 		if (bClientPush(client, buttons, vAng, buttons & IN_MOVELEFT ? -SPEEDBOOST : SPEEDBOOST))
-			bJumped = true;
+			aResult = Plugin_Changed;
 	}
 
-	return bJumped;
+	return aResult;
 }
 
-bool bClientPush(int client, int &buttons, float vVec[3], float fForce)
-{
+bool bClientPush(int client, int &buttons, float vVec[3], float fForce) {
 	NormalizeVector(vVec, vVec);
 	ScaleVector(vVec, fForce);
 
 	static float vVel[3];
 	GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", vVel);
 	AddVectors(vVel, vVec, vVel);
+	if (!bWontFall(client, vVel))
+		return false;
 
-	if (bWontFall(client, vVel)) {
-		buttons |= IN_DUCK;
-		buttons |= IN_JUMP;
-		TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, vVel);
-		return true;
-	}
-
-	return false;
+	buttons |= IN_DUCK;
+	buttons |= IN_JUMP;
+	TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, vVel);
+	return true;
 }
 
 #define OBSTACLE_HEIGHT 18.0
-bool bWontFall(int client, const float vVel[3])
-{
+bool bWontFall(int client, const float vVel[3]) {
 	static float vPos[3];
 	static float vEnd[3];
 	GetClientAbsOrigin(client, vPos);
 	AddVectors(vPos, vVel, vEnd);
-	vPos[2] += OBSTACLE_HEIGHT;
 
 	static float vMins[3];
 	static float vMaxs[3];
 	GetClientMins(client, vMins);
 	GetClientMaxs(client, vMaxs);
 
-	static bool bHit;
+	static bool bDidHit;
 	static Handle hTrace;
-	static float vBuff[3];
 
-	bHit = false;
+	bDidHit = false;
+	vPos[2] += OBSTACLE_HEIGHT;
 	vEnd[2] += OBSTACLE_HEIGHT;
 	hTrace = TR_TraceHullFilterEx(vPos, vEnd, vMins, vMaxs, MASK_PLAYERSOLID_BRUSHONLY, bTraceEntityFilter);
-	vEnd[2] -= OBSTACLE_HEIGHT;
+	//vEnd[2] -= OBSTACLE_HEIGHT;
 
+	static float vVec[3];
 	if (TR_DidHit(hTrace)) {
-		bHit = true;
-		TR_GetPlaneNormal(hTrace, vBuff);
-		if (RadToDeg(ArcCosine(GetVectorDotProduct(vVel, vBuff))) > 135.0) {
-			TR_GetEndPosition(vBuff, hTrace);
-			if (33.0 < GetVectorDistance(vPos, vBuff) < 64.0) {
+		bDidHit = true;
+		TR_GetPlaneNormal(hTrace, vVec);
+		if (RadToDeg(ArcCosine(GetVectorDotProduct(vVel, vVec))) > 150.0) {
+			TR_GetEndPosition(vVec, hTrace);
+			if (33.0 < GetVectorDistance(vPos, vVec) < 64.0) {
 				delete hTrace;
 				return false;
 			}
 		}
 	}
+
 	delete hTrace;
-	
-	if (!bHit)
-		vBuff = vEnd;
+	if (!bDidHit)
+		vVec = vEnd;
 
 	static float vDown[3];
-	vDown[0] = vBuff[0];
-	vDown[1] = vBuff[1];
-	vDown[2] = vBuff[2] - 100000.0;
-
-	hTrace = TR_TraceHullFilterEx(vBuff, vDown, vMins, vMaxs, MASK_PLAYERSOLID_BRUSHONLY, bTraceEntityFilter);
+	vDown[0] = vVec[0];
+	vDown[1] = vVec[1];
+	vDown[2] = vVec[2] - 100000.0;
+	hTrace = TR_TraceHullFilterEx(vVec, vDown, vMins, vMaxs, MASK_PLAYERSOLID_BRUSHONLY, bTraceEntityFilter);
 	if (TR_DidHit(hTrace)) {
 		TR_GetEndPosition(vEnd, hTrace);
-		if (vBuff[2] - vEnd[2] > 120.0) {
+		if (vVec[2] - vEnd[2] > 120.0) {
 			delete hTrace;
 			return false;
 		}
 
-		static int entity;
-		if ((entity = TR_GetEntityIndex(hTrace)) > MaxClients) {
-			static char classname[13];
-			GetEdictClassname(entity, classname, sizeof classname);
-			if (strcmp(classname, "trigger_hurt") == 0) {
+		static int iEnt;
+		if ((iEnt = TR_GetEntityIndex(hTrace)) > MaxClients) {
+			static char cls[13];
+			GetEdictClassname(iEnt, cls, sizeof cls);
+			if (strcmp(cls, "trigger_hurt") == 0) {
 				delete hTrace;
 				return false;
 			}
@@ -257,21 +239,19 @@ bool bWontFall(int client, const float vVel[3])
 	return false;
 }
  
-bool bTraceEntityFilter(int entity, int contentsMask, any data)
-{
-	if (entity <= MaxClients || entity == data)
+bool bTraceEntityFilter(int entity, int contentsMask) {
+	if (entity <= MaxClients)
 		return false;
 
-	static char classname[9];
-	GetEntityClassname(entity, classname, sizeof classname);
-	if ((classname[0] == 'i' && strcmp(classname[1], "nfected") == 0) || (classname[0] == 'w' && strcmp(classname[1], "itch") == 0))
+	static char cls[9];
+	GetEntityClassname(entity, cls, sizeof cls);
+	if ((cls[0] == 'i' && strcmp(cls[1], "nfected") == 0) || (cls[0] == 'w' && strcmp(cls[1], "itch") == 0))
 		return false;
 
 	return true;
 }
 
-float fNearestSurvivorDistance(int client)
-{
+float fNearestSurDistance(int client) {
 	static int i;
 	static int iCount;
 	static float vPos[3];
@@ -280,7 +260,6 @@ float fNearestSurvivorDistance(int client)
 	
 	iCount = 0;
 	GetClientAbsOrigin(client, vPos);
-
 	for (i = 1; i <= MaxClients; i++) {
 		if (i != client && IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i)) {
 			GetClientAbsOrigin(i, vTarg);
@@ -295,8 +274,7 @@ float fNearestSurvivorDistance(int client)
 	return fDists[0];
 }
 
-public Action L4D2_OnSelectTankAttack(int client, int &sequence)
-{
+public Action L4D2_OnSelectTankAttack(int client, int &sequence) {
 	if (sequence != 50 || !IsFakeClient(client))
 		return Plugin_Continue;
 
@@ -305,8 +283,7 @@ public Action L4D2_OnSelectTankAttack(int client, int &sequence)
 }
 
 #define PLAYER_HEIGHT 72.0
-public Action L4D_TankRock_OnRelease(int tank, int rock, float vecPos[3], float vecAng[3], float vecVel[3], float vecRot[3])
-{
+public Action L4D_TankRock_OnRelease(int tank, int rock, float vecPos[3], float vecAng[3], float vecVel[3], float vecRot[3]) {
 	if (rock <= MaxClients || !IsValidEntity(rock))
 		return Plugin_Continue;
 
@@ -318,10 +295,10 @@ public Action L4D_TankRock_OnRelease(int tank, int rock, float vecPos[3], float 
 
 	static int iTarget;
 	iTarget = GetClientAimTarget(tank, true);
-	if (bIsAliveSurvivor(iTarget) && !bIsIncapacitated(iTarget) && !bIsPinned(iTarget) && !bHitWall(tank, rock, iTarget) && !bWithinViewAngle(tank, iTarget, g_fAimOffsetSensitivityTank))
+	if (bIsAliveSur(iTarget) && !bIsIncapacitated(iTarget) && !bIsPinned(iTarget) && !bHitWall(tank, rock, iTarget) && !bWithinViewAngle(tank, iTarget, g_fAimOffsetSensitivityTank))
 		return Plugin_Continue;
 	
-	iTarget = iGetClosestSurvivor(tank, iTarget, rock, 2.0 * g_fTankThrowForce);
+	iTarget = iGetClosestSur(tank, iTarget, rock, 2.0 * g_fTankThrowForce);
 	if (iTarget == -1)
 		return Plugin_Continue;
 
@@ -346,6 +323,7 @@ public Action L4D_TankRock_OnRelease(int tank, int rock, float vecPos[3], float 
 		vTarg[2] += fDelta / PLAYER_HEIGHT * 10.0;
 
 	GetClientEyePosition(tank, vRock);
+	vecPos = vRock;
 	MakeVectorFromPoints(vRock, vTarg, vVectors);
 	GetVectorAngles(vVectors, vTarg);
 	vecAng = vTarg;
@@ -359,18 +337,15 @@ public Action L4D_TankRock_OnRelease(int tank, int rock, float vecPos[3], float 
 	return Plugin_Changed;
 }
 
-bool bIsAliveSurvivor(int client)
-{
-	return client > 0 && client <= MaxClients && IsClientInGame(client) && GetClientTeam(client) == 2 && IsPlayerAlive(client);
+bool bIsAliveSur(int client) {
+	return 0 < client <= MaxClients && IsClientInGame(client) && GetClientTeam(client) == 2 && IsPlayerAlive(client);
 }
 
-bool bIsIncapacitated(int client)
-{
+bool bIsIncapacitated(int client) {
 	return !!GetEntProp(client, Prop_Send, "m_isIncapacitated");
 }
 
-bool bIsPinned(int client)
-{
+bool bIsPinned(int client) {
 	if (GetEntPropEnt(client, Prop_Send, "m_pummelAttacker") > 0)
 		return true;
 	if (GetEntPropEnt(client, Prop_Send, "m_carryAttacker") > 0)
@@ -384,8 +359,7 @@ bool bIsPinned(int client)
 	return false;
 }
 
-bool bHitWall(int iTank, int entity, int iTarget = -1, const float vEnd[3] = NULL_VECTOR)
-{
+bool bHitWall(int iTank, int iEnt, int iTarget = -1, const float vEnd[3] = NULL_VECTOR) {
 	static float vSrc[3];
 	static float vTarg[3];
 	GetClientEyePosition(iTank, vSrc);
@@ -397,19 +371,18 @@ bool bHitWall(int iTank, int entity, int iTarget = -1, const float vEnd[3] = NUL
 
 	static float vMins[3];
 	static float vMaxs[3];
-	GetEntPropVector(entity, Prop_Send, "m_vecMins", vMins);
-	GetEntPropVector(entity, Prop_Send, "m_vecMaxs", vMaxs);
+	GetEntPropVector(iEnt, Prop_Send, "m_vecMins", vMins);
+	GetEntPropVector(iEnt, Prop_Send, "m_vecMaxs", vMaxs);
 
-	static bool bHit;
+	static bool bDidHit;
 	static Handle hTrace;
-	hTrace = TR_TraceHullFilterEx(vSrc, vTarg, vMins, vMaxs, MASK_SOLID, bTraceEntityFilter, entity);
-	bHit = TR_DidHit(hTrace);
+	hTrace = TR_TraceHullFilterEx(vSrc, vTarg, vMins, vMaxs, MASK_SOLID, bTraceEntityFilter, iEnt);
+	bDidHit = TR_DidHit(hTrace);
 	delete hTrace;
-	return bHit;
+	return bDidHit;
 }
 
-int iGetClosestSurvivor(int client, int iExclude = -1, int entity, float fDistance)
-{
+int iGetClosestSur(int client, int iExclude = -1, int iEnt, float fDistance) {
 	static int i;
 	static int iCount;
 	static int iIndex;
@@ -428,10 +401,9 @@ int iGetClosestSurvivor(int client, int iExclude = -1, int entity, float fDistan
 
 	static ArrayList aClients;
 	aClients = new ArrayList(3);
-
 	float fFOV = GetFOVDotProduct(g_fAimOffsetSensitivityTank);
 	for (i = 0; i < iCount; i++) {
-		if (iTargets[i] && iTargets[i] != iExclude && GetClientTeam(iTargets[i]) == 2 && IsPlayerAlive(iTargets[i]) && !bIsIncapacitated(iTargets[i]) && !bIsPinned(iTargets[i]) && !bHitWall(client, entity, iTargets[i])) {
+		if (iTargets[i] && iTargets[i] != iExclude && GetClientTeam(iTargets[i]) == 2 && IsPlayerAlive(iTargets[i]) && !bIsIncapacitated(iTargets[i]) && !bIsPinned(iTargets[i]) && !bHitWall(client, iEnt, iTargets[i])) {
 			GetClientEyePosition(iTargets[i], vTarg);
 			fDist = GetVectorDistance(vSrc, vTarg);
 			if (fDist < fDistance) {
@@ -450,18 +422,16 @@ int iGetClosestSurvivor(int client, int iExclude = -1, int entity, float fDistan
 	}
 
 	aClients.Sort(Sort_Ascending, Sort_Float);
-
 	iIndex = aClients.FindValue(0, 2);
 	i = aClients.Get(iIndex != -1 && aClients.Get(iIndex, 0) < g_fTankThrowForce ? iIndex : GetRandomInt(0, RoundToCeil((aClients.Length - 1) * 0.8)), 1);
 	delete aClients;
 	return i;
 }
 
-bool bWithinViewAngle(int client, int iViewer, float fOffsetThreshold)
-{
-	float vSrc[3];
-	float vTarg[3];
-	float vAng[3];
+bool bWithinViewAngle(int client, int iViewer, float fOffsetThreshold) {
+	static float vSrc[3];
+	static float vTarg[3];
+	static float vAng[3];
 	GetClientEyePosition(iViewer, vSrc);
 	GetClientEyePosition(client, vTarg);
 	GetClientEyeAngles(iViewer, vAng);
@@ -488,22 +458,16 @@ bool bWithinViewAngle(int client, int iViewer, float fOffsetThreshold)
  * @return					True if the point is within view from the source position at the
  * 							specified FOV.
  */
-stock bool PointWithinViewAngle(const float vecSrcPosition[3], const float vecTargetPosition[3],
-		const float vecLookDirection[3], float flCosHalfFOV) {
-	float vecDelta[3];
-	
+bool PointWithinViewAngle(const float vecSrcPosition[3], const float vecTargetPosition[3], const float vecLookDirection[3], float flCosHalfFOV) {
+	static float vecDelta[3];
 	SubtractVectors(vecTargetPosition, vecSrcPosition, vecDelta);
-	
-	float cosDiff = GetVectorDotProduct(vecLookDirection, vecDelta);
-	
-	if (cosDiff < 0.0) {
+	static float cosDiff;
+	cosDiff = GetVectorDotProduct(vecLookDirection, vecDelta);
+	if (cosDiff < 0.0)
 		return false;
-	}
-	
-	float flLen2 = GetVectorLength(vecDelta, true);
-	
+
 	// a/sqrt(b) > c  == a^2 > b * c ^2
-	return ( cosDiff * cosDiff >= flLen2 * flCosHalfFOV * flCosHalfFOV );
+	return cosDiff * cosDiff >= GetVectorLength(vecDelta, true) * flCosHalfFOV * flCosHalfFOV;
 }
 
 /**
@@ -515,6 +479,6 @@ stock bool PointWithinViewAngle(const float vecSrcPosition[3], const float vecTa
  * @param angle     The FOV value in degree
  * @return          Width of the forward view cone as a dot product result
  */
-stock float GetFOVDotProduct(float angle) {
+float GetFOVDotProduct(float angle) {
 	return Cosine(DegToRad(angle) / 2.0);
 }
