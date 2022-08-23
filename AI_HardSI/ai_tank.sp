@@ -30,7 +30,7 @@ public Plugin myinfo = {
 
 public void OnPluginStart() {
 	g_hTankBhop = CreateConVar("ai_tank_bhop", "1", "Flag to enable bhop facsimile on AI tanks");
-	g_hAimOffsetSensitivityTank = CreateConVar("ai_aim_offset_sensitivity_tank", "15.0", "If the tank has a target, it will not straight throw if the target's aim on the horizontal axis is within this radius", _, true, 0.0, true, 180.0);
+	g_hAimOffsetSensitivityTank = CreateConVar("ai_aim_offset_sensitivity_tank", "22.5", "If the tank has a target, it will not straight throw if the target's aim on the horizontal axis is within this radius", _, true, 0.0, true, 180.0);
 	g_hTankAttackRange = FindConVar("tank_attack_range");
 	g_hTankThrowForce = FindConVar("z_tank_throw_force");
 
@@ -323,7 +323,6 @@ public Action L4D_TankRock_OnRelease(int tank, int rock, float vecPos[3], float 
 		vTarg[2] += fDelta / PLAYER_HEIGHT * 10.0;
 
 	GetClientEyePosition(tank, vRock);
-	vecPos = vRock;
 	MakeVectorFromPoints(vRock, vTarg, vVectors);
 	GetVectorAngles(vVectors, vTarg);
 	vecAng = vTarg;
