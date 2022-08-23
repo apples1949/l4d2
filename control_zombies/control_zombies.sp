@@ -253,7 +253,7 @@ int
 	g_iRoundStart,
 	g_iPlayerSpawn,
 	g_iSpawnablePZ,
-	g_iPassTankBot,
+	g_iTransferTankBot,
 	g_iOff_m_hHiddenWeapon,
 	g_iOff_m_preHangingHealth,
 	g_iOff_m_preHangingHealthBuffer,
@@ -271,8 +271,8 @@ int
 	g_iGlowColor[4],
 	g_iSpawnLimits[6],
 	g_iSpawnWeights[6],
-	g_iUserFlagBits[6],
-	g_iImmunityLevels[6];
+	g_iUserFlagBits[7],
+	g_iImmunityLevels[7];
 
 float
 	g_fPZPunishHealth,
@@ -309,7 +309,7 @@ public Plugin myinfo = {
 	name = "Control Zombies In Co-op",
 	author = "sorallll",
 	description = "",
-	version = "3.4.4",
+	version = "3.4.5",
 	url = "https://steamcommunity.com/id/sorallll"
 }
 
@@ -354,13 +354,13 @@ public void OnPluginStart() {
 	g_cvSurvuivorChance = 			CreateConVar("cz_survivor_allow_chance", 			"0.0", 					"准备叛变的玩家数量为0时,自动抽取生还者和感染者玩家的几率(排除闲置旁观玩家)(0.0=不自动抽取)", CVAR_FLAGS);
 	g_cvExchangeTeam = 				CreateConVar("cz_exchange_team", 					"0", 					"特感玩家杀死生还者玩家后是否互换队伍?(0=否,1=是)", CVAR_FLAGS);
 	g_cvPZSuicideTime = 			CreateConVar("cz_pz_suicide_time", 					"120", 					"特感玩家复活后自动处死的时间(0=不会处死复活后的特感玩家)", CVAR_FLAGS, true, 0.0);
-	g_cvPZRespawnTime = 			CreateConVar("cz_pz_respawn_time", 					"15", 					"特感玩家自动复活时间(0=插件不会接管特感玩家的复活)", CVAR_FLAGS, true, 0.0);
-	g_cvPZPunishTime = 				CreateConVar("cz_pz_punish_time", 					"30", 					"特感玩家在ghost状态下切换特感类型后下次复活延长的时间(0=插件不会延长复活时间)", CVAR_FLAGS, true, 0.0);
+	g_cvPZRespawnTime = 			CreateConVar("cz_pz_respawn_time", 					"10", 					"特感玩家自动复活时间(0=插件不会接管特感玩家的复活)", CVAR_FLAGS, true, 0.0);
+	g_cvPZPunishTime = 				CreateConVar("cz_pz_punish_time", 					"15", 					"特感玩家在ghost状态下切换特感类型后下次复活延长的时间(0=插件不会延长复活时间)", CVAR_FLAGS, true, 0.0);
 	g_cvPZPunishHealth = 			CreateConVar("cz_pz_punish_health", 				"0.5", 					"特感玩家在ghost状态下切换特感类型是否进行血量惩罚(0.0=不惩罚.计算方式为当前血量乘以该值)", CVAR_FLAGS, true, 0.0);
 	g_cvAutoDisplayMenu = 			CreateConVar("cz_atuo_display_menu", 				"1", 					"在感染玩家进入灵魂状态后自动向其显示更改类型的菜单?(0=不显示,-1=每次都显示,大于0=每回合总计显示的最大次数)", CVAR_FLAGS, true, -1.0);
 	g_cvPZTeamLimit = 				CreateConVar("cz_pz_team_limit", 					"2", 					"感染玩家数量达到多少后将限制使用sm_team3命令(-1=感染玩家不能超过生还玩家,大于等于0=感染玩家不能超过该值)", CVAR_FLAGS, true, -1.0);
-	g_cvCmdCooldownTime = 			CreateConVar("cz_cmd_cooldown_time", 				"60.0", 				"sm_team2,sm_team3,sm_tt命令的冷却时间(0.0-无冷却)", CVAR_FLAGS, true, 0.0);
-	g_cvCmdEnterCooling = 			CreateConVar("cz_return_enter_cooling", 			"31", 					"什么情况下sm_team2,sm_team3,sm_tt命令会进入冷却(1=使用其中一个命令,2=坦克玩家掉控,4=坦克玩家死亡,8=坦克玩家未及时重生,16=特感玩家杀掉生还者玩家,31=所有)", CVAR_FLAGS);
+	g_cvCmdCooldownTime = 			CreateConVar("cz_cmd_cooldown_time", 				"60.0", 				"sm_team2,sm_team3命令的冷却时间(0.0-无冷却)", CVAR_FLAGS, true, 0.0);
+	g_cvCmdEnterCooling = 			CreateConVar("cz_return_enter_cooling", 			"31", 					"什么情况下sm_team2,sm_team3命令会进入冷却(1=使用其中一个命令,2=坦克玩家掉控,4=坦克玩家死亡,8=坦克玩家未及时重生,16=特感玩家杀掉生还者玩家,31=所有)", CVAR_FLAGS);
 	g_cvLotTargetPlayer = 			CreateConVar("cz_lot_target_player", 				"7", 					"抽取哪些玩家来接管坦克?(0=不抽取,1=叛变玩家,2=生还者,4=感染者)", CVAR_FLAGS);
 	g_cvPZChangeTeamTo = 			CreateConVar("cz_pz_change_team_to", 				"0", 					"换图,过关以及任务失败时是否自动将特感玩家切换到哪个队伍?(0=不切换,1=旁观者,2=生还者)", CVAR_FLAGS);
 	g_cvGlowColorEnable = 			CreateConVar("cz_survivor_color_enable", 			"1", 					"是否给生还者创发光建模型?(0=否,1=是)", CVAR_FLAGS);
@@ -368,8 +368,8 @@ public void OnPluginStart() {
 	g_cvGlowColor[COLOR_INCAPA] = 	CreateConVar("cz_survivor_color_incapacitated", 	"180 0 0", 				"特感玩家看到的倒地状态生还者发光颜色", CVAR_FLAGS);
 	g_cvGlowColor[COLOR_BLACKW] = 	CreateConVar("cz_survivor_color_blackwhite", 		"255 255 255", 			"特感玩家看到的黑白状态生还者发光颜色", CVAR_FLAGS);
 	g_cvGlowColor[COLOR_VOMITED] = 	CreateConVar("cz_survivor_color_nowit", 			"155 0 180", 			"特感玩家看到的被Boomer喷或炸中过的生还者发光颜色", CVAR_FLAGS);
-	g_cvUserFlagBits = 				CreateConVar("cz_user_flagbits", 					";z;;;;z", 				"哪些标志能绕过sm_team2,sm_team3,sm_pb,sm_tt,sm_class,鼠标中键重置冷却的使用限制(留空表示所有人都不会被限制)", CVAR_FLAGS);
-	g_cvImmunityLevels = 			CreateConVar("cz_immunity_levels", 					"99;99;99;99;99;99", 	"要达到什么免疫级别才能绕过sm_team2,sm_team3,sm_pb,sm_tt,sm_class,鼠标中键重置冷的使用限制", CVAR_FLAGS);
+	g_cvUserFlagBits = 				CreateConVar("cz_user_flagbits", 					";z;;z;z;;z", 			"哪些标志能绕过sm_team2,sm_team3,sm_pb,sm_tt,sm_pt,sm_class,鼠标中键重置冷却的使用限制(留空表示所有人都不会被限制)", CVAR_FLAGS);
+	g_cvImmunityLevels = 			CreateConVar("cz_immunity_levels", 					"99;99;99;99;99;99;99", "要达到什么免疫级别才能绕过sm_team2,sm_team3,sm_pb,sm_tt,sm_pt,sm_class,鼠标中键重置冷的使用限制", CVAR_FLAGS);
 
 	// https://github.com/brxce/hardcoop/blob/master/addons/sourcemod/scripting/modules/SS_SpawnQueue.sp
 	g_cvSILimit = 					CreateConVar("cz_si_limit", 						"31", 					"同时存在的最大特感数量", CVAR_FLAGS, true, 0.0, true, 32.0);
@@ -434,8 +434,8 @@ public void OnPluginStart() {
 	RegConsoleCmd("sm_team2", 	cmdTeam2, 			"切换到Team 2.");
 	RegConsoleCmd("sm_team3", 	cmdTeam3, 			"切换到Team 3.");
 	RegConsoleCmd("sm_pb", 		cmdPanBian, 		"提前叛变.");
-	RegConsoleCmd("sm_pt", 		cmdPassTank, 		"转交坦克.");
 	RegConsoleCmd("sm_tt", 		cmdTakeOverTank, 	"接管坦克.");
+	RegConsoleCmd("sm_pt", 		cmdTransferTank, 	"转交坦克.");
 	RegConsoleCmd("sm_class", 	cmdChangeClass,		"更改特感类型.");
 
 	if (g_bLateLoad) {
@@ -632,24 +632,24 @@ void vGetCvars_Access() {
 }
 
 void vGetUserFlagBits() {
-	char sTemp[256];
+	char sTemp[512];
 	g_cvUserFlagBits.GetString(sTemp, sizeof sTemp);
 
-	char sUserFlagBits[6][26];
+	char sUserFlagBits[7][32];
 	ExplodeString(sTemp, ";", sUserFlagBits, sizeof sUserFlagBits, sizeof sUserFlagBits[]);
 
-	for (int i; i < 6; i++)
+	for (int i; i < 7; i++)
 		g_iUserFlagBits[i] = ReadFlagString(sUserFlagBits[i]);
 }
 
 void vGetImmunityLevels() {
-	char sTemp[128];
+	char sTemp[512];
 	g_cvImmunityLevels.GetString(sTemp, sizeof sTemp);
 
-	char sImmunityLevels[6][8];
+	char sImmunityLevels[7][12];
 	ExplodeString(sTemp, ";", sImmunityLevels, sizeof sImmunityLevels, sizeof sImmunityLevels[]);
 
-	for (int i; i < 6; i++)
+	for (int i; i < 7; i++)
 		g_iImmunityLevels[i] = StringToInt(sImmunityLevels[i]);
 }
 
@@ -804,201 +804,41 @@ Action cmdPanBian(int client, int args) {
 	return Plugin_Handled;
 }
 
-Action cmdPassTank(int client, int args) {
-	if (g_iControlled == 1) {
-		//ReplyToCommand(client, "仅支持战役模式");
-		//return Plugin_Handled;
-	}
-
-	if (!bIsRoundStarted()) {
-		//ReplyToCommand(client, "回合尚未开始");
-		return Plugin_Handled;
-	}
-
-	if (!client || !IsClientInGame(client) || IsFakeClient(client) || GetClientTeam(client) != 3 || !IsPlayerAlive(client) || GetEntProp(client, Prop_Send, "m_zombieClass") != 8)
-		return Plugin_Handled;
-
-	if (args) {
-		char arg[32];
-		GetCmdArg(1, arg, sizeof arg);
-		char target_name[MAX_TARGET_LENGTH];
-		int target_list[MAXPLAYERS], target_count;
-		bool tn_is_ml;
-		if ((target_count = ProcessTargetString(arg, client, target_list, MAXPLAYERS, COMMAND_FILTER_NO_BOTS, target_name, sizeof target_name, tn_is_ml)) <= 0) {
-			ReplyToTargetError(client, target_count);
-			return Plugin_Handled;
-		}
-
-		vOfferTankMenu(client, target_list[0]);
-	}
-	else 
-		vPassTankMenu(client);
-
-	return Plugin_Handled;
-}
-
-void vPassTankMenu(int client) {
-	char sUID[16];
-	char sName[MAX_NAME_LENGTH];
-	Menu menu = new Menu(iPassTank_MenuHandler);
-	menu.SetTitle("选择要转交控制权的玩家");
-	for (int i = 1; i <= MaxClients; i++) {
-		if (i == client || !IsClientInGame(i) || IsFakeClient(i))
-			continue;
-		
-		FormatEx(sUID, sizeof sUID, "%d", GetClientUserId(i));
-		FormatEx(sName, sizeof sName, "%N", i);
-		menu.AddItem(sUID, sName);
-	}
-	menu.ExitBackButton = true;
-	menu.Display(client, MENU_TIME_FOREVER);
-}
-
-int iPassTank_MenuHandler(Menu menu, MenuAction action, int client, int param2) {
-	switch (action) {
-		case MenuAction_Select: {
-			if (GetClientTeam(client) != 3 || !IsPlayerAlive(client) || GetEntProp(client, Prop_Send, "m_zombieClass") != 8)
-				ReplyToCommand(client, "你当前已不是存活的坦克");
-			else {
-				char sItem[16];
-				menu.GetItem(param2, sItem, sizeof sItem);
-				int target = GetClientOfUserId(StringToInt(sItem));
-				if (target && IsClientInGame(target))
-					vOfferTankMenu(client, target);
-				else
-					ReplyToCommand(client, "目标玩家已失效");
-			}
-		}
-
-		case MenuAction_End:
-			delete menu;
-	}
-
-	return 0;
-}
-
-void vOfferTankMenu(int client,int target) {
-	Menu menu = new Menu(iOfferTank_MenuHandler);
-	menu.SetTitle("是否接受 %N 的坦克控制权转移?", client);
-
-	char sUID[16];
-	FormatEx(sUID, sizeof sUID, "%d", GetClientUserId(client));
-	menu.AddItem(sUID, "是");
-	menu.AddItem("no", "否");
-	menu.ExitButton = false;
-	menu.ExitBackButton = false;
-	menu.Display(target, 10);
-}
-
-int iOfferTank_MenuHandler(Menu menu, MenuAction action, int client, int param2) {
-	switch (action) {
-		case MenuAction_Select: {
-			if (GetClientTeam(client) == 3 && IsPlayerAlive(client) && GetEntProp(client, Prop_Send, "m_zombieClass") == 8)
-				ReplyToCommand(client, "你当前已经是坦克");
-			else {
-				char sItem[16];
-				menu.GetItem(param2, sItem, sizeof sItem);
-				if (sItem[0] != 'n') {
-					int tank = GetClientOfUserId(StringToInt(sItem));
-					if (tank && IsClientInGame(tank) && GetClientTeam(tank) == 3 && IsPlayerAlive(tank) && GetEntProp(tank, Prop_Send, "m_zombieClass") == 8)
-						vPassTank(tank, client);
-					else
-						ReplyToCommand(client, "目标玩家已不是坦克");
-				}
-			}
-		}
-
-		case MenuAction_End:
-			delete menu;
-	}
-
-	return 0;
-}
-
-void vPassTank(int tank, int target) {
-	int iTeam = GetClientTeam(target);
-	switch (iTeam) {
-		case 2: {
-				g_esData[target].Clean();
-				g_esData[target].Save(target, false);
-				ChangeClientTeam(target, 3);
-		}
-			
-		case 3: {
-			if (IsPlayerAlive(target)) {
-				SDKCall(g_hSDK_CTerrorPlayer_CleanupPlayerState, target);
-				ForcePlayerSuicide(target);
-			}
-		}
-
-		default:
-			ChangeClientTeam(target, 3);
-	}
-
-	if (GetClientTeam(target) == 3)
-		g_esPlayer[target].iLastTeamID = iTeam != 3 ? 2 : 3;
-
-	// CTerrorPlayer::UpdateZombieFrustration(CTerrorPlayer *__hidden this)函数里面的原生方法
-	Event event = CreateEvent("tank_frustrated", true);
-	event.SetInt("userid", GetClientUserId(tank));
-	event.Fire(false);
-
-	int ghost = GetEntProp(tank, Prop_Send, "m_isGhost");
-	if (ghost)
-		SetEntProp(tank, Prop_Send, "m_isGhost", 0);
-
-	g_iPassTankBot = 0;
-	g_bOnPassPlayerTank = true;
-	SDKCall(g_hSDK_CTerrorPlayer_ReplaceWithBot, tank, false);
-	g_bOnPassPlayerTank = false;
-	SDKCall(g_hSDK_CTerrorPlayer_SetPreSpawnClass, tank, 3);
-	SDKCall(g_hSDK_CCSPlayer_State_Transition, tank, 8);
-
-	if (g_iPassTankBot && iTakeOverZombieBot(target, g_iPassTankBot) == 8 && IsPlayerAlive(target)) {
-		if (g_iCmdEnterCooling & (1 << 0))
-			g_esPlayer[target].fCmdLastUsedTime = GetEngineTime() + g_fCmdCooldownTime;
-
-		if (ghost)
-			SDKCall(g_hSDK_CCSPlayer_State_Transition, target, 8);
-
-		CPrintToChatAll("{green}★ {default}坦克控制权已由 {red}%N {default}转交给 {olive}%N", tank, target);
-	}
-}
 
 Action cmdTakeOverTank(int client, int args) {
 	if (g_iControlled == 1) {
-		//ReplyToCommand(client, "仅支持战役模式");
-		//return Plugin_Handled;
+		ReplyToCommand(client, "仅支持战役模式");
+		return Plugin_Handled;
 	}
 
 	if (!bIsRoundStarted()) {
-		//ReplyToCommand(client, "回合尚未开始");
+		ReplyToCommand(client, "回合尚未开始");
 		return Plugin_Handled;
 	}
 
 	if (!client || !IsClientInGame(client) || IsFakeClient(client))
 		return Plugin_Handled;
-
-	int iTeam = GetClientTeam(client);
+	
 	if (!bCheckClientAccess(client, 3)) {
-		// ReplyToCommand(client, "无权使用该指令");
-		// return Plugin_Handled;
-		float fTime = GetEngineTime();
+		ReplyToCommand(client, "无权使用该指令");
+		return Plugin_Handled;
+		/*float fTime = GetEngineTime();
 		if (g_esPlayer[client].fCmdLastUsedTime > fTime) {
 			PrintToChat(client, "\x01请等待 \x05%.1f秒 \x01再使用该指令", g_esPlayer[client].fCmdLastUsedTime - fTime);
 			return Plugin_Handled;
-		}
-	}
-		
-	if (iGetTankPlayers() >= g_iMaxTankPlayer) {
-		ReplyToCommand(client, "\x01存活的玩家坦克数量达到预设上限 ->\x05%d", g_iMaxTankPlayer);
-		return Plugin_Handled;
+		}*/
 	}
 
+	/*if (iGetTankPlayers() >= g_iMaxTankPlayer) {
+		ReplyToCommand(client, "\x01存活的玩家坦克数量达到预设上限 ->\x05%d", g_iMaxTankPlayer);
+		return Plugin_Handled;
+	}*/
+
+	int iTeam = GetClientTeam(client);
 	switch (iTeam) {
 		case 2: {
 			if (!bAllowSurvivor()) {
-				ReplyToCommand(client, "生还者接管坦克将会导致任务失败 请等待玩家足够后再尝试");
+				ReplyToCommand(client, "生还者接管坦克将会导致任务失败, 请等待玩家足够后再尝试");
 				return Plugin_Handled;
 			}
 		}
@@ -1076,6 +916,275 @@ Action cmdTakeOverTank(int client, int args) {
 	return Plugin_Handled;
 }
 
+Action cmdTransferTank(int client, int args) {
+	if (g_iControlled == 1) {
+		ReplyToCommand(client, "仅支持战役模式");
+		return Plugin_Handled;
+	}
+
+	if (!bIsRoundStarted()) {
+		ReplyToCommand(client, "回合尚未开始");
+		return Plugin_Handled;
+	}
+
+	if (!client || !IsClientInGame(client) || IsFakeClient(client))
+		return Plugin_Handled;
+
+	bool bAccess = bCheckClientAccess(client, 4);
+	bool bIsAliveTank = GetClientTeam(client) == 3 && IsPlayerAlive(client) && GetEntProp(client, Prop_Send, "m_zombieClass") == 8;
+	if (!bAccess && !bIsAliveTank) {
+		ReplyToCommand(client, "你当前不是存活的坦克");
+		return Plugin_Handled;
+	}
+
+	if (args && bIsAliveTank) {
+		char arg[32];
+		GetCmdArg(1, arg, sizeof arg);
+		char target_name[MAX_TARGET_LENGTH];
+		int target_list[MAXPLAYERS], target_count;
+		bool tn_is_ml;
+		if ((target_count = ProcessTargetString(arg, client, target_list, MAXPLAYERS, COMMAND_FILTER_NO_BOTS, target_name, sizeof target_name, tn_is_ml)) <= 0) {
+			ReplyToTargetError(client, target_count);
+			return Plugin_Handled;
+		}
+
+		vOfferTankMenu(client, client, target_list[0], bAccess);
+	}
+	else {
+		if (iGetTankPlayers()) {
+			if (bAccess)
+				vShowTankListMenu(client);
+			else
+				vShowPlayerListMenu(client, client);
+		}
+		else
+			ReplyToCommand(client, "无可供接管的坦克存在");
+	}
+
+	return Plugin_Handled;
+}
+
+void vOfferTankMenu(int client, int tank, int target, bool bAccess = false) {
+	switch (GetClientTeam(target)) {
+		case 2: {
+			if (!bAllowSurvivor()) {
+				ReplyToCommand(client, "生还者接管坦克将会导致任务失败, 请等待玩家足够后再尝试");
+				return;
+			}
+		}
+
+		case 3: {
+			if (IsPlayerAlive(target) && GetEntProp(target, Prop_Send, "m_zombieClass") == 8) {
+				ReplyToCommand(client, "目标玩家已是存活的坦克");
+				return;
+			}
+		}
+	}
+
+	if (bAccess)
+		vTransferTank(tank, target);
+	else {
+		if (iGetTankPlayers() - (IsFakeClient(tank) ? 0 : 1) >= g_iMaxTankPlayer) {
+			ReplyToCommand(client, "\x01存活的玩家坦克数量达到预设上限 ->\x05%d", g_iMaxTankPlayer);
+			return;
+		}
+
+		if (iGetStandingSurvivors() < g_iSurvuivorLimit) {
+			ReplyToCommand(client, "\x01完全正常的生还者数量小于预设值 ->\x05%d", g_iSurvuivorLimit);
+			return;
+		}
+
+		Menu menu = new Menu(iOfferTank_MenuHandler);
+		menu.SetTitle("是否接受 %N 的坦克控制权转移?", tank);
+
+		char sUID[12];
+		FormatEx(sUID, sizeof sUID, "%d", GetClientUserId(tank));
+		menu.AddItem(sUID, "是");
+		menu.AddItem("no", "否");
+		menu.ExitButton = false;
+		menu.ExitBackButton = false;
+		menu.Display(target, 15);
+	}
+}
+
+int iOfferTank_MenuHandler(Menu menu, MenuAction action, int client, int param2) {
+	switch (action) {
+		case MenuAction_Select: {
+			if (GetClientTeam(client) == 3 && IsPlayerAlive(client) && GetEntProp(client, Prop_Send, "m_zombieClass") == 8)
+				ReplyToCommand(client, "你当前已经是坦克");
+			else {
+				char sItem[12];
+				menu.GetItem(param2, sItem, sizeof sItem);
+				if (sItem[0] == 'n')
+					return 0;
+
+				int tank = GetClientOfUserId(StringToInt(sItem));
+				if (tank && IsClientInGame(tank) && GetClientTeam(tank) == 3 && IsPlayerAlive(tank) && GetEntProp(tank, Prop_Send, "m_zombieClass") == 8)
+					vTransferTank(tank, client);
+				else
+					ReplyToCommand(client, "目标玩家已不是存活的坦克");
+			}
+		}
+
+		case MenuAction_End:
+			delete menu;
+	}
+
+	return 0;
+}
+
+void vShowTankListMenu(int client) {
+	char sUID[12];
+	char sName[MAX_NAME_LENGTH + 24];
+	Menu menu = new Menu(iShowTankList_MenuHandler);
+	menu.SetTitle("选择要转交的坦克");
+	for (int i = 1; i <= MaxClients; i++) {
+		if (!IsClientInGame(i) || GetClientTeam(i) != 3 || !IsPlayerAlive(i) || GetEntProp(i, Prop_Send, "m_zombieClass") != 8)
+			continue;
+		
+		FormatEx(sUID, sizeof sUID, "%d", GetClientUserId(i));
+		FormatEx(sName, sizeof sName, "%d HP - %N", GetEntProp(i, Prop_Data, "m_iHealth"), i);
+		menu.AddItem(sUID, sName);
+	}
+
+	menu.ExitBackButton = false;
+	menu.Display(client, 30);
+}
+
+int iShowTankList_MenuHandler(Menu menu, MenuAction action, int client, int param2) {
+	switch (action) {
+		case MenuAction_Select: {
+			char sItem[12];
+			menu.GetItem(param2, sItem, sizeof sItem);
+			int target = GetClientOfUserId(StringToInt(sItem));
+			if (target && IsClientInGame(target) && GetClientTeam(target) == 3 && IsPlayerAlive(target) && GetEntProp(target, Prop_Send, "m_zombieClass") == 8)
+				vShowPlayerListMenu(client, target);
+			else {
+				ReplyToCommand(client, "目标坦克已失效, 请重新选择");
+				vShowTankListMenu(client);
+			}
+		}
+
+		case MenuAction_End:
+			delete menu;
+	}
+
+	return 0;
+}
+
+void vShowPlayerListMenu(int client, int target) {
+	char sInfo[32];
+	char sUID[2][12];
+	char sName[MAX_NAME_LENGTH];
+	Menu menu = new Menu(iShowPlayerList_MenuHandler);
+	menu.SetTitle("选择要给予控制权的玩家");
+	FormatEx(sUID[0], sizeof sUID[], "%d", GetClientUserId(target));
+	for (int i = 1; i <= MaxClients; i++) {
+		if (i == target || !IsClientInGame(i) || IsFakeClient(i))
+			continue;
+
+		FormatEx(sUID[1], sizeof sUID[], "%d", GetClientUserId(i));
+		switch (GetClientTeam(i)) {
+			case 1:
+				FormatEx(sName, sizeof sName, "%s - %N", iGetBotOfIdlePlayer(i) ? "闲置" : "观众", i);
+
+			case 2:
+				FormatEx(sName, sizeof sName, "生还 - %N", i);
+					
+			case 3:
+				FormatEx(sName, sizeof sName, "感染 - %N", i);
+		}
+
+		ImplodeStrings(sUID, 2, "|", sInfo, sizeof sInfo);
+		menu.AddItem(sInfo, sName);
+	}
+
+	menu.ExitBackButton = false;
+	menu.Display(client, MENU_TIME_FOREVER);
+}
+
+int iShowPlayerList_MenuHandler(Menu menu, MenuAction action, int client, int param2) {
+	switch (action) {
+		case MenuAction_Select: {
+			char sItem[32];
+			char sInfo[2][16];
+			menu.GetItem(param2, sItem, sizeof sItem);
+			ExplodeString(sItem, "|", sInfo, 2, sizeof sInfo[]);
+			int tank = GetClientOfUserId(StringToInt(sInfo[0]));
+			if (!tank || !IsClientInGame(tank) || GetClientTeam(tank) != 3 || !IsPlayerAlive(tank) || GetEntProp(tank, Prop_Send, "m_zombieClass") != 8) {
+				ReplyToCommand(client, "目标坦克已失效");
+				return 0;
+			}
+
+			int target = GetClientOfUserId(StringToInt(sInfo[1]));
+			if (!target || !IsClientInGame(target)) {
+				ReplyToCommand(client, "目标玩家已失效, 请重新选择");
+				vShowPlayerListMenu(client, tank);
+			}
+			else
+				vOfferTankMenu(client, tank, target, bCheckClientAccess(client, 4));
+		}
+
+		case MenuAction_End:
+			delete menu;
+	}
+
+	return 0;
+}
+
+void vTransferTank(int tank, int target) {
+	int iTeam = GetClientTeam(target);
+	switch (iTeam) {
+		case 2: {
+				g_esData[target].Clean();
+				g_esData[target].Save(target, false);
+				ChangeClientTeam(target, 3);
+		}
+			
+		case 3: {
+			if (IsPlayerAlive(target)) {
+				SDKCall(g_hSDK_CTerrorPlayer_CleanupPlayerState, target);
+				ForcePlayerSuicide(target);
+			}
+		}
+
+		default:
+			ChangeClientTeam(target, 3);
+	}
+
+	if (GetClientTeam(target) == 3)
+		g_esPlayer[target].iLastTeamID = iTeam != 3 ? 2 : 3;
+
+	int ghost = GetEntProp(tank, Prop_Send, "m_isGhost");
+	if (ghost)
+		SetEntProp(tank, Prop_Send, "m_isGhost", 0);
+
+	if (IsFakeClient(tank))
+		g_iTransferTankBot = tank;
+	else {
+		Event event = CreateEvent("tank_frustrated", true);
+		event.SetInt("userid", GetClientUserId(tank));
+		event.Fire(false);
+
+		g_iTransferTankBot = 0;
+		g_bOnPassPlayerTank = true;
+		SDKCall(g_hSDK_CTerrorPlayer_ReplaceWithBot, tank, false);
+		g_bOnPassPlayerTank = false;
+		SDKCall(g_hSDK_CTerrorPlayer_SetPreSpawnClass, tank, 3);
+		SDKCall(g_hSDK_CCSPlayer_State_Transition, tank, 8);
+	}
+
+	if (g_iTransferTankBot && iTakeOverZombieBot(target, g_iTransferTankBot) == 8 && IsPlayerAlive(target)) {
+		if (g_iCmdEnterCooling & (1 << 0))
+			g_esPlayer[target].fCmdLastUsedTime = GetEngineTime() + g_fCmdCooldownTime;
+
+		if (ghost)
+			SDKCall(g_hSDK_CCSPlayer_State_Transition, target, 8);
+
+		CPrintToChatAll("{green}★ {default}坦克控制权已由 {red}%N {default}转交给 {olive}%N", tank, target);
+	}
+}
+
 Action cmdChangeClass(int client, int args) {
 	if (g_iControlled == 1) {
 		ReplyToCommand(client, "仅支持战役模式");
@@ -1085,7 +1194,7 @@ Action cmdChangeClass(int client, int args) {
 	if (!client || !IsClientInGame(client) || IsFakeClient(client))
 		return Plugin_Handled;
 	
-	if (!bCheckClientAccess(client, 4)) {
+	if (!bCheckClientAccess(client, 5)) {
 		ReplyToCommand(client, "无权使用该指令");
 		return Plugin_Handled;
 	}
@@ -1237,7 +1346,7 @@ public void OnPlayerRunCmdPost(int client) {
 	iFlags = GetEntProp(client, Prop_Data, "m_afButtonPressed");
 	if (GetEntProp(client, Prop_Send, "m_isGhost")) {
 		if (iFlags & IN_ZOOM) {
-			if (g_esPlayer[client].iMaterialized == 0 && bCheckClientAccess(client, 4))
+			if (g_esPlayer[client].iMaterialized == 0 && bCheckClientAccess(client, 5))
 				vSelectAscendingClass(client);
 		}
 		else if (iFlags & IN_ATTACK) {
@@ -1246,7 +1355,7 @@ public void OnPlayerRunCmdPost(int client) {
 		}
 	}
 	else {
-		if (iFlags & IN_ZOOM && bCheckClientAccess(client, 5))
+		if (iFlags & IN_ZOOM && bCheckClientAccess(client, 6))
 			vResetInfectedAbility(client, 0.1); // 管理员鼠标中键重置技能冷却
 	}
 }
@@ -1511,13 +1620,13 @@ void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast) {
 	g_esPlayer[client].fRespawnStartTime = 0.0;
 
 	if (g_bOnPassPlayerTank)
-		g_iPassTankBot = client;
+		g_iTransferTankBot = client;
 	else if (!g_bOnMaterializeFromGhost)
 		RequestFrame(OnNextFrame_PlayerSpawn, userid); // player_bot_replace在player_spawn之后触发, 延迟一帧进行接管判断
 }
 
 void OnNextFrame_PlayerSpawn(int client) {
-	if (g_iControlled == 1 || (client = GetClientOfUserId(client))== 0 || !IsClientInGame(client) || IsClientInKickQueue(client) || !IsPlayerAlive(client))
+	if (g_iControlled == 1 || !(client = GetClientOfUserId(client)) || !IsClientInGame(client) || IsClientInKickQueue(client) || !IsPlayerAlive(client))
 		return;
 
 	switch (GetClientTeam(client)) {
@@ -2915,11 +3024,11 @@ void OnNextFrame_EnterGhostState(int client) {
 			if (bCheckClientAccess(client, 0))
 				CPrintToChat(client, "{default}聊天栏输入 {olive}!team2 {default}可切换回{blue}生还者");
 				
-			if (bCheckClientAccess(client, 4))
+			if (bCheckClientAccess(client, 5))
 				CPrintToChat(client, "{red}灵魂状态下{default} 按下 {red}[鼠标中键] {default}可以快速切换特感");
 		}
 
-		vClassSelectionMenu(client);
+		vDelaySelectClass(client);
 		g_esPlayer[client].iEnteredGhost++;
 	
 		if (g_iPZSuicideTime > 0)
@@ -2927,7 +3036,7 @@ void OnNextFrame_EnterGhostState(int client) {
 	}
 }
 
-void vClassSelectionMenu(int client) {
+void vDelaySelectClass(int client) {
 	if ((g_iAutoDisplayMenu == -1 || g_esPlayer[client].iEnteredGhost < g_iAutoDisplayMenu) && bCheckClientAccess(client, 5)) {
 		vDisplayClassMenu(client);
 		EmitSoundToClient(client, SOUND_CLASSMENU, SOUND_FROM_PLAYER, SNDCHAN_AUTO, SNDLEVEL_NORMAL, SND_NOFLAGS, SNDVOL_NORMAL, SNDPITCH_NORMAL, -1, NULL_VECTOR, NULL_VECTOR, true, 0.0);
