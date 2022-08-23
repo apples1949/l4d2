@@ -368,13 +368,12 @@ Action cmdSetLimit(int client, int args) {
 		}
 	}
 	else if (args == 2) {
-		char sArg[32];
-		GetCmdArg(1, sArg, sizeof sArg);
-
 		int iLimit = GetCmdArgInt(2);	
 		if (iLimit < 0)
 			ReplyToCommand(client, "[SS] Limit value must be >= 0");
 		else {
+			char sArg[16];
+			GetCmdArg(1, sArg, sizeof sArg);
 			if (strcmp(sArg, "all", false) == 0) {
 				for (int i; i < 6; i++)
 					g_cvSpawnLimits[i].IntValue = iLimit;
@@ -423,9 +422,8 @@ Action cmdSetWeight(int client, int args) {
 			return Plugin_Handled;
 		} 
 		else  {
-			char sArg[32];
+			char sArg[16];
 			GetCmdArg(1, sArg, sizeof sArg);
-
 			int iWeight = GetCmdArgInt(2);
 			if (strcmp(sArg, "all", false) == 0) {
 				for (int i; i < 6; i++)
