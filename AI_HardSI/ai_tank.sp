@@ -198,7 +198,7 @@ bool bWontFall(int client, const float vVel[3]) {
 	if (TR_DidHit(hTrace)) {
 		bDidHit = true;
 		TR_GetPlaneNormal(hTrace, vVec);
-		if (RadToDeg(ArcCosine(GetVectorDotProduct(vVel, vVec))) > 150.0) {
+		if (RadToDeg(ArcCosine(GetVectorDotProduct(vVel, vVec))) > 135.0) {
 			TR_GetEndPosition(vVec, hTrace);
 			if (33.0 < GetVectorDistance(vPos, vVec) < 64.0) {
 				delete hTrace;
@@ -237,7 +237,7 @@ bool bWontFall(int client, const float vVel[3]) {
 	}
 
 	delete hTrace;
-	return true;
+	return false;
 }
  
 bool bTraceEntityFilter(int entity, int contentsMask) {

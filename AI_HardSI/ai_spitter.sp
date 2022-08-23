@@ -90,6 +90,7 @@ void vClientPush(int client, const float vAng[3], float fForce) {
 	static float vVel[3];
 	GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", vVel);
 	AddVectors(vVel, vVec, vVel);
+	SetEntPropFloat(client, Prop_Send, "m_flStamina", 0.0);
 	TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, vVel);
 }
 
