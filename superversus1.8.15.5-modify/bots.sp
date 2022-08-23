@@ -40,7 +40,7 @@ ConVar
 	g_cvSurvivorLimit,
 	g_cvSurvivorLimitSet,
 	g_cvJoinSurvivor,
-	g_hRespawnJoin,
+	g_cvRespawnJoin,
 	g_cvSpecCmdLimit,
 	g_cvSpecNextNotify,
 	g_cvGiveWeaponType,
@@ -291,7 +291,7 @@ public void OnPluginStart() {
 
 	g_cvSurvivorLimitSet = 		CreateConVar("bots_survivor_limit", 	"4", 		"开局Bot的数量", CVAR_FLAGS, true, 1.0, true, 31.0);
 	g_cvJoinSurvivor = 			CreateConVar("bots_join_survivor", 		"3", 		"加入生还者的方法. \n0=插件不进行处理, 1=输入!join手动加入, 2=进服后插件自动加入, 3=手动+自动", CVAR_FLAGS);
-	g_hRespawnJoin = 			CreateConVar("bots_respawn_on_join", 	"1", 		"玩家第一次进服时如果没有存活的Bot可以接管是否复活. \n0=否, 1=是.", CVAR_FLAGS);
+	g_cvRespawnJoin = 			CreateConVar("bots_respawn_on_join", 	"1", 		"玩家第一次进服时如果没有存活的Bot可以接管是否复活. \n0=否, 1=是.", CVAR_FLAGS);
 	g_cvSpecCmdLimit = 			CreateConVar("bots_spec_cmd_limit", 	"1", 		"当完全旁观玩家达到多少个时禁止使用sm_spec命令.", CVAR_FLAGS);
 	g_cvSpecNextNotify = 		CreateConVar("bots_spec_next_notify", 	"3", 		"完全旁观玩家点击鼠标左键时, 提示加入生还者的方式 \n0=不提示, 1=聊天栏, 2=屏幕中央, 3=弹出菜单.", CVAR_FLAGS);
 	g_esWeapon[0].cvFlags = 	CreateConVar("bots_give_slot0", 		"131071", 	"主武器给什么. \n0=不给, 131071=所有, 7=微冲, 1560=霰弹, 30720=狙击, 31=Tier1, 32736=Tier2, 98304=Tier0.", CVAR_FLAGS);
@@ -310,7 +310,7 @@ public void OnPluginStart() {
 	g_cvSurvivorLimitSet.AddChangeHook(vCvarChanged_Limit);
 
 	g_cvJoinSurvivor.AddChangeHook(vCvarChanged_General);
-	g_hRespawnJoin.AddChangeHook(vCvarChanged_General);
+	g_cvRespawnJoin.AddChangeHook(vCvarChanged_General);
 	g_cvSpecCmdLimit.AddChangeHook(vCvarChanged_General);
 	g_cvSpecNextNotify.AddChangeHook(vCvarChanged_General);
 
@@ -415,10 +415,10 @@ Action cmdJoinSurvivor(int client, int args) {
 			ChangeClientTeam(client, TEAM_SPECTATOR);
 	}
 
-	return JoinSurvivor(client);
+	return aJoinSurvivor(client);
 }
 
-Action JoinSurvivor(int client) {
+Action aJoinSurvivor(int client) {
 	bool bCanRespawn = g_bRespawnJoin && bIsFirstTime(client);
 	int iBot = GetClientOfUserId(g_esPlayer[client].iPlayerBot);
 	if (!iBot || !bIsValidSurvivorBot(iBot, -1))
@@ -503,8 +503,8 @@ int iClientTeamTakeOver(int client) {
 }
 
 void vTakeOverBotMenu(int client) {
-	char info[12];
-	char display[64];
+	char item[12];
+	char info[64];
 	Menu menu = new Menu(iTakeOverBot_MenuHandler);
 	menu.SetTitle("- 请选择接管目标 - [!tkbot]");
 	menu.AddItem("o", "当前旁观目标");
@@ -513,9 +513,9 @@ void vTakeOverBotMenu(int client) {
 		if (!bIsValidSurvivorBot(i, -1))
 			continue;
 
-		FormatEx(info, sizeof info, "%d", GetClientUserId(i));
-		FormatEx(display, sizeof display, "%s - %s", IsPlayerAlive(i) ? "存活" : "死亡", sGetModelName(i));
-		menu.AddItem(info, display);
+		FormatEx(item, sizeof item, "%d", GetClientUserId(i));
+		FormatEx(info, sizeof info, "%s - %s", IsPlayerAlive(i) ? "存活" : "死亡", sGetModelName(i));
+		menu.AddItem(item, info);
 	}
 
 	menu.ExitButton = true;
@@ -524,44 +524,42 @@ void vTakeOverBotMenu(int client) {
 }
 
 // L4D2_Adrenaline_Recovery (https://github.com/LuxLuma/L4D2_Adrenaline_Recovery)
-char[] sGetModelName(int client)
-{
-	char model[31];
-	int character;
-	GetClientModel(client, model, sizeof model);
-	switch (model[29]) {
+char[] sGetModelName(int client) {
+	int iChar;
+	char sModel[31];
+	GetClientModel(client, sModel, sizeof sModel);
+	switch (sModel[29]) {
 		case 'b'://nick
-			character = 0;
+			iChar = 0;
 		case 'd'://rochelle
-			character = 1;
+			iChar = 1;
 		case 'c'://coach
-			character = 2;
+			iChar = 2;
 		case 'h'://ellis
-			character = 3;
+			iChar = 3;
 		case 'v'://bill
-			character = 4;
+			iChar = 4;
 		case 'n'://zoey
-			character = 5;
+			iChar = 5;
 		case 'e'://francis
-			character = 6;
+			iChar = 6;
 		case 'a'://louis
-			character = 7;
+			iChar = 7;
 		default:
-			character = 8;
+			iChar = 8;
 	}
 
-	strcopy(model, sizeof model, character == 8 ? "未知" : g_sSurvivorNames[character]);
-	return model;
+	strcopy(sModel, sizeof sModel, iChar == 8 ? "未知" : g_sSurvivorNames[iChar]);
+	return sModel;
 }
 
 int iTakeOverBot_MenuHandler(Menu menu, MenuAction action, int param1, int param2) {
 	switch (action) {
 		case MenuAction_Select: {
-			char info[12];
-			menu.GetItem(param2, info, sizeof info);
-
 			int iBot;
-			if (info[0] == 'o') {
+			char item[12];
+			menu.GetItem(param2, item, sizeof item);
+			if (item[0] == 'o') {
 				iBot = GetEntPropEnt(param1, Prop_Send, "m_hObserverTarget");
 				if (iBot > 0 && bIsValidSurvivorBot(iBot, -1))
 					vTakeOverBot(param1, iBot);
@@ -569,7 +567,7 @@ int iTakeOverBot_MenuHandler(Menu menu, MenuAction action, int param1, int param
 					PrintToChat(param1, "当前旁观目标非可接管BOT.");
 			}
 			else {
-				iBot = GetClientOfUserId(StringToInt(info));
+				iBot = GetClientOfUserId(StringToInt(item));
 				if (!iBot || !bIsValidSurvivorBot(iBot, -1))
 					PrintToChat(param1, "选定的目标BOT已失效.");
 				else {
@@ -613,14 +611,13 @@ Action cmdBotSet(int client, int args) {
 	}
 
 	int iArg = GetCmdArgInt(1);
-	if (iArg < 1 || iArg > 31) {
-		ReplyToCommand(client, "\x01参数范围 \x051\x01~\x0531\x01.");
+	if (iArg < 1 || iArg > MaxClients - 1) {
+		ReplyToCommand(client, "\x01参数范围 \x051\x01~\x05%d\x01.", MaxClients - 1);
 		return Plugin_Handled;
 	}
 
-	g_cvSurvivorLimitSet.SetInt(iArg);
-
 	delete g_hBotsTimer;
+	g_cvSurvivorLimitSet.SetInt(iArg);
 	g_hBotsTimer = CreateTimer(1.0, tmrBotsUpdate);
 	ReplyToCommand(client, "\x05开局BOT数量已设置为\x01-> \x04%d\x01.", iArg);
 	return Plugin_Handled;
@@ -695,9 +692,9 @@ Action umSayText2(UserMsg msg_id, BfRead msg, const int[] players, int playersNu
 	msg.ReadByte();
 	msg.ReadByte();
 
-	char sMessage[254];
-	msg.ReadString(sMessage, sizeof sMessage, true);
-	if (strcmp(sMessage, "#Cstrike_Name_Change") == 0)
+	char sMsg[254];
+	msg.ReadString(sMsg, sizeof sMsg, true);
+	if (strcmp(sMsg, "#Cstrike_Name_Change") == 0)
 		return Plugin_Handled;
 
 	return Plugin_Continue;
@@ -722,9 +719,9 @@ void vCvarChanged_General(ConVar convar, const char[] oldValue, const char[] new
 }
 
 void vGeCvars_General() {
-	g_iJoinSurvivor = g_cvJoinSurvivor.IntValue;
-	g_bRespawnJoin = g_hRespawnJoin.BoolValue;
-	g_iSpecCmdLimit = g_cvSpecCmdLimit.IntValue;
+	g_iJoinSurvivor = 	g_cvJoinSurvivor.IntValue;
+	g_bRespawnJoin = 	g_cvRespawnJoin.BoolValue;
+	g_iSpecCmdLimit = 	g_cvSpecCmdLimit.IntValue;
 	g_iSpecNextNotify = g_cvSpecNextNotify.IntValue;
 }
 
@@ -896,7 +893,7 @@ Action tmrJoinSurvivorTeam(Handle timer, int client) {
 	if (!g_iRoundStart || GetClientTeam(client) <= TEAM_NOTEAM/* || SDKCall(g_hSDK_CDirector_IsInTransition, g_pDirector)*/)
 		return Plugin_Continue;
 
-	JoinSurvivor(client);
+	aJoinSurvivor(client);
 	return Plugin_Stop;
 }
 
@@ -942,7 +939,7 @@ void Event_BotPlayerReplace(Event event, const char[] name, bool dontBroadcast) 
 
 void Event_FinaleVehicleLeaving(Event event, const char[] name, bool dontBroadcast) {
 	int entity = FindEntityByClassname(MaxClients + 1, "info_survivor_position");
-	if (entity == INVALID_ENT_REFERENCE)
+	if (entity == -1)
 		return;
 
 	float vOrigin[3];
@@ -958,7 +955,7 @@ void Event_FinaleVehicleLeaving(Event event, const char[] name, bool dontBroadca
 			continue;
 			
 		entity = CreateEntityByName("info_survivor_position");
-		if (entity != INVALID_ENT_REFERENCE) {
+		if (entity != -1) {
 			DispatchKeyValue(entity, "Order", sOrder[iSurvivor - RoundToFloor(iSurvivor / 4.0) * 4]);
 			TeleportEntity(entity, vOrigin, NULL_VECTOR, NULL_VECTOR);
 			DispatchSpawn(entity);
@@ -1128,11 +1125,11 @@ public void OnMapStart() {
 			PrecacheModel(g_sWeaponModels[i], true);
 	}
 
-	char generic[64];
+	char buffer[64];
 	for (i = 3; i < 17; i++) {
-		FormatEx(generic, sizeof generic, "scripts/melee/%s.txt", g_sWeaponName[1][i]);
-		if (!IsGenericPrecached(generic))
-			PrecacheGeneric(generic, true);
+		FormatEx(buffer, sizeof buffer, "scripts/melee/%s.txt", g_sWeaponName[1][i]);
+		if (!IsGenericPrecached(buffer))
+			PrecacheGeneric(buffer, true);
 	}
 
 	PrecacheSound(SOUND_SPECMENU);
@@ -1191,12 +1188,7 @@ void vDisplayTeamPanel(int client) {
 
 		FormatEx(text, sizeof text, "%N", i);
 		ReplaceString(text, sizeof text, "[", "");
-			
-		if (iGetBotOfIdlePlayer(i))
-			Format(text, sizeof text, "闲置 - %s", text);
-		else
-			Format(text, sizeof text, "观众 - %s", text);
-
+		Format(text, sizeof text, "%s - %s", iGetBotOfIdlePlayer(i) ? "闲置" : "观众", text);
 		panel.DrawText(text);
 	}
 
@@ -1215,7 +1207,10 @@ void vDisplayTeamPanel(int client) {
 		FormatEx(text, sizeof text, "%N", i);
 		ReplaceString(text, sizeof text, "[", "");
 	
-		if (IsPlayerAlive(i)) {
+		if (!IsPlayerAlive(i))
+			Format(text, sizeof text, "死亡 - %s", text);
+		else
+		 {
 			if (GetEntProp(i, Prop_Send, "m_isIncapacitated"))
 				Format(text, sizeof text, "倒地 - %d HP - %s", GetClientHealth(i) + iGetTempHealth(i), text);
 			else if (GetEntProp(i, Prop_Send, "m_currentReviveCount") >= iSurvivorMaxInc)
@@ -1224,8 +1219,6 @@ void vDisplayTeamPanel(int client) {
 				Format(text, sizeof text, "%dHP - %s", GetClientHealth(i) + iGetTempHealth(i), text);
 	
 		}
-		else
-			Format(text, sizeof text, "死亡 - %s", text);
 
 		panel.DrawText(text);
 	}
@@ -1582,14 +1575,14 @@ MRESReturn DD_CTerrorPlayer_GiveDefaultItems_Pre(int pThis) {
 }
 
 void vWriteTakeoverPanel(int client, int iBot) {
-	char character[2];
-	IntToString(GetEntProp(iBot, Prop_Send, "m_survivorCharacter"), character, sizeof character);
+	char sChar[2];
+	IntToString(GetEntProp(iBot, Prop_Send, "m_survivorCharacter"), sChar, sizeof sChar);
 	BfWrite bf = view_as<BfWrite>(StartMessageOne("VGUIMenu", client));
 	bf.WriteString("takeover_survivor_bar");
 	bf.WriteByte(true);
 	bf.WriteByte(IN_ATTACK);
 	bf.WriteString("character");
-	bf.WriteString(character);
+	bf.WriteString(sChar);
 	EndMessage();
 }
 
@@ -1662,7 +1655,7 @@ bool bIsWeaponTier1(int iWeapon) {
 }
 
 void vGiveAveragePrimary(int client) {
-	int i = 1, iWeapon, iTier, iTotal;
+	int i = 1, iTier, iTotal, iWeapon;
 	for (; i <= MaxClients; i++) {
 		if (i == client || !IsClientInGame(i) || GetClientTeam(i) != TEAM_SURVIVOR || !IsPlayerAlive(i))
 			continue;
