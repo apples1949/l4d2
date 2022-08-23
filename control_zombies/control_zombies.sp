@@ -195,7 +195,7 @@ DynamicDetour
 	g_ddForEachTerrorPlayer_SpawnablePZScan;
 
 ConVar
-	g_hGameMode,
+	g_cvGameMode,
 	g_cvMaxTankPlayer,
 	g_cvSurvuivorLimit,
 	g_cvSurvuivorChance,
@@ -309,7 +309,7 @@ public Plugin myinfo = {
 	name = "Control Zombies In Co-op",
 	author = "sorallll",
 	description = "",
-	version = "3.4.3",
+	version = "3.4.4",
 	url = "https://steamcommunity.com/id/sorallll"
 }
 
@@ -390,8 +390,8 @@ public void OnPluginStart() {
 	AutoExecConfig(true, "controll_zombies");
 	// 想要生成cfg的,把上面那一行的注释去掉保存后重新编译就行
 
-	g_hGameMode = FindConVar("mp_gamemode");
-	g_hGameMode.AddChangeHook(vCvarChanged_Mode);
+	g_cvGameMode = FindConVar("mp_gamemode");
+	g_cvGameMode.AddChangeHook(vCvarChanged_Mode);
 	g_hSbAllBotGame = FindConVar("sb_all_bot_game");
 	g_hSbAllBotGame.AddChangeHook(vCvarChanged_General);
 	g_hAllowAllBotSur = FindConVar("allow_all_bot_survivor_team");
@@ -467,7 +467,7 @@ void vCvarChanged_Mode(ConVar convar, const char[] oldValue, const char[] newVal
 }
 
 void vPluginStateChange() {
-	g_hGameMode.GetString(g_sGameMode, sizeof g_sGameMode);
+	g_cvGameMode.GetString(g_sGameMode, sizeof g_sGameMode);
 
 	int iLast = g_iControlled;
 	g_iControlled = SDKCall(g_hSDK_CTerrorGameRules_HasPlayerControlledZombies);
@@ -1142,6 +1142,7 @@ int iDisplayClass_MenuHandler(Menu menu, MenuAction action, int param1, int para
 			if (param2 == 0 && GetClientTeam(param1) == 3 && !IsFakeClient(param1) && IsPlayerAlive(param1) && GetEntProp(param1, Prop_Send, "m_isGhost"))
 				vSelectClassMenu(param1);
 		}
+	
 		case MenuAction_End:
 			delete menu;
 	}
@@ -1177,6 +1178,7 @@ int iSelectClass_MenuHandler(Menu menu, MenuAction action, int param1, int param
 					vSetClassAndPunish(param1, iClass);
 			}
 		}
+
 		case MenuAction_End:
 			delete menu;
 	}
@@ -1462,7 +1464,7 @@ void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast) {
 Action tmrLadderAndGlow(Handle timer, int client) {
 	if (g_iControlled == 0 && (client = GetClientOfUserId(client)) && IsClientInGame(client) && !IsFakeClient(client)) {
 		if (GetClientTeam(client) == 3) {
-			// g_hGameMode.ReplicateToClient(client, "versus");
+			// g_cvGameMode.ReplicateToClient(client, "versus");
 			if (iGetTeamPlayers(3) == 1) {
 				for (int i = 1; i <= MaxClients; i++)
 					vCreateSurvivorGlow(i);
@@ -1472,7 +1474,7 @@ Action tmrLadderAndGlow(Handle timer, int client) {
 			}
 		}
 		else {
-			g_hGameMode.ReplicateToClient(client, g_sGameMode);
+			g_cvGameMode.ReplicateToClient(client, g_sGameMode);
 
 			int i = 1;
 			for (; i <= MaxClients; i++)
@@ -1537,7 +1539,7 @@ void OnNextFrame_PlayerSpawn(int client) {
 					}
 				}
 
-				if (iPlayer == 0 && (GetEntProp(client, Prop_Data, "m_bIsInStasis") == 1 || SDKCall(g_hSDK_CBaseEntity_IsInStasis, client)))
+				if (!iPlayer && (GetEntProp(client, Prop_Data, "m_bIsInStasis") == 1 || SDKCall(g_hSDK_CBaseEntity_IsInStasis, client)))
 					SDKCall(g_hSDK_Tank_LeaveStasis, client); // 解除战役模式下特感方有玩家存在时坦克卡住的问题
 			}
 		}
@@ -1668,7 +1670,7 @@ Action tmrPlayerStatus(Handle timer) {
 						}
 					}
 					else if (!GetEntProp(i, Prop_Send, "m_isGhost")) {
-						if (bTankFrustrated[i] && GetEntProp(i, Prop_Send, "m_frustration") >= 100) {
+						if (bTankFrustrated[i] && GetEntProp(i, Prop_Send, "m_frustration") > 99 && GetEntityFlags(i) & FL_ONFIRE == 0) {
 							// CTerrorPlayer::UpdateZombieFrustration(CTerrorPlayer *__hidden this)函数里面的原生方法
 							Event event = CreateEvent("tank_frustrated", true);
 							event.SetInt("userid", GetClientUserId(i));
@@ -1679,7 +1681,7 @@ Action tmrPlayerStatus(Handle timer) {
 							SDKCall(g_hSDK_CCSPlayer_State_Transition, i, 8);
 						}
 						else {
-							bTankFrustrated[i] = GetEntProp(i, Prop_Send, "m_frustration") >= 100;
+							bTankFrustrated[i] = GetEntProp(i, Prop_Send, "m_frustration") > 99;
 							// 这里延迟0.1秒等待系统自动掉控, 如果出了Bug系统没进行掉控操作, 则由插件进行
 						}
 					}
@@ -1699,7 +1701,7 @@ Action tmrPlayerStatus(Handle timer) {
 // 与Silvers的[L4D & L4D2] Coop Markers - Flow Distance插件进行兼容 (https://forums.alliedmods.net/showthread.php?p=2682584)
 void queryMpGamemode(QueryCookie cookie, int client, ConVarQueryResult result, const char[] cvarName, const char[] cvarValue, any value) {
     if (result == ConVarQuery_Okay && GetClientFromSerial(value) == client && strcmp(cvarValue, "versus", false) != 0)
-		g_hGameMode.ReplicateToClient(client, "versus");
+		g_cvGameMode.ReplicateToClient(client, "versus");
 }
 
 void Event_TankFrustrated(Event event, const char[] name, bool dontBroadcast) {
@@ -1890,6 +1892,7 @@ int iGetIdlePlayerOfBot(int client) {
 int iTakeOverTank(int tank) {
 	int client = 1;
 	ArrayList aClients = new ArrayList(2);
+
 	bool bAllowsurvivor = bAllowSurvivor();
 	for (; client <= MaxClients; client++) {
 		if (!IsClientInGame(client) || IsFakeClient(client))
