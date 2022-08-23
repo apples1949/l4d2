@@ -114,9 +114,10 @@ public Action OnPlayerRunCmd(int client, int &buttons) {
 
 	if (!g_bChargerBhop || fProximity < 150.0 || fProximity > 1000.0 || GetEntityFlags(client) & FL_ONGROUND == 0 || GetEntityMoveType(client) == MOVETYPE_LADDER || GetEntProp(client, Prop_Data, "m_nWaterLevel") > 1 || !GetEntProp(client, Prop_Send, "m_hasVisibleThreats"))
 		return Plugin_Continue;
+
 	static float vVel[3];
 	GetEntPropVector(client, Prop_Data, "m_vecVelocity", vVel);
-	if (SquareRoot(Pow(vVel[0], 2.0) + Pow(vVel[1], 2.0)) < 150.0)
+	if (SquareRoot(Pow(vVel[0], 2.0) + Pow(vVel[1], 2.0)) <= 0.5 * GetEntPropFloat(client, Prop_Send, "m_flMaxspeed"))
 		return Plugin_Continue;
 
 	static float vAng[3];
@@ -154,6 +155,7 @@ bool bClientPush(int client, int &buttons, float vVec[3], float fForce) {
 
 	buttons |= IN_DUCK;
 	buttons |= IN_JUMP;
+	SetEntPropFloat(client, Prop_Send, "m_flStamina", 0.0);
 	TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, vVel);
 	return true;
 }
@@ -222,7 +224,7 @@ bool bWontFall(int client, const float vVel[3]) {
 	}
 
 	delete hTrace;
-	return false;
+	return true;
 }
 
 bool bTraceEntityFilter(int entity, int contentsMask) {

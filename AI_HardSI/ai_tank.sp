@@ -83,7 +83,7 @@ public Action OnPlayerRunCmd(int client, int &buttons) {
 
 	static float fSpeed;
 	fSpeed = SquareRoot(Pow(vVel[0], 2.0) + Pow(vVel[1], 2.0));
-	if (fSpeed < g_fRunTopSpeed[client] - 10.0)
+	if (fSpeed <= 0.5 * g_fRunTopSpeed[client])
 		return Plugin_Continue;
 
 	static float vAng[3];
@@ -168,6 +168,7 @@ bool bClientPush(int client, int &buttons, float vVec[3], float fForce) {
 
 	buttons |= IN_DUCK;
 	buttons |= IN_JUMP;
+	SetEntPropFloat(client, Prop_Send, "m_flStamina", 0.0);
 	TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, vVel);
 	return true;
 }
@@ -236,7 +237,7 @@ bool bWontFall(int client, const float vVel[3]) {
 	}
 
 	delete hTrace;
-	return false;
+	return true;
 }
  
 bool bTraceEntityFilter(int entity, int contentsMask) {

@@ -44,7 +44,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 	if (GetEntityFlags(client) & FL_ONGROUND && GetEntityMoveType(client) != MOVETYPE_LADDER && GetEntProp(client, Prop_Data, "m_nWaterLevel") < 2 && GetEntProp(client, Prop_Send, "m_hasVisibleThreats")) {
 		static float vVel[3];
 		GetEntPropVector(client, Prop_Data, "m_vecVelocity", vVel);
-		if (SquareRoot(Pow(vVel[0], 2.0) + Pow(vVel[1], 2.0)) < 150.0)
+		if (SquareRoot(Pow(vVel[0], 2.0) + Pow(vVel[1], 2.0)) <= 0.5 * GetEntPropFloat(client, Prop_Send, "m_flMaxspeed"))
 			return Plugin_Continue;
 	
 		if (150.0 < fNearestSurDistance(client) < 1000.0) {
