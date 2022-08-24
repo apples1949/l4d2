@@ -829,7 +829,7 @@ Action cmdTakeOverTank(int client, int args) {
 		}*/
 	}
 
-	/*if (iGetTankPlayers() >= g_iMaxTankPlayer) {
+	/*if (iGetTankCount(1) >= g_iMaxTankPlayer) {
 		ReplyToCommand(client, "\x01存活的玩家坦克数量达到预设上限 ->\x05%d", g_iMaxTankPlayer);
 		return Plugin_Handled;
 	}*/
@@ -951,14 +951,14 @@ Action cmdTransferTank(int client, int args) {
 		vOfferTankMenu(client, client, target_list[0], bAccess);
 	}
 	else {
-		if (iGetTankPlayers()) {
+		if (iGetTankCount(-1)) {
 			if (bAccess)
 				vShowTankListMenu(client);
 			else
 				vShowPlayerListMenu(client, client);
 		}
 		else
-			ReplyToCommand(client, "无可供接管的坦克存在");
+			ReplyToCommand(client, "无存活的坦克存在");
 	}
 
 	return Plugin_Handled;
@@ -984,7 +984,7 @@ void vOfferTankMenu(int client, int tank, int target, bool bAccess = false) {
 	if (bAccess)
 		vTransferTank(tank, target);
 	else {
-		if (iGetTankPlayers() - (IsFakeClient(tank) ? 0 : 1) >= g_iMaxTankPlayer) {
+		if (iGetTankCount(1) - (IsFakeClient(tank) ? 0 : 1) >= g_iMaxTankPlayer) {
 			ReplyToCommand(client, "\x01存活的玩家坦克数量达到预设上限 ->\x05%d", g_iMaxTankPlayer);
 			return;
 		}
@@ -1638,7 +1638,7 @@ void OnNextFrame_PlayerSpawn(int client) {
 		case 3: {
 			if (g_iRoundStart && IsFakeClient(client) && GetEntProp(client, Prop_Send, "m_zombieClass") == 8) {
 				int iPlayer;
-				if (g_esPlayer[client].iTankBot != 2 && iGetTankPlayers() < g_iMaxTankPlayer) {
+				if (g_esPlayer[client].iTankBot != 2 && iGetTankCount(1) < g_iMaxTankPlayer) {
 					if ((iPlayer = iTakeOverTank(client))) {
 						vSetInfectedGhost(iPlayer, true);
 						if (g_esPlayer[iPlayer].iLastTeamID == 2)
@@ -1900,13 +1900,16 @@ int iGetTeamPlayers(int iTeam=-1) {
 	return iTeam == -1 ? iPlayers : iTeamPlayers;
 }
 
-int iGetTankPlayers() {
-	int iTankPlayers;
+int iGetTankCount(int filter = -1) {
+	int iCount;
 	for (int i = 1; i <= MaxClients; i++) {
-		if (IsClientInGame(i) && !IsFakeClient(i) && GetClientTeam(i) == 3 && IsPlayerAlive(i) && GetEntProp(i, Prop_Send, "m_zombieClass") == 8)
-			iTankPlayers++;
+		if (!IsClientInGame(i) || GetClientTeam(i) != 3 || !IsPlayerAlive(i) || GetEntProp(i, Prop_Send, "m_zombieClass") != 8)
+			continue;
+
+		if (filter == -1 || !IsFakeClient(i) == view_as<bool>(filter))
+			iCount++;
 	}
-	return iTankPlayers;
+	return iCount;
 }
 
 void vTeleportToSurvivor(int client, bool bRandom = true) {
@@ -2807,7 +2810,6 @@ void vInitPatchs(GameData hGameData = null) {
 		SetFailState("Failed to find address: \"CTerrorPlayer::RoundRespawn\"");
 
 	g_pStatsCondition += view_as<Address>(iOffset);
-	
 	int iByteOrigin = LoadFromAddress(g_pStatsCondition, NumberType_Int8);
 	if (iByteOrigin != iByteMatch)
 		SetFailState("Failed to load \"CTerrorPlayer::RoundRespawn\", byte mis-match @ %d (0x%02X != 0x%02X)", iOffset, iByteOrigin, iByteMatch);
