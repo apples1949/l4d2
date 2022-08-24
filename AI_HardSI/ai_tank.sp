@@ -79,9 +79,8 @@ public Action OnPlayerRunCmd(int client, int &buttons) {
 		return Plugin_Continue;
 
 	static float vVel[3];
-	GetEntPropVector(client, Prop_Data, "m_vecVelocity", vVel);
-
 	static float fSpeed;
+	GetEntPropVector(client, Prop_Data, "m_vecVelocity", vVel);
 	fSpeed = SquareRoot(Pow(vVel[0], 2.0) + Pow(vVel[1], 2.0));
 	if (fSpeed <= 0.5 * g_fRunTopSpeed[client])
 		return Plugin_Continue;
@@ -138,18 +137,20 @@ public Action OnPlayerRunCmd(int client, int &buttons) {
 	return Plugin_Continue;
 }
 
-Action aBunnyHop(int client, int &buttons, float vAng[3]) {
-	Action aResult = Plugin_Continue;
+Action aBunnyHop(int client, int &buttons, const float vAng[3]) {
+	static float vVec[3];
+	static Action aResult;
 
+	aResult = Plugin_Continue;
 	if (buttons & IN_FORWARD || buttons & IN_BACK) {
-		GetAngleVectors(vAng, vAng, NULL_VECTOR, NULL_VECTOR);
-		if (bClientPush(client, buttons, vAng, buttons & IN_FORWARD ? 2.0 * SPEEDBOOST : -SPEEDBOOST))
+		GetAngleVectors(vAng, vVec, NULL_VECTOR, NULL_VECTOR);
+		if (bClientPush(client, buttons, vVec, buttons & IN_FORWARD ? 180.0 : -90.0))
 			aResult = Plugin_Changed;
 	}
 
 	if (buttons & IN_MOVELEFT || buttons & IN_MOVERIGHT) {
-		GetAngleVectors(vAng, NULL_VECTOR, vAng, NULL_VECTOR);
-		if (bClientPush(client, buttons, vAng, buttons & IN_MOVELEFT ? -SPEEDBOOST : SPEEDBOOST))
+		GetAngleVectors(vAng, NULL_VECTOR, vVec, NULL_VECTOR);
+		if (bClientPush(client, buttons, vVec, buttons & IN_MOVELEFT ? -90.0 : 90.0))
 			aResult = Plugin_Changed;
 	}
 
@@ -163,14 +164,14 @@ bool bClientPush(int client, int &buttons, float vVec[3], float fForce) {
 	static float vVel[3];
 	GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", vVel);
 	AddVectors(vVel, vVec, vVel);
-	if (!bWontFall(client, vVel))
-		return false;
+	if (bWontFall(client, vVel)) {
+		buttons |= IN_DUCK;
+		buttons |= IN_JUMP;
+		TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, vVel);
+		return true;
+	}
 
-	buttons |= IN_DUCK;
-	buttons |= IN_JUMP;
-	SetEntPropFloat(client, Prop_Send, "m_flStamina", 0.0);
-	TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, vVel);
-	return true;
+	return false;
 }
 
 #define OBSTACLE_HEIGHT 18.0
@@ -187,20 +188,19 @@ bool bWontFall(int client, const float vVel[3]) {
 
 	static bool bDidHit;
 	static Handle hTrace;
+	static float vVec[3];
 
 	bDidHit = false;
 	vPos[2] += OBSTACLE_HEIGHT;
 	vEnd[2] += OBSTACLE_HEIGHT;
 	hTrace = TR_TraceHullFilterEx(vPos, vEnd, vMins, vMaxs, MASK_PLAYERSOLID_BRUSHONLY, bTraceEntityFilter);
-	//vEnd[2] -= OBSTACLE_HEIGHT;
-
-	static float vVec[3];
+	vEnd[2] -= 2.0 * OBSTACLE_HEIGHT;
 	if (TR_DidHit(hTrace)) {
 		bDidHit = true;
 		TR_GetPlaneNormal(hTrace, vVec);
-		if (RadToDeg(ArcCosine(GetVectorDotProduct(vVel, vVec))) > 135.0) {
+		if (RadToDeg(ArcCosine(GetVectorDotProduct(vVel, vVec))) > 150.0) {
 			TR_GetEndPosition(vVec, hTrace);
-			if (33.0 < GetVectorDistance(vPos, vVec) < 64.0) {
+			if (GetVectorDistance(vPos, vVec) < 64.0) {
 				delete hTrace;
 				return false;
 			}
@@ -218,7 +218,7 @@ bool bWontFall(int client, const float vVel[3]) {
 	hTrace = TR_TraceHullFilterEx(vVec, vDown, vMins, vMaxs, MASK_PLAYERSOLID_BRUSHONLY, bTraceEntityFilter);
 	if (TR_DidHit(hTrace)) {
 		TR_GetEndPosition(vEnd, hTrace);
-		if (vVec[2] - vEnd[2] > 120.0) {
+		if (vVec[2] - vEnd[2] > 128.0) {
 			delete hTrace;
 			return false;
 		}
