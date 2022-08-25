@@ -88,11 +88,10 @@ any aNative_SetNextMap(Handle plugin, int numParams) {
 	maxlength += 1;
 	char[] buffer = new char[maxlength];
 	GetNativeString(1, buffer, maxlength);
-	if (!IsMapValidEx(buffer))
-		return 0;
+	if (IsMapValidEx(buffer))
+		strcopy(g_sNextMap, sizeof g_sNextMap, buffer);
 
-	strcopy(g_sNextMap, sizeof g_sNextMap, buffer);
-	return 1;
+	return 0;
 }
 
 any aNative_FinaleMapChange(Handle plugin, int numParams) {
@@ -168,11 +167,17 @@ void vHookUserMessageCredits() {
 Action umStatsCrawlMsg(UserMsg msg_id, BfRead msg, const int[] players, int playersNum, bool reliable, bool init) {
 	UnhookUserMessage(g_umStatsCrawlMsg, umStatsCrawlMsg, false);
 	g_bUMHooked = false;
-	vFinaleMapChange();
+
+	if (g_bIsFinalMap)
+		vFinaleMapChange();
+
 	return Plugin_Continue;
 }
 
 Action umDisconnectToLobby(UserMsg msg_id, BfRead msg, const int[] players, int playersNum, bool reliable, bool init) {
+	if (!g_bIsFinalMap)
+		return Plugin_Continue;
+
 	if (g_iFinaleChangeType & FINALE_CHANGE_CREDITS_END) {
 		vFinaleMapChange();
 		return Plugin_Handled;
