@@ -51,7 +51,7 @@ UserMsg
 	g_umStatsCrawlMsg;
 
 ConVar
-	g_hFinaleChangeType;
+	g_cvFinaleChangeType;
 
 int
 	g_iFinaleChangeType;
@@ -109,8 +109,8 @@ public void OnPluginStart() {
 	HookEvent("finale_win", 			Event_FinaleWin,		EventHookMode_PostNoCopy);
 	HookEvent("finale_vehicle_leaving",	Event_VehicleLeaving,	EventHookMode_PostNoCopy);
 
-	g_hFinaleChangeType = CreateConVar("mapchanger_finale_change_type", "12", "0 - 结局不换地图(返回大厅); 1 - 救援载具离开时; 2 - 结局获胜时; 4 - 统计屏幕出现时; 8 - 统计屏幕结束时", CVAR_FLAGS);
-	g_hFinaleChangeType.AddChangeHook(vCvarChanged);
+	g_cvFinaleChangeType = CreateConVar("mapchanger_finale_change_type", "12", "0 - 结局不换地图(返回大厅); 1 - 救援载具离开时; 2 - 结局获胜时; 4 - 统计屏幕出现时; 8 - 统计屏幕结束时", CVAR_FLAGS);
+	g_cvFinaleChangeType.AddChangeHook(vCvarChanged);
 
 	RegAdminCmd("sm_setnext", cmdSetNext, ADMFLAG_RCON, "设置下一张地图");
 }
@@ -147,7 +147,7 @@ void vCvarChanged(ConVar convar, const char[] oldValue, const char[] newValue) {
 }
 
 void vGetCvars() {
-	g_iFinaleChangeType = g_hFinaleChangeType.IntValue;
+	g_iFinaleChangeType = g_cvFinaleChangeType.IntValue;
 }
 
 public void OnMapEnd() {
@@ -223,12 +223,15 @@ int iFindMapId(const char[] sMap, const int type) {
 
 void vChangeLevel(const char[] sMap) {
 	if (g_bChangeLevel)
-		L4D2_ChangeLevel(sMap, true);
+		L4D2_ChangeLevel(sMap, false);
 	else
 		ServerCommand("changelevel %s", sMap);
 }
 
-bool IsMapValidEx(char[] map) {
+bool IsMapValidEx(const char[] map) {
+	if (!map[0])
+		return false;
+
 	char foundmap[1];
-	return FindMap(map, foundmap, sizeof foundmap) != FindMap_NotFound;
+	return FindMap(map, foundmap, sizeof foundmap) == FindMap_Found;
 }
