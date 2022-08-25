@@ -3,7 +3,7 @@
 #include <sourcemod>
 #include <left4dhooks>
 
-#define PLUGIN_VERSION	"1.0.1"
+#define PLUGIN_VERSION	"1.0.2"
 #define CVAR_FLAGS		FCVAR_NOTIFY
 
 enum {
@@ -44,7 +44,8 @@ char
 
 bool
 	g_bUMHooked,
-	g_bIsFinalMap;
+	g_bIsFinalMap,
+	g_bChangeLevel;
 
 UserMsg
 	g_umStatsCrawlMsg;
@@ -61,7 +62,20 @@ public Plugin myinfo = {
 	version = PLUGIN_VERSION
 }
 
+native void L4D2_ChangeLevel(const char[] sMapName, bool bShouldResetScores=true);
+public void OnLibraryAdded(const char[] name) {
+	if (strcmp(name, "l4d2_changelevel") == 0)
+		g_bChangeLevel = true;
+}
+
+public void OnLibraryRemoved(const char[] name) {
+	if (strcmp(name, "l4d2_changelevel") == 0)
+		g_bChangeLevel = false;
+}
+
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max) {
+	MarkNativeAsOptional("L4D2_ChangeLevel");
+	
 	CreateNative("MC_SetNextMap", aNative_SetNextMap);
 	CreateNative("MC_FinaleMapChange", aNative_FinaleMapChange);
 	RegPluginLibrary("map_changer");
@@ -69,11 +83,16 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 }
 
 any aNative_SetNextMap(Handle plugin, int numParams) {
-	GetNativeString(1, g_sNextMap, sizeof g_sNextMap);
-	if (!IsMapValid(g_sNextMap))
-		g_sNextMap[0] = '\0';
+	int maxlength;
+	GetNativeStringLength(1, maxlength);
+	maxlength += 1;
+	char[] buffer = new char[maxlength];
+	GetNativeString(1, buffer, maxlength);
+	if (!IsMapValidEx(buffer))
+		return 0;
 
-	return 0;
+	strcopy(g_sNextMap, sizeof g_sNextMap, buffer);
+	return 1;
 }
 
 any aNative_FinaleMapChange(Handle plugin, int numParams) {
@@ -109,7 +128,7 @@ Action cmdSetNext(int client, int args) {
 
 	char sArg[128];
 	GetCmdArg(1, sArg, sizeof sArg);
-	if (!IsMapValid(sArg)) {
+	if (!IsMapValidEx(sArg)) {
 		ReplyToCommand(client, "无效的地图名.");
 		return Plugin_Handled;
 	}
@@ -185,12 +204,12 @@ void Event_VehicleLeaving(Event event, const char[] name, bool dontBroadcast) {
 }
 
 void vFinaleMapChange() {
-	if (IsMapValid(g_sNextMap))
-		ServerCommand("changelevel %s", g_sNextMap);
+	if (IsMapValidEx(g_sNextMap))
+		vChangeLevel(g_sNextMap);
 	else {
 		char sMap[128];
 		GetCurrentMap(sMap, sizeof sMap);
-		ServerCommand("changelevel %s", g_sValveMaps[iFindMapId(sMap, FINAL_MAP)][FIRST_MAP]);
+		vChangeLevel(g_sValveMaps[iFindMapId(sMap, FINAL_MAP)][FIRST_MAP]);
 	}
 }
 
@@ -200,4 +219,16 @@ int iFindMapId(const char[] sMap, const int type) {
 			return i;
 	}
 	return 0;
+}
+
+void vChangeLevel(const char[] sMap) {
+	if (g_bChangeLevel)
+		L4D2_ChangeLevel(sMap, true);
+	else
+		ServerCommand("changelevel %s", sMap);
+}
+
+bool IsMapValidEx(char[] map) {
+	char foundmap[1];
+	return FindMap(map, foundmap, sizeof foundmap) != FindMap_NotFound;
 }
