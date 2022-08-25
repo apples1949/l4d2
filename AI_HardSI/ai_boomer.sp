@@ -70,24 +70,21 @@ public Action OnPlayerRunCmd(int client, int &buttons) {
 	if (!IsClientInGame(client) || !IsFakeClient(client) || GetClientTeam(client) != 3 || !IsPlayerAlive(client) || GetEntProp(client, Prop_Send, "m_zombieClass") != 2 || GetEntProp(client, Prop_Send, "m_isGhost") == 1)
 		return Plugin_Continue;
 
-	if (GetEntityFlags(client) & FL_ONGROUND && GetEntityMoveType(client) != MOVETYPE_LADDER && GetEntProp(client, Prop_Data, "m_nWaterLevel") < 2 && (GetEntProp(client, Prop_Send, "m_hasVisibleThreats") || bTargetSur(client))) {
-		static float vVel[3];
-		GetEntPropVector(client, Prop_Data, "m_vecVelocity", vVel);
-		if (SquareRoot(Pow(vVel[0], 2.0) + Pow(vVel[1], 2.0)) <= 0.5 * GetEntPropFloat(client, Prop_Send, "m_flMaxspeed"))
-			return Plugin_Continue;
+	if (GetEntityFlags(client) & FL_ONGROUND == 0 || GetEntityMoveType(client) == MOVETYPE_LADDER || GetEntProp(client, Prop_Data, "m_nWaterLevel") > 1)
+		return Plugin_Continue;
+
+	static float vVel[3];
+	GetEntPropVector(client, Prop_Data, "m_vecVelocity", vVel);
+	if (SquareRoot(Pow(vVel[0], 2.0) + Pow(vVel[1], 2.0)) <= 0.5 * GetEntPropFloat(client, Prop_Send, "m_flMaxspeed"))
+		return Plugin_Continue;
 	
-		if (0.50 * g_fVomitRange < fNearestSurDistance(client) < 1000.0) {
-			static float vAng[3];
-			GetClientEyeAngles(client, vAng);
-			return aBunnyHop(client, buttons, vAng);
-		}
+	if (0.50 * g_fVomitRange < fNearestSurDistance(client) < 1000.0) {
+		static float vAng[3];
+		GetClientEyeAngles(client, vAng);
+		return aBunnyHop(client, buttons, vAng);
 	}
 
 	return Plugin_Continue;
-}
-
-bool bTargetSur(int client) {
-	return bIsAliveSur(GetClientAimTarget(client, true));
 }
 
 Action aBunnyHop(int client, int &buttons, const float vAng[3]) {
@@ -141,19 +138,20 @@ bool bWontFall(int client, const float vVel[3]) {
 
 	static bool bDidHit;
 	static Handle hTrace;
-	static float vVec[3];
 
 	bDidHit = false;
 	vPos[2] += OBSTACLE_HEIGHT;
 	vEnd[2] += OBSTACLE_HEIGHT;
 	hTrace = TR_TraceHullFilterEx(vPos, vEnd, vMins, vMaxs, MASK_PLAYERSOLID_BRUSHONLY, bTraceEntityFilter);
 	vEnd[2] -= 2.0 * OBSTACLE_HEIGHT;
+
+	static float vVec[3];
 	if (TR_DidHit(hTrace)) {
 		bDidHit = true;
 		TR_GetPlaneNormal(hTrace, vVec);
 		if (RadToDeg(ArcCosine(GetVectorDotProduct(vVel, vVec))) > 150.0) {
 			TR_GetEndPosition(vVec, hTrace);
-			if (GetVectorDistance(vPos, vVec) < 64.0) {
+			if (GetVectorDistance(vPos, vVec) < 33.0) {
 				delete hTrace;
 				return false;
 			}
@@ -172,7 +170,7 @@ bool bWontFall(int client, const float vVel[3]) {
 	hTrace = TR_TraceHullFilterEx(vVec, vDown, vMins, vMaxs, MASK_PLAYERSOLID_BRUSHONLY, bTraceEntityFilter);
 	if (TR_DidHit(hTrace)) {
 		TR_GetEndPosition(vEnd, hTrace);
-		if (vVec[2] - vEnd[2] > 128.0) {
+		if (vVec[2] - vEnd[2] > 120.0) {
 			delete hTrace;
 			return false;
 		}
@@ -254,7 +252,7 @@ void vBoomer_OnVomit(int client) {
 	else {
 		float fHeight = vTarg[2] - vPos[2];
 		if (fHeight > PLAYER_HEIGHT)
-			vLength = vLength - 0.5 * g_fVomitRange + fHeight;
+			vLength += GetVectorDistance(vPos, vTarg) / vLength * PLAYER_HEIGHT;
 	}
 
 	static float vAngles[3];
@@ -262,6 +260,9 @@ void vBoomer_OnVomit(int client) {
 	NormalizeVector(vVelocity, vVelocity);
 	ScaleVector(vVelocity, vLength);
 	TeleportEntity(client, NULL_VECTOR, vAngles, vVelocity);
+	int iEnt = GetEntPropEnt(client, Prop_Send, "m_customAbility");
+	if (iEnt > MaxClients)
+		TeleportEntity(iEnt, NULL_VECTOR, vAngles, vVelocity);
 }
 
 bool bIsAliveSur(int client) {
