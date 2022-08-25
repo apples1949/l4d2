@@ -3,7 +3,7 @@
 #include <sourcemod>
 #include <left4dhooks>
 
-#define PLUGIN_VERSION	"1.0.0"
+#define PLUGIN_VERSION	"1.0.1"
 #define CVAR_FLAGS		FCVAR_NOTIFY
 
 enum {
@@ -58,11 +58,12 @@ int
 public Plugin myinfo = {
 	name = "Map Changer",
 	author = "Alex Dragokas",
-	version = "1.0.0"
+	version = PLUGIN_VERSION
 }
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max) {
 	CreateNative("MC_SetNextMap", aNative_SetNextMap);
+	CreateNative("MC_FinaleMapChange", aNative_FinaleMapChange);
 	RegPluginLibrary("map_changer");
 	return APLRes_Success;
 }
@@ -71,6 +72,13 @@ any aNative_SetNextMap(Handle plugin, int numParams) {
 	GetNativeString(1, g_sNextMap, sizeof g_sNextMap);
 	if (!IsMapValid(g_sNextMap))
 		g_sNextMap[0] = '\0';
+
+	return 0;
+}
+
+any aNative_FinaleMapChange(Handle plugin, int numParams) {
+	if (g_bIsFinalMap)
+		vFinaleMapChange();
 
 	return 0;
 }
