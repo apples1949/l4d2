@@ -228,7 +228,7 @@ int iFindMapId(const char[] sMap, const int type) {
 
 void vChangeLevel(const char[] sMap) {
 	if (g_bChangeLevel)
-		L4D2_ChangeLevel(sMap, false);
+		L4D2_ChangeLevel(sMap);
 	else
 		ServerCommand("changelevel %s", sMap);
 }
