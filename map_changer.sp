@@ -8,8 +8,7 @@
 
 enum {
 	FINAL_MAP,
-	FIRST_MAP,
-	MAP_TRANSLATE,
+	FIRST_MAP
 }
 
 enum {
