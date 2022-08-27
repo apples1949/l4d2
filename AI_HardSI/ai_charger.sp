@@ -117,7 +117,7 @@ public Action OnPlayerRunCmd(int client, int &buttons) {
 
 	static float vVel[3];
 	GetEntPropVector(client, Prop_Data, "m_vecVelocity", vVel);
-	if (SquareRoot(Pow(vVel[0], 2.0) + Pow(vVel[1], 2.0)) <= 0.5 * GetEntPropFloat(client, Prop_Send, "m_flMaxspeed"))
+	if (SquareRoot(Pow(vVel[0], 2.0) + Pow(vVel[1], 2.0)) < GetEntPropFloat(client, Prop_Send, "m_flMaxspeed") - 10.0)
 		return Plugin_Continue;
 
 	static float vAng[3];

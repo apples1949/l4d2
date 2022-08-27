@@ -82,7 +82,7 @@ public Action OnPlayerRunCmd(int client, int &buttons) {
 	static float fSpeed;
 	GetEntPropVector(client, Prop_Data, "m_vecVelocity", vVel);
 	fSpeed = SquareRoot(Pow(vVel[0], 2.0) + Pow(vVel[1], 2.0));
-	if (fSpeed <= 0.5 * g_fRunTopSpeed[client])
+	if (fSpeed < g_fRunTopSpeed[client] - 10.0)
 		return Plugin_Continue;
 
 	static float vAng[3];
