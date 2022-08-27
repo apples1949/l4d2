@@ -200,7 +200,7 @@ bool bWontFall(int client, const float vVel[3]) {
 		TR_GetPlaneNormal(hTrace, vVec);
 		if (RadToDeg(ArcCosine(GetVectorDotProduct(vVel, vVec))) > 150.0) {
 			TR_GetEndPosition(vVec, hTrace);
-			if (GetVectorDistance(vPos, vVec) < 33.0) {
+			if (GetVectorDistance(vPos, vVec) < 64.0) {
 				delete hTrace;
 				return false;
 			}

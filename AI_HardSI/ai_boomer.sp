@@ -59,8 +59,12 @@ void Event_AbilityUse(Event event, const char[] name, bool dontBroadcast) {
 
 	static char sUse[16];
 	event.GetString("ability", sUse, sizeof sUse);
-	if (strcmp(sUse, "ability_vomit") == 0)
+	if (strcmp(sUse, "ability_vomit") == 0) {
+		int flags = GetEntityFlags(client) & ~FL_ONGROUND;
+		SetEntityFlags(client, flags & ~FL_FROZEN);
 		vBoomer_OnVomit(client);
+		SetEntityFlags(client, flags);
+	}
 }
 
 public Action OnPlayerRunCmd(int client, int &buttons) {
@@ -151,7 +155,7 @@ bool bWontFall(int client, const float vVel[3]) {
 		TR_GetPlaneNormal(hTrace, vVec);
 		if (RadToDeg(ArcCosine(GetVectorDotProduct(vVel, vVec))) > 150.0) {
 			TR_GetEndPosition(vVec, hTrace);
-			if (GetVectorDistance(vPos, vVec) < 33.0) {
+			if (GetVectorDistance(vPos, vVec) < 64.0) {
 				delete hTrace;
 				return false;
 			}
@@ -227,7 +231,6 @@ float fNearestSurDistance(int client) {
 	return fDists[0];
 }
 
-#define CROUCHING_EYE 44.0
 #define PLAYER_HEIGHT 72.0
 void vBoomer_OnVomit(int client) {
 	static int iTarget;
@@ -242,7 +245,7 @@ void vBoomer_OnVomit(int client) {
 	static float vTarg[3];
 	static float vVelocity[3];
 	GetClientAbsOrigin(client, vPos);
-	GetClientAbsOrigin(iTarget, vTarg);
+	GetClientEyePosition(iTarget, vTarg);
 	MakeVectorFromPoints(vPos, vTarg, vVelocity);
 
 	static float vLength;
@@ -260,9 +263,6 @@ void vBoomer_OnVomit(int client) {
 	NormalizeVector(vVelocity, vVelocity);
 	ScaleVector(vVelocity, vLength);
 	TeleportEntity(client, NULL_VECTOR, vAngles, vVelocity);
-	int iEnt = GetEntPropEnt(client, Prop_Send, "m_customAbility");
-	if (iEnt > MaxClients)
-		TeleportEntity(iEnt, NULL_VECTOR, vAngles, vVelocity);
 }
 
 bool bIsAliveSur(int client) {

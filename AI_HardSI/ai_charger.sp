@@ -78,7 +78,7 @@ void Event_ChargerChargeStart(Event event, const char[] name, bool dontBroadcast
 		return;
 
 	int flags = GetEntityFlags(client);
-	SetEntityFlags(client, flags & ~FL_FROZEN);
+	SetEntityFlags(client, (flags & ~FL_FROZEN) & ~FL_ONGROUND);
 	vCharger_OnCharge(client);
 	SetEntityFlags(client, flags);
 }
@@ -188,7 +188,7 @@ bool bWontFall(int client, const float vVel[3]) {
 		TR_GetPlaneNormal(hTrace, vVec);
 		if (RadToDeg(ArcCosine(GetVectorDotProduct(vVel, vVec))) > 150.0) {
 			TR_GetEndPosition(vVec, hTrace);
-			if (GetVectorDistance(vPos, vVec) < 33.0) {
+			if (GetVectorDistance(vPos, vVec) < 64.0) {
 				delete hTrace;
 				return false;
 			}
@@ -310,7 +310,6 @@ void vResetAbilityTime(int client, float fTime)
 		SetEntPropFloat(iEnt, Prop_Send, "m_timestamp", GetGameTime() + fTime);	
 }
 
-#define CROUCHING_EYE	44.0
 #define PLAYER_HEIGHT	72.0
 void vCharger_OnCharge(int client) {
 	static int iTarget;
@@ -331,15 +330,13 @@ void vCharger_OnCharge(int client) {
 	static float vPos[3];
 	static float vTarg[3];
 	GetClientAbsOrigin(client, vPos);
-	GetClientAbsOrigin(iTarget, vTarg);
+	GetClientEyePosition(iTarget, vTarg);
 	float fDelta = vTarg[2] - vPos[2];
 	if (fDelta > PLAYER_HEIGHT)
 		vLength += fDelta;
-	
-	if (GetEntityFlags(client) & FL_ONGROUND == 0) {
-		vTarg[2] += CROUCHING_EYE;
+
+	if (GetEntPropEnt(client, Prop_Send, "m_hGroundEntity") == -1)
 		vLength += g_fChargeMaxSpeed;
-	}
 
 	vTarg[2] += GetVectorDistance(vPos, vTarg) / vLength * PLAYER_HEIGHT;
 	MakeVectorFromPoints(vPos, vTarg, vVelocity);
