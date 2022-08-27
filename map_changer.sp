@@ -3,7 +3,7 @@
 #include <sourcemod>
 #include <left4dhooks>
 
-#define PLUGIN_VERSION	"1.0.2"
+#define PLUGIN_VERSION	"1.0.3"
 #define CVAR_FLAGS		FCVAR_NOTIFY
 
 enum {
@@ -43,7 +43,6 @@ char
 
 bool
 	g_bUMHooked,
-	g_bIsFinalMap,
 	g_bChangeLevel;
 
 UserMsg
@@ -61,7 +60,7 @@ public Plugin myinfo = {
 	version = PLUGIN_VERSION
 }
 
-native void L4D2_ChangeLevel(const char[] sMapName, bool bShouldResetScores=true);
+native void L4D2_ChangeLevel(const char[] sMap);
 public void OnLibraryAdded(const char[] name) {
 	if (strcmp(name, "l4d2_changelevel") == 0)
 		g_bChangeLevel = true;
@@ -87,17 +86,19 @@ any aNative_SetNextMap(Handle plugin, int numParams) {
 	maxlength += 1;
 	char[] buffer = new char[maxlength];
 	GetNativeString(1, buffer, maxlength);
-	if (IsMapValidEx(buffer))
-		strcopy(g_sNextMap, sizeof g_sNextMap, buffer);
+	if (!IsMapValidEx(buffer))
+		return 0;
 
-	return 0;
+	strcopy(g_sNextMap, sizeof g_sNextMap, buffer);
+	return 1;
 }
 
 any aNative_FinaleMapChange(Handle plugin, int numParams) {
-	if (g_bIsFinalMap)
-		vFinaleMapChange();
+	if (!L4D_IsMissionFinalMap())
+		return 0;
 
-	return 0;
+	vFinaleMapChange();
+	return 1;
 }
 
 public void OnPluginStart() {
@@ -114,7 +115,7 @@ public void OnPluginStart() {
 }
 
 Action cmdSetNext(int client, int args) {
-	if (!g_bIsFinalMap) {
+	if (!L4D_IsMissionFinalMap()) {
 		ReplyToCommand(client, "当前地图非结局地图.");
 		return Plugin_Handled;
 	}
@@ -150,31 +151,35 @@ void vGetCvars() {
 
 public void OnMapEnd() {
 	g_sNextMap[0] = '\0';
+	vUnhookStatsCrawlMsg();
 }
 
-public void OnMapStart() {
-	g_bIsFinalMap = L4D_IsMissionFinalMap();
-}
-
-void vHookUserMessageCredits() {
+void vHookStatsCrawlMsg() {
 	if (g_iFinaleChangeType & FINALE_CHANGE_CREDITS_START) {
 		g_bUMHooked = true;
-		HookUserMessage(g_umStatsCrawlMsg, umStatsCrawlMsg, false);
+		HookUserMessage(g_umStatsCrawlMsg, umStatsCrawlMsg, false, umStatsCrawlMsgPost);
+	}
+}
+
+void vUnhookStatsCrawlMsg() {
+	if (g_bUMHooked) {
+		UnhookUserMessage(g_umStatsCrawlMsg, umStatsCrawlMsg, false);
+		g_bUMHooked = false;
 	}
 }
 
 Action umStatsCrawlMsg(UserMsg msg_id, BfRead msg, const int[] players, int playersNum, bool reliable, bool init) {
-	UnhookUserMessage(g_umStatsCrawlMsg, umStatsCrawlMsg, false);
-	g_bUMHooked = false;
-
-	if (g_bIsFinalMap)
-		vFinaleMapChange();
-
 	return Plugin_Continue;
 }
 
+void umStatsCrawlMsgPost(UserMsg msg_id, bool sent) {
+	vUnhookStatsCrawlMsg();
+	if (L4D_IsMissionFinalMap())
+		vFinaleMapChange();
+}
+
 Action umDisconnectToLobby(UserMsg msg_id, BfRead msg, const int[] players, int playersNum, bool reliable, bool init) {
-	if (!g_bIsFinalMap)
+	if (!L4D_IsMissionFinalMap())
 		return Plugin_Continue;
 
 	if (g_iFinaleChangeType & FINALE_CHANGE_CREDITS_END) {
@@ -186,25 +191,25 @@ Action umDisconnectToLobby(UserMsg msg_id, BfRead msg, const int[] players, int 
 }
 
 void Event_FinaleWin(Event event, const char[] name, bool dontBroadcast) {
-	if (!g_bIsFinalMap)
+	if (!L4D_IsMissionFinalMap())
 		return;
 
 	if (g_iFinaleChangeType & FINALE_CHANGE_FINALE_WIN)
 		vFinaleMapChange();
 
 	if (!g_bUMHooked)
-		vHookUserMessageCredits();
+		vHookStatsCrawlMsg();
 }
 
 void Event_VehicleLeaving(Event event, const char[] name, bool dontBroadcast) {
-	if (!g_bIsFinalMap)
+	if (!L4D_IsMissionFinalMap())
 		return;
 
 	if (g_iFinaleChangeType & FINALE_CHANGE_VEHICLE_LEAVE)
 		vFinaleMapChange();
 
 	if (!g_bUMHooked)
-		vHookUserMessageCredits();
+		vHookStatsCrawlMsg();
 }
 
 void vFinaleMapChange() {
