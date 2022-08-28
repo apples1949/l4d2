@@ -116,11 +116,11 @@ void Event_AbilityUse(Event event, const char[] name, bool dontBroadcast) {
 	static char sUse[16];
 	event.GetString("ability", sUse, sizeof(sUse));
 	if (strcmp(sUse, "ability_lunge") == 0)
-		vHunter_OnPounce(GetClientOfUserId(event.GetInt("userid")));
+		vHunter_OnPounce(client);
 }
 
 public Action OnPlayerRunCmd(int client, int &buttons) {
-	if (!IsClientInGame(client) || !IsFakeClient(client) || GetClientTeam(client) != 3 || !IsPlayerAlive(client) || GetEntProp(client, Prop_Send, "m_zombieClass") != 3 || GetEntProp(client, Prop_Send, "m_isGhost") == 1)
+	if (!IsClientInGame(client) || !IsFakeClient(client) || GetClientTeam(client) != 3 || !IsPlayerAlive(client) || GetEntProp(client, Prop_Send, "m_zombieClass") != 3 || GetEntProp(client, Prop_Send, "m_isGhost"))
 		return Plugin_Continue;
 
 	static int flags;
@@ -169,14 +169,7 @@ float fNearestSurDistance(int client, const float vPos[3]) {
 	return fDistance[0];
 }
 
-bool bIsBotHunter(int client) {
-	return client && IsClientInGame(client) && IsFakeClient(client) && GetClientTeam(client) == 3 && GetEntProp(client, Prop_Send, "m_zombieClass") == 3;
-}
-
 void vHunter_OnPounce(int client) {	
-	if (!bIsBotHunter(client))
-		return;
-
 	static int iEnt;
 	static float vPos[3];
 	GetClientAbsOrigin(client, vPos);

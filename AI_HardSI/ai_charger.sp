@@ -83,36 +83,46 @@ void Event_ChargerChargeStart(Event event, const char[] name, bool dontBroadcast
 	SetEntityFlags(client, flags);
 }
 
+int g_iCurTarget[MAXPLAYERS + 1];
+public Action L4D2_OnChooseVictim(int specialInfected, int &curTarget) {
+	g_iCurTarget[specialInfected] = curTarget;
+	return Plugin_Continue;
+}
+
 public Action OnPlayerRunCmd(int client, int &buttons) {
-	if (!IsClientInGame(client) || !IsFakeClient(client) || GetClientTeam(client) != 3 || !IsPlayerAlive(client) || GetEntProp(client, Prop_Send, "m_zombieClass") != 6 || GetEntProp(client, Prop_Send, "m_isGhost") == 1)
+	if (!IsClientInGame(client) || !IsFakeClient(client) || GetClientTeam(client) != 3 || !IsPlayerAlive(client) || GetEntProp(client, Prop_Send, "m_zombieClass") != 6 || GetEntProp(client, Prop_Send, "m_isGhost") )
 		return Plugin_Continue;
 
-	static float fProximity;
-	fProximity = fNearestSurDistance(client);
-	if (fProximity > g_fChargeProximity && GetEntProp(client, Prop_Data, "m_iHealth") > g_iHealthThresholdCharger) {
+	static float fNearest;
+	fNearest = fNearestSurDistance(client);
+	if (fNearest > g_fChargeProximity && GetEntProp(client, Prop_Data, "m_iHealth") > g_iHealthThresholdCharger) {
 		if (!g_bShouldCharge[client])
 			vResetAbilityTime(client, 0.1);
 	}
 	else
 		g_bShouldCharge[client] = true;
 		
-	if (g_bShouldCharge[client] && -1.0 < fProximity < 150.0 && bChargerCanCharge(client)) {
-		static int iTarget;
-		iTarget = GetClientAimTarget(client, true);
-		if (bIsAliveSurv(iTarget) && !bIsIncapacitated(iTarget)) {
+	if (g_bShouldCharge[client]) {
+		if (bCanCharge(client) && bIsAliveSur(g_iCurTarget[client]) && !bIsIncapacitated(g_iCurTarget[client])) {
 			static float vPos[3];
 			static float vTarg[3];
 			GetClientAbsOrigin(client, vPos);
-			GetClientAbsOrigin(iTarget, vTarg);
-			if (GetVectorDistance(vPos, vTarg) < 150.0 && (buttons & IN_ATTACK2 || !bHitWall(client, iTarget))) {
-				buttons |= IN_ATTACK;
-				buttons |= IN_ATTACK2;
-				return Plugin_Changed;
+			GetClientAbsOrigin(g_iCurTarget[client], vTarg);
+			if (!bHitWall(client, g_iCurTarget[client])) {
+				if (GetVectorDistance(vPos, vTarg) < 150.0) {
+					buttons |= IN_ATTACK;
+					buttons |= IN_ATTACK2;
+					return Plugin_Changed;
+				}
 			}
+			else if (buttons & IN_ATTACK)
+				buttons &= ~IN_ATTACK;
 		}
+		else if (buttons & IN_ATTACK)
+			buttons &= ~IN_ATTACK;
 	}
 
-	if (!g_bChargerBhop || fProximity < 150.0 || fProximity > 1000.0 || GetEntityFlags(client) & FL_ONGROUND == 0 || GetEntityMoveType(client) == MOVETYPE_LADDER || GetEntProp(client, Prop_Data, "m_nWaterLevel") > 1 || !GetEntProp(client, Prop_Send, "m_hasVisibleThreats"))
+	if (!g_bChargerBhop || fCurTargetDistance(client) < 150.0 || fNearest > 1000.0 || !bIsGrounded(client) || GetEntityMoveType(client) == MOVETYPE_LADDER || GetEntProp(client, Prop_Data, "m_nWaterLevel") > 1 || !GetEntProp(client, Prop_Send, "m_hasVisibleThreats"))
 		return Plugin_Continue;
 
 	static float vVel[3];
@@ -125,44 +135,48 @@ public Action OnPlayerRunCmd(int client, int &buttons) {
 	return aBunnyHop(client, buttons, vAng);
 }
 
-Action aBunnyHop(int client, int &buttons, const float vAng[3]) {
-	static float vVec[3];
-	static Action aResult;
-
-	aResult = Plugin_Continue;
-	if (buttons & IN_FORWARD || buttons & IN_BACK) {
-		GetAngleVectors(vAng, vVec, NULL_VECTOR, NULL_VECTOR);
-		if (bClientPush(client, buttons, vVec, buttons & IN_FORWARD ? 180.0 : -90.0))
-			aResult = Plugin_Changed;
-	}
-
-	if (buttons & IN_MOVELEFT || buttons & IN_MOVERIGHT) {
-		GetAngleVectors(vAng, NULL_VECTOR, vVec, NULL_VECTOR);
-		if (bClientPush(client, buttons, vVec, buttons & IN_MOVELEFT ? -90.0 : 90.0))
-			aResult = Plugin_Changed;
-	}
-
-	return aResult;
+bool bIsGrounded(int client) {
+	int iEnt = GetEntPropEnt(client, Prop_Send, "m_hGroundEntity");
+	return iEnt != -1 && IsValidEntity(iEnt);
+	//return GetEntityFlags(client) & FL_ONGROUND != 0;
 }
 
-bool bClientPush(int client, int &buttons, float vVec[3], float fForce) {
-	NormalizeVector(vVec, vVec);
-	ScaleVector(vVec, fForce);
+Action aBunnyHop(int client, int &buttons, const float vAng[3]) {
+	float vFwd[3];
+	float vRig[3];
+	float vDir[3];
+	float vVel[3];
+	bool bPressed;
+	if (buttons & IN_FORWARD || buttons & IN_BACK) {
+		GetAngleVectors(vAng, vFwd, NULL_VECTOR, NULL_VECTOR);
+		NormalizeVector(vFwd, vFwd);
+		ScaleVector(vFwd, buttons & IN_FORWARD ? 180.0 : -90.0);
+		bPressed = true;
+	}
 
-	static float vVel[3];
-	GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", vVel);
-	AddVectors(vVel, vVec, vVel);
-	if (bWontFall(client, vVel)) {
+	if (buttons & IN_MOVERIGHT || buttons & IN_MOVELEFT) {
+		GetAngleVectors(vAng, NULL_VECTOR, vRig, NULL_VECTOR);
+		NormalizeVector(vRig, vRig);
+		ScaleVector(vRig, buttons & IN_MOVERIGHT ? 90.0 : -90.0);
+		bPressed = true;
+	}
+
+	if (bPressed) {
+		AddVectors(vFwd, vRig, vDir);
+		GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", vVel);
+		AddVectors(vVel, vDir, vVel);
+		if (!bWontFall(client, vVel))
+			return Plugin_Continue;
+
 		buttons |= IN_DUCK;
 		buttons |= IN_JUMP;
 		TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, vVel);
-		return true;
+		return Plugin_Changed;
 	}
 
-	return false;
+	return Plugin_Continue;
 }
 
-#define OBSTACLE_HEIGHT 18.0
 bool bWontFall(int client, const float vVel[3]) {
 	static float vPos[3];
 	static float vEnd[3];
@@ -177,18 +191,18 @@ bool bWontFall(int client, const float vVel[3]) {
 	static bool bDidHit;
 	static Handle hTrace;
 	static float vVec[3];
+	static float vPlane[3];
 
 	bDidHit = false;
-	vPos[2] += OBSTACLE_HEIGHT;
-	vEnd[2] += OBSTACLE_HEIGHT;
+	vPos[2] += 10.0;
+	vEnd[2] += 10.0;
 	hTrace = TR_TraceHullFilterEx(vPos, vEnd, vMins, vMaxs, MASK_PLAYERSOLID_BRUSHONLY, bTraceEntityFilter);
-	vEnd[2] -= 2.0 * OBSTACLE_HEIGHT;
 	if (TR_DidHit(hTrace)) {
 		bDidHit = true;
-		TR_GetPlaneNormal(hTrace, vVec);
-		if (RadToDeg(ArcCosine(GetVectorDotProduct(vVel, vVec))) > 150.0) {
-			TR_GetEndPosition(vVec, hTrace);
-			if (GetVectorDistance(vPos, vVec) < 64.0) {
+		TR_GetEndPosition(vVec, hTrace);
+		if (GetVectorDistance(vPos, vVec) < GetVectorLength(vVel)) {
+			TR_GetPlaneNormal(hTrace, vPlane);
+			if (RadToDeg(ArcCosine(GetVectorDotProduct(vVel, vPlane))) > 135.0) {
 				delete hTrace;
 				return false;
 			}
@@ -203,6 +217,7 @@ bool bWontFall(int client, const float vVel[3]) {
 	vDown[0] = vVec[0];
 	vDown[1] = vVec[1];
 	vDown[2] = vVec[2] - 100000.0;
+
 	hTrace = TR_TraceHullFilterEx(vVec, vDown, vMins, vMaxs, MASK_PLAYERSOLID_BRUSHONLY, bTraceEntityFilter);
 	if (TR_DidHit(hTrace)) {
 		TR_GetEndPosition(vEnd, hTrace);
@@ -217,6 +232,7 @@ bool bWontFall(int client, const float vVel[3]) {
 			GetEdictClassname(iEnt, cls, sizeof cls);
 			if (strcmp(cls, "trigger_hurt") == 0) {
 				delete hTrace;
+				PrintToChatAll("trigger_hurt");
 				return false;
 			}
 		}
@@ -238,6 +254,17 @@ bool bTraceEntityFilter(int entity, int contentsMask) {
 		return false;
 
 	return true;
+}
+
+float fCurTargetDistance(int client) {
+	if (!bIsAliveSur(g_iCurTarget[client]))
+		return -1.0;
+
+	static float vPos[3];
+	static float vTarg[3];
+	GetClientAbsOrigin(client, vPos);
+	GetClientAbsOrigin(g_iCurTarget[client], vTarg);
+	return GetVectorDistance(vPos, vTarg);
 }
 
 float fNearestSurDistance(int client) {
@@ -268,8 +295,8 @@ bool bHitWall(int client, int iTarget) {
 	static float vTarg[3];
 	GetClientAbsOrigin(client, vPos);
 	GetClientAbsOrigin(iTarget, vTarg);
-	vPos[2] += OBSTACLE_HEIGHT;
-	vTarg[2] += OBSTACLE_HEIGHT;
+	vPos[2] += 10.0;
+	vTarg[2] += 10.0;
 
 	MakeVectorFromPoints(vPos, vTarg, vTarg);
 	static float fDist;
@@ -293,7 +320,7 @@ bool bHitWall(int client, int iTarget) {
 	return bDidHit;
 }
 
-bool bChargerCanCharge(int client) {
+bool bCanCharge(int client) {
 	if (GetEntPropEnt(client, Prop_Send, "m_pummelVictim") > 0 || GetEntPropEnt(client, Prop_Send, "m_carryVictim") > 0)
 		return false;
 
@@ -307,14 +334,14 @@ void vResetAbilityTime(int client, float fTime)
 	static int iEnt;
 	iEnt = GetEntPropEnt(client, Prop_Send, "m_customAbility");
 	if (iEnt > MaxClients)
-		SetEntPropFloat(iEnt, Prop_Send, "m_timestamp", GetGameTime() + fTime);	
+		SetEntPropFloat(iEnt, Prop_Send, "m_timestamp", GetGameTime() + fTime);
 }
 
 #define PLAYER_HEIGHT	72.0
 void vCharger_OnCharge(int client) {
 	static int iTarget;
-	iTarget = GetClientAimTarget(client, true);
-	if (!bIsAliveSurv(iTarget) || bIsIncapacitated(iTarget) || bIsPinned(iTarget) || bHitWall(client, iTarget) || bWithinViewAngle(client, iTarget, g_fAimOffsetSensitivityCharger))
+	iTarget = g_iCurTarget[client];//GetClientAimTarget(client, true);
+	if (!bIsAliveSur(iTarget) || bIsIncapacitated(iTarget) || bIsPinned(iTarget) || bHitWall(client, iTarget) || bWithinViewAngle(client, iTarget, g_fAimOffsetSensitivityCharger))
 		iTarget = iGetClosestSur(client, iTarget, g_fChargeMaxSpeed);
 
 	if (iTarget == -1)
@@ -348,7 +375,7 @@ void vCharger_OnCharge(int client) {
 	TeleportEntity(client, NULL_VECTOR, vAngles, vVelocity);
 }
 
-bool bIsAliveSurv(int client) {
+bool bIsAliveSur(int client) {
 	return 0 < client <= MaxClients && IsClientInGame(client) && GetClientTeam(client) == 2 && IsPlayerAlive(client);
 }
 

@@ -41,7 +41,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 	if (!IsClientInGame(client) || !IsFakeClient(client) || GetClientTeam(client) != 3 || !IsPlayerAlive(client) || GetEntProp(client, Prop_Send, "m_zombieClass") != 4 || GetEntProp(client, Prop_Send, "m_isGhost") == 1)
 		return Plugin_Continue;
 
-	if (GetEntityFlags(client) & FL_ONGROUND && GetEntityMoveType(client) != MOVETYPE_LADDER && GetEntProp(client, Prop_Data, "m_nWaterLevel") < 2 && GetEntProp(client, Prop_Send, "m_hasVisibleThreats")) {
+	if (bIsGrounded(client) && GetEntityMoveType(client) != MOVETYPE_LADDER && GetEntProp(client, Prop_Data, "m_nWaterLevel") < 2 && GetEntProp(client, Prop_Send, "m_hasVisibleThreats")) {
 		static float vVel[3];
 		GetEntPropVector(client, Prop_Data, "m_vecVelocity", vVel);
 		if (SquareRoot(Pow(vVel[0], 2.0) + Pow(vVel[1], 2.0)) < GetEntPropFloat(client, Prop_Send, "m_flMaxspeed") - 10.0)
@@ -61,44 +61,48 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 	return Plugin_Continue;
 }
 
-Action aBunnyHop(int client, int &buttons, const float vAng[3]) {
-	static float vVec[3];
-	static Action aResult;
-
-	aResult = Plugin_Continue;
-	if (buttons & IN_FORWARD || buttons & IN_BACK) {
-		GetAngleVectors(vAng, vVec, NULL_VECTOR, NULL_VECTOR);
-		if (bClientPush(client, buttons, vVec, buttons & IN_FORWARD ? 180.0 : -90.0))
-			aResult = Plugin_Changed;
-	}
-
-	if (buttons & IN_MOVELEFT || buttons & IN_MOVERIGHT) {
-		GetAngleVectors(vAng, NULL_VECTOR, vVec, NULL_VECTOR);
-		if (bClientPush(client, buttons, vVec, buttons & IN_MOVELEFT ? -90.0 : 90.0))
-			aResult = Plugin_Changed;
-	}
-
-	return aResult;
+bool bIsGrounded(int client) {
+	int iEnt = GetEntPropEnt(client, Prop_Send, "m_hGroundEntity");
+	return iEnt != -1 && IsValidEntity(iEnt);
+	//return GetEntityFlags(client) & FL_ONGROUND != 0;
 }
 
-bool bClientPush(int client, int &buttons, float vVec[3], float fForce) {
-	NormalizeVector(vVec, vVec);
-	ScaleVector(vVec, fForce);
+Action aBunnyHop(int client, int &buttons, const float vAng[3]) {
+	float vFwd[3];
+	float vRig[3];
+	float vDir[3];
+	float vVel[3];
+	bool bPressed;
+	if (buttons & IN_FORWARD || buttons & IN_BACK) {
+		GetAngleVectors(vAng, vFwd, NULL_VECTOR, NULL_VECTOR);
+		NormalizeVector(vFwd, vFwd);
+		ScaleVector(vFwd, buttons & IN_FORWARD ? 180.0 : -90.0);
+		bPressed = true;
+	}
 
-	static float vVel[3];
-	GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", vVel);
-	AddVectors(vVel, vVec, vVel);
-	if (bWontFall(client, vVel)) {
+	if (buttons & IN_MOVERIGHT || buttons & IN_MOVELEFT) {
+		GetAngleVectors(vAng, NULL_VECTOR, vRig, NULL_VECTOR);
+		NormalizeVector(vRig, vRig);
+		ScaleVector(vRig, buttons & IN_MOVERIGHT ? 90.0 : -90.0);
+		bPressed = true;
+	}
+
+	if (bPressed) {
+		AddVectors(vFwd, vRig, vDir);
+		GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", vVel);
+		AddVectors(vVel, vDir, vVel);
+		if (!bWontFall(client, vVel))
+			return Plugin_Continue;
+
 		buttons |= IN_DUCK;
 		buttons |= IN_JUMP;
 		TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, vVel);
-		return true;
+		return Plugin_Changed;
 	}
 
-	return false;
+	return Plugin_Continue;
 }
 
-#define OBSTACLE_HEIGHT 18.0
 bool bWontFall(int client, const float vVel[3]) {
 	static float vPos[3];
 	static float vEnd[3];
@@ -113,18 +117,18 @@ bool bWontFall(int client, const float vVel[3]) {
 	static bool bDidHit;
 	static Handle hTrace;
 	static float vVec[3];
+	static float vPlane[3];
 
 	bDidHit = false;
-	vPos[2] += OBSTACLE_HEIGHT;
-	vEnd[2] += OBSTACLE_HEIGHT;
+	vPos[2] += 10.0;
+	vEnd[2] += 10.0;
 	hTrace = TR_TraceHullFilterEx(vPos, vEnd, vMins, vMaxs, MASK_PLAYERSOLID_BRUSHONLY, bTraceEntityFilter);
-	vEnd[2] -= 2.0 * OBSTACLE_HEIGHT;
 	if (TR_DidHit(hTrace)) {
 		bDidHit = true;
-		TR_GetPlaneNormal(hTrace, vVec);
-		if (RadToDeg(ArcCosine(GetVectorDotProduct(vVel, vVec))) > 150.0) {
-			TR_GetEndPosition(vVec, hTrace);
-			if (GetVectorDistance(vPos, vVec) < 64.0) {
+		TR_GetEndPosition(vVec, hTrace);
+		if (GetVectorDistance(vPos, vVec) < GetVectorLength(vVel)) {
+			TR_GetPlaneNormal(hTrace, vPlane);
+			if (RadToDeg(ArcCosine(GetVectorDotProduct(vVel, vPlane))) > 135.0) {
 				delete hTrace;
 				return false;
 			}
@@ -154,6 +158,7 @@ bool bWontFall(int client, const float vVel[3]) {
 			GetEdictClassname(iEnt, cls, sizeof cls);
 			if (strcmp(cls, "trigger_hurt") == 0) {
 				delete hTrace;
+				PrintToChatAll("trigger_hurt");
 				return false;
 			}
 		}

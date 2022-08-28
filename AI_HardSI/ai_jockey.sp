@@ -133,17 +133,16 @@ bool bIsPinned(int client) {
 
 public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3], float angles[3]) {
 	
-	if (!IsClientInGame(client) || !IsFakeClient(client) || GetClientTeam(client) != 3 || !IsPlayerAlive(client) || GetEntProp(client, Prop_Send, "m_zombieClass") != 5 || GetEntProp(client, Prop_Send, "m_isGhost") == 1 || !GetEntProp(client, Prop_Send, "m_hasVisibleThreats"))
+	if (!IsClientInGame(client) || !IsFakeClient(client) || GetClientTeam(client) != 3 || !IsPlayerAlive(client) || GetEntProp(client, Prop_Send, "m_zombieClass") != 5 || GetEntProp(client, Prop_Send, "m_isGhost") || !GetEntProp(client, Prop_Send, "m_hasVisibleThreats"))
 		return Plugin_Continue;
 
-	static float fSurvivorProximity;
-	fSurvivorProximity = fNearestSurDistance(client);
-	if (fSurvivorProximity > g_fHopActivationProximity)
+	static float fNearest;
+	fNearest = fNearestSurDistance(client);
+	if (fNearest > g_fHopActivationProximity)
 		return Plugin_Continue;
 
-	if (GetEntityFlags(client) & FL_ONGROUND) {
+	if (bIsGrounded(client)) {
 		static float vAng[3];
-
 		if (g_bDoNormalJump[client]) {
 			if (buttons & IN_FORWARD) {
 				vAng = angles;
@@ -164,7 +163,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 		else {
 			static float fGameTime;
 			if (g_fLeapAgainTime[client] < (fGameTime = GetGameTime())) {
-				if (fSurvivorProximity < g_fJockeyLeapRange) {
+				if (fNearest < g_fJockeyLeapRange) {
 					switch (GetRandomInt(0, 1)) {
 						case 0:
 							buttons |= IN_FORWARD;
@@ -192,6 +191,12 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 	}
 
 	return Plugin_Continue;
+}
+
+bool bIsGrounded(int client) {
+	int iEnt = GetEntPropEnt(client, Prop_Send, "m_hGroundEntity");
+	return iEnt != -1 && IsValidEntity(iEnt);
+	//return GetEntityFlags(client) & FL_ONGROUND != 0;
 }
 
 bool bIsAliveSur(int client) {
