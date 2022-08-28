@@ -3,7 +3,7 @@
 #include <sourcemod>
 #include <sdktools>
 
-#define PLUGIN_VERSION "1.9.0"
+#define PLUGIN_VERSION "1.9.1"
 
 #define MSGTAG "\x04[PS]\x01"
 #define MODULES_SIZE 128
@@ -25,8 +25,7 @@ bool
 	g_bSettingAllow;
 
 //汉化@夏恋灬花火碎片 
-enum struct esPlayer
-{
+enum struct esPlayer {
 	char g_sBought[64];
 	char g_sCommand[64];
 	char g_sSteamID[32];
@@ -48,8 +47,7 @@ enum struct esPlayer
 esPlayer
 	g_esPlayer[MAXPLAYERS + 1];
 
-public Plugin myinfo =
-{
+public Plugin myinfo = {
 	name = "Points System",
 	author = "McFlurry & evilmaniac and modified by Psykotik",
 	description = "Customized edition of McFlurry's points system",
@@ -57,20 +55,15 @@ public Plugin myinfo =
 	url = "http://www.evilmania.net"
 }
 
-public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
-{
+public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max) {
 	vCreateNatives();
 	MarkNativeAsOptional("CZ_RespawnPZ");
-	MarkNativeAsOptional("CZ_SetSpawnablePZ");
-	MarkNativeAsOptional("CZ_ResetSpawnablePZ");
-	MarkNativeAsOptional("CZ_IsSpawnablePZSupported");
 
 	g_bLateLoad = late;
 	return APLRes_Success;
 }
 
-void vCreateNatives()
-{
+void vCreateNatives() {
 	CreateNative("PS_IsSystemEnabled", aNative_PS_IsSystemEnabled);
 	CreateNative("PS_GetVersion", aNative_PS_GetVersion);
 	CreateNative("PS_GetPoints", aNative_PS_GetPoints);
@@ -90,15 +83,13 @@ void vCreateNatives()
 	RegPluginLibrary("ps_natives");
 }
 
-public void OnAllPluginsLoaded()
-{
+public void OnAllPluginsLoaded() {
 	g_bRespawnPZ = GetFeatureStatus(FeatureType_Native, "CZ_RespawnPZ") == FeatureStatus_Available;
 	Call_StartForward(g_hForwardOnPSLoaded);
 	Call_Finish();
 }
 
-public void OnPluginEnd()
-{
+public void OnPluginEnd() {
 	vSQL_SaveAll();
 	vMultiTargetFilters(false);
 
@@ -106,145 +97,113 @@ public void OnPluginEnd()
 	Call_Finish();
 }
 
-void vSQL_SaveAll()
-{
-	for(int i = 1; i <= MaxClients; i++)
-	{
-		if(IsClientInGame(i) && !IsFakeClient(i))
+void vSQL_SaveAll() {
+	for (int i = 1; i <= MaxClients; i++) {
+		if (IsClientInGame(i) && !IsFakeClient(i))
 			vSQL_Save(i);
 	}
 }
 
-any aNative_PS_IsSystemEnabled(Handle plugin, int numParams)
-{
+any aNative_PS_IsSystemEnabled(Handle plugin, int numParams) {
 	return bIsModEnabled();
 }
 
-any aNative_PS_GetVersion(Handle plugin, int numParams)
-{
+any aNative_PS_GetVersion(Handle plugin, int numParams) {
 	return StringToFloat(PLUGIN_VERSION);
 }
 
-any aNative_PS_GetPoints(Handle plugin, int numParams)
-{
+any aNative_PS_GetPoints(Handle plugin, int numParams) {
 	return g_esPlayer[GetNativeCell(1)].g_iPlayerPoints;
 }
 
-any aNative_PS_SetPoints(Handle plugin, int numParams)
-{
+any aNative_PS_SetPoints(Handle plugin, int numParams) {
 	g_esPlayer[GetNativeCell(1)].g_iPlayerPoints = GetNativeCell(2);
 	return 0;
 }
 
-any aNative_PS_RemovePoints(Handle plugin, int numParams)
-{
+any aNative_PS_RemovePoints(Handle plugin, int numParams) {
 	vRemovePoints(GetNativeCell(1), GetNativeCell(2));
 	return 0;
 }
 
-any aNative_PS_GetItem(Handle plugin, int numParams)
-{
+any aNative_PS_GetItem(Handle plugin, int numParams) {
 	SetNativeString(2, g_esPlayer[GetNativeCell(1)].g_sCommand, GetNativeCell(3));
 	return 0;
 }
 
-any aNative_PS_SetItem(Handle plugin, int numParams)
-{
+any aNative_PS_SetItem(Handle plugin, int numParams) {
 	GetNativeString(2, g_esPlayer[GetNativeCell(1)].g_sCommand, sizeof esPlayer::g_sCommand);
 	return 0;
 }
 
-any aNative_PS_GetCost(Handle plugin, int numParams)
-{
+any aNative_PS_GetCost(Handle plugin, int numParams) {
 	return g_esPlayer[GetNativeCell(1)].g_iItemCost;
 }
 
-any aNative_PS_SetCost(Handle plugin, int numParams)
-{
+any aNative_PS_SetCost(Handle plugin, int numParams) {
 	g_esPlayer[GetNativeCell(1)].g_iItemCost = GetNativeCell(2);
 	return 0;
 }
 
-any aNative_PS_GetBought(Handle plugin, int numParams)
-{
+any aNative_PS_GetBought(Handle plugin, int numParams) {
 	SetNativeString(2, g_esPlayer[GetNativeCell(1)].g_sBought, sizeof esPlayer::g_sBought);
 	return 0;
 }
 
-any aNative_PS_SetBought(Handle plugin, int numParams)
-{
+any aNative_PS_SetBought(Handle plugin, int numParams) {
 	GetNativeString(2, g_esPlayer[GetNativeCell(1)].g_sBought, sizeof esPlayer::g_sBought);
 	return 0;
 }
 
-any aNative_PS_GetBoughtCost(Handle plugin, int numParams)
-{
+any aNative_PS_GetBoughtCost(Handle plugin, int numParams) {
 	return g_esPlayer[GetNativeCell(1)].g_iBoughtCost;
 }
 
-any aNative_PS_SetBoughtCost(Handle plugin, int numParams)
-{
+any aNative_PS_SetBoughtCost(Handle plugin, int numParams) {
 	g_esPlayer[GetNativeCell(1)].g_iBoughtCost = GetNativeCell(2);
 	return 0;
 }
 
-any aNative_PS_RegisterModule(Handle plugin, int numParams)
-{
+any aNative_PS_RegisterModule(Handle plugin, int numParams) {
 	char sNewModule[MODULES_SIZE];
 	GetNativeString(1, sNewModule, MODULES_SIZE);
-
-	if(sNewModule[0] == '\0')
+	if (sNewModule[0] == '\0')
 		return false;
 
-	if(g_aModules.FindString(sNewModule) != -1)
+	if (g_aModules.FindString(sNewModule) != -1)
 		return false;
 
 	g_aModules.PushString(sNewModule);
 	return true;
 }
 
-any aNative_PS_UnregisterModule(Handle plugin, int numParams)
-{
+any aNative_PS_UnregisterModule(Handle plugin, int numParams) {
 	char sUnloadModule[MODULES_SIZE];
 	GetNativeString(1, sUnloadModule, MODULES_SIZE);
-
-	if(sUnloadModule[0] == '\0')
+	if (sUnloadModule[0] == '\0')
 		return false;
 
 	int iModule = g_aModules.FindString(sUnloadModule);
-	if(iModule != -1)
-	{
+	if (iModule != -1) {
 		g_aModules.Erase(iModule);
 		return true;
 	}
 	return false;
 }
 
-bool g_bControlZombies;
 bool g_bWeaponHandling;
-native bool CZ_RespawnPZ(int client, int iZombieClass);
-native void CZ_SetSpawnablePZ(int client);
-native void CZ_ResetSpawnablePZ();
-native bool CZ_IsSpawnablePZSupported();
-
-public void OnLibraryAdded(const char[] name)
-{
-	if(strcmp(name, "control_zombies") == 0)
-		g_bControlZombies = true;
-	else if(strcmp(name, "WeaponHandling") == 0)
+native bool CZ_RespawnPZ(int client, int zombieClass);
+public void OnLibraryAdded(const char[] name) {
+	if (strcmp(name, "WeaponHandling") == 0)
 		g_bWeaponHandling = true;
 }
 
-public void OnLibraryRemoved(const char[] name)
-{
-	if(strcmp(name, "control_zombies") == 0)
-		g_bControlZombies = false;
-	else if(strcmp(name, "WeaponHandling") == 0)
+public void OnLibraryRemoved(const char[] name) {
+	if (strcmp(name, "WeaponHandling") == 0)
 		g_bWeaponHandling = false;
 }
 
-enum
-{
+enum {
 	cSettingAllow,
 	cSettingModes,
 	cSettingModesOff,
@@ -260,8 +219,7 @@ enum
 	cSettingMax
 }
 
-enum
-{
+enum {
 	cCategoryWeapon,
 	cCategoryHealth,
 	cCategoryUpgrade,
@@ -277,8 +235,7 @@ enum
 	cCategoryMax
 }
 
-enum
-{
+enum {
 	cRewardSKillSpree,
 	cRewardSHeadShots,
 	cRewardSKillI,
@@ -305,8 +262,7 @@ enum
 	cRewardMax
 }
 
-enum
-{
+enum {
 	cCostP220,
 	cCostMagnum,
 	cCostUZI,
@@ -378,14 +334,12 @@ enum
 	cCostMax
 }
 
-enum
-{
+enum {
 	iTankSpawned,
 	iWitchSpawned
 }
 
-enum struct esGeneral
-{
+enum struct esGeneral {
 	ConVar g_cGameMode;
 	ConVar g_cSettings[cSettingMax];
 	ConVar g_cCategories[cCategoryMax];
@@ -400,8 +354,7 @@ enum struct esGeneral
 esGeneral
 	g_esGeneral;
 
-enum struct esSpecial
-{
+enum struct esSpecial {
 	ConVar g_cLeechHealth[5];
 	ConVar g_cRealodSpeedUp[5];
 }
@@ -417,8 +370,7 @@ char
 	g_sMeleeClass[16][32];
 
 static const char
-	g_sMeleeModels[][] =
-	{
+	g_sMeleeModels[][] = {
 		"models/weapons/melee/v_fireaxe.mdl",
 		"models/weapons/melee/w_fireaxe.mdl",
 		"models/weapons/melee/v_frying_pan.mdl",
@@ -448,8 +400,7 @@ static const char
 		"models/weapons/melee/v_riotshield.mdl",
 		"models/weapons/melee/w_riotshield.mdl"
 	},
-	g_sMeleeName[][] =
-	{
+	g_sMeleeName[][] = {
 		"fireaxe",			//斧头
 		"frying_pan",		//平底锅
 		"machete",			//砍刀
@@ -465,8 +416,7 @@ static const char
 		"pitchfork",		//草叉
 	};
 
-void vInitSettings()
-{
+void vInitSettings() {
 	CreateConVar("em_points_sys_version", PLUGIN_VERSION, "该服务器上的积分系统版本.", FCVAR_NOTIFY|FCVAR_DONTRECORD|FCVAR_REPLICATED);
 
 	g_esGeneral.g_cSettings[cSettingAllow] 				= CreateConVar("l4d2_points_allow", "1", "0=Plugin off, 1=Plugin on.");
@@ -483,15 +433,14 @@ void vInitSettings()
 	g_esGeneral.g_cSettings[cSettingSurvivorRequired]	= CreateConVar("l4d2_points_survivor_required", "0", "至少需要存在多少名真人生还者才允许购买到感染者团队");
 
 	g_esGeneral.g_cGameMode = FindConVar("mp_gamemode");
-	g_esGeneral.g_cGameMode.AddChangeHook(vAllowConVarChanged);
-	g_esGeneral.g_cSettings[cSettingAllow].AddChangeHook(vAllowConVarChanged);
-	g_esGeneral.g_cSettings[cSettingModes].AddChangeHook(vAllowConVarChanged);
-	g_esGeneral.g_cSettings[cSettingModesOff].AddChangeHook(vAllowConVarChanged);
-	g_esGeneral.g_cSettings[cSettingModesTog].AddChangeHook(vAllowConVarChanged);
+	g_esGeneral.g_cGameMode.AddChangeHook(vAllowCvarChanged);
+	g_esGeneral.g_cSettings[cSettingAllow].AddChangeHook(vAllowCvarChanged);
+	g_esGeneral.g_cSettings[cSettingModes].AddChangeHook(vAllowCvarChanged);
+	g_esGeneral.g_cSettings[cSettingModesOff].AddChangeHook(vAllowCvarChanged);
+	g_esGeneral.g_cSettings[cSettingModesTog].AddChangeHook(vAllowCvarChanged);
 }
 
-void vInitCategories()
-{
+void vInitCategories() {
 	g_esGeneral.g_cCategories[cCategoryWeapon] 		= CreateConVar("l4d2_points_cat_weapons", "1", "启用武器项目购买");
 	g_esGeneral.g_cCategories[cCategoryUpgrade] 	= CreateConVar("l4d2_points_cat_upgrades", "1", "启用升级项目购买");
 	g_esGeneral.g_cCategories[cCategoryHealth] 		= CreateConVar("l4d2_points_cat_health", "1", "启用生命项目购买");
@@ -506,8 +455,7 @@ void vInitCategories()
 	g_esGeneral.g_cCategories[cCategoryMisc] 		= CreateConVar("l4d2_points_cat_misc", "1", "启用杂项项目购买");
 }
 
-void vInitItemCosts()
-{
+void vInitItemCosts() {
 	g_esGeneral.g_cItemCosts[cCostP220]				= CreateConVar("l4d2_points_pistol", "5", "购买小手枪需要多少积分");
 	g_esGeneral.g_cItemCosts[cCostMagnum] 			= CreateConVar("l4d2_points_magnum", "10", "购买马格南手枪需要多少积分");
 	g_esGeneral.g_cItemCosts[cCostUZI] 				= CreateConVar("l4d2_points_smg", "10", "购买乌兹冲锋枪需要多少积分");
@@ -578,8 +526,7 @@ void vInitItemCosts()
 	g_esGeneral.g_cItemCosts[cCostTraitor] 			= CreateConVar("l4d2_points_traitor", "50", "购买一个感染者位置需要多少积分");
 }
 
-void vInitPointRewards()
-{
+void vInitPointRewards() {
 	g_esGeneral.g_cPointRewards[cRewardSKillSpree] 	= CreateConVar("l4d2_points_cikill_value", "3", "击杀一定数量的普通感染者可以获得多少积分");
 	g_esGeneral.g_cPointRewards[cRewardSHeadShots]	= CreateConVar("l4d2_points_headshots_value", "5", "爆头击杀一定数量的感染者可以获得多少积分");
 	g_esGeneral.g_cPointRewards[cRewardSKillI] 		= CreateConVar("l4d2_points_sikill", "1", "击杀一个特感可以获得多少积分");
@@ -605,8 +552,7 @@ void vInitPointRewards()
 	g_esGeneral.g_cPointRewards[cRewardIKillS] 		= CreateConVar("l4d2_points_kill", "5", "击杀一个生还者可以获得多少积分");
 }
 
-void vInitSpecialCosts()
-{
+void vInitSpecialCosts() {
 	g_esSpecial.g_cLeechHealth[0] 					= CreateConVar("l4d2_points_special_leech0", "10", "购买1生命汲取需要多少积分");
 	g_esSpecial.g_cLeechHealth[1] 					= CreateConVar("l4d2_points_special_leech1", "30", "购买2生命汲取需要多少积分");
 	g_esSpecial.g_cLeechHealth[2] 					= CreateConVar("l4d2_points_special_leech2", "70", "购买3生命汲取需要多少积分");
@@ -619,8 +565,7 @@ void vInitSpecialCosts()
 	g_esSpecial.g_cRealodSpeedUp[4] 				= CreateConVar("l4d2_points_special_reload4", "350", "购买3.5x加速装填需要多少积分");
 }
 
-void vCreateConVars()
-{
+void vCreateConVars() {
 	vInitSettings();
 	vInitCategories();
 	vInitItemCosts();
@@ -628,8 +573,7 @@ void vCreateConVars()
 	vInitSpecialCosts();
 }
 
-void vRegisterCommands()
-{
+void vRegisterCommands() {
 	RegAdminCmd("sm_heal", cmdHealPlayer, ADMFLAG_SLAY, "sm_heal <目标>给玩家XXX回血");
 	RegAdminCmd("sm_delold",	cmdDelOld,	ADMFLAG_ROOT, "sm_delold <天数> 删除超过多少天未上线的玩家记录");
 	RegAdminCmd("sm_listpoints", cmdListPoints, ADMFLAG_ROOT, "列出每个玩家的积分数量.");
@@ -644,12 +588,9 @@ void vRegisterCommands()
 	RegConsoleCmd("sm_repeatbuy", cmdRepeatBuy, "重复购买上一次购买的物品");
 }
 
-void vHookEvents(bool bToggle)
-{
-	switch(bToggle)
-	{
-		case true:
-		{
+void vHookEvents(bool bToggle) {
+	switch (bToggle) {
+		case true: {
 			HookEvent("round_end", Event_RoundEnd);
 			HookEvent("infected_death", Event_InfectedDeath);
 			HookEvent("player_incapacitated", Event_PlayerIncapacitated);
@@ -668,8 +609,8 @@ void vHookEvents(bool bToggle)
 			HookEvent("charger_impact", Event_ChargerImpact);
 			HookEvent("player_hurt", Event_PlayerHurt);
 		}
-		case false:
-		{
+
+		case false: {
 			UnhookEvent("round_end", Event_RoundEnd);
 			UnhookEvent("infected_death", Event_InfectedDeath);
 			UnhookEvent("player_incapacitated", Event_PlayerIncapacitated);
@@ -692,17 +633,15 @@ void vHookEvents(bool bToggle)
 	
 }
 
-void vLoadTranslations()
-{
+void vLoadTranslations() {
 	LoadTranslations("core.phrases");
 	LoadTranslations("common.phrases");
 	LoadTranslations("points_system.phrases");
 	LoadTranslations("points_system_menus.phrases");
 }
 
-public void OnPluginStart()
-{
-	g_aModules = new ArrayList(64);
+public void OnPluginStart() {
+	g_aModules = new ArrayList(ByteCountToCells(MODULES_SIZE));
 	g_hForwardOnPSLoaded = new GlobalForward("OnPSLoaded", ET_Ignore);
 	g_hForwardOnPSUnloaded = new GlobalForward("OnPSUnloaded", ET_Ignore);
 
@@ -712,38 +651,32 @@ public void OnPluginStart()
 	vRegisterCommands();
 	vInitSpecialValue();
 
-	if(g_dbSQL == null)
+	if (!g_dbSQL)
 		vIniSQLite();
 
-	if(g_bLateLoad)
+	if (g_bLateLoad)
 		vSQL_LoadAll();
 }
 
-void vSQL_LoadAll()
-{
-	for(int i = 1; i <= MaxClients; i++)
-	{
-		if(IsClientInGame(i) && !IsFakeClient(i))
-		{
+void vSQL_LoadAll() {
+	for (int i = 1; i <= MaxClients; i++) {
+		if (IsClientInGame(i) && !IsFakeClient(i)) {
 			vSetPlayerStartPoints(i);
 			vSQL_Load(i);
 		}
 	}
 }
 
-void vMultiTargetFilters(bool bToggle)
-{
-	switch(bToggle)
-	{
-		case true:
-		{
+void vMultiTargetFilters(bool bToggle) {
+	switch (bToggle) {
+		case true: {
 			AddMultiTargetFilter("@s", bSurvivorFilter, "all Survivor", false);
 			AddMultiTargetFilter("@survivor", bSurvivorFilter, "all Survivor", false);
 			AddMultiTargetFilter("@i", bInfectedFilter, "all Infected", false);
 			AddMultiTargetFilter("@infected", bInfectedFilter, "all Infected", false);
 		}
-		case false:
-		{
+
+		case false: {
 			RemoveMultiTargetFilter("@s", bSurvivorFilter);
 			RemoveMultiTargetFilter("@survivor", bSurvivorFilter);
 			RemoveMultiTargetFilter("@i", bInfectedFilter);
@@ -752,50 +685,41 @@ void vMultiTargetFilters(bool bToggle)
 	}
 }
 
-bool bSurvivorFilter(const char[] pattern, Handle clients)
-{
-	for(int i = 1; i <= MaxClients; i++)
-	{
-		if(IsClientInGame(i) && GetClientTeam(i) == 2)
+bool bSurvivorFilter(const char[] pattern, Handle clients) {
+	for (int i = 1; i <= MaxClients; i++) {
+		if (IsClientInGame(i) && GetClientTeam(i) == 2)
 			PushArrayCell(clients, i);
 	}
 	return true;
 }
 
-bool bInfectedFilter(const char[] pattern, Handle clients)
-{
-	for(int i = 1; i <= MaxClients; i++)
-	{
-		if(IsClientInGame(i) && GetClientTeam(i) == 3)
+bool bInfectedFilter(const char[] pattern, Handle clients) {
+	for (int i = 1; i <= MaxClients; i++) {
+		if (IsClientInGame(i) && GetClientTeam(i) == 3)
 			PushArrayCell(clients, i);
 	}
 	return true;
 }
 
-public void OnConfigsExecuted()
-{
+public void OnConfigsExecuted() {
 	vIsAllowed();
 }
 
-void vAllowConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
-{
+void vAllowCvarChanged(ConVar convar, const char[] oldValue, const char[] newValue) {
 	vIsAllowed();
 }
 
-void vIsAllowed()
-{
+void vIsAllowed() {
 	bool bAllow = g_esGeneral.g_cSettings[cSettingAllow].BoolValue;
 	bool bAllowMode = bIsAllowedGameMode();
 
-	if(g_bSettingAllow == false && bAllow == true && bAllowMode == true)
-	{
+	if (g_bSettingAllow == false && bAllow == true && bAllowMode == true) {
 		g_bSettingAllow = true;
 
 		vMultiTargetFilters(true);
 		vHookEvents(true);
 	}
-	else if(g_bSettingAllow == true && (bAllow == false || bAllowMode == false))
-	{
+	else if (g_bSettingAllow == true && (bAllow == false || bAllowMode == false)) {
 		g_bSettingAllow = false;
 
 		vMultiTargetFilters(false);
@@ -804,22 +728,19 @@ void vIsAllowed()
 }
 
 int g_iCurrentMode;
-bool bIsAllowedGameMode()
-{
-	if(g_esGeneral.g_cGameMode == null)
+bool bIsAllowedGameMode() {
+	if (!g_esGeneral.g_cGameMode)
 		return false;
 
 	int iModesTog = g_esGeneral.g_cSettings[cSettingModesTog].IntValue;
-	if(iModesTog != 0)
-	{
-		if(g_bMapStarted == false)
+	if (iModesTog != 0) {
+		if (g_bMapStarted == false)
 			return false;
 
 		g_iCurrentMode = 0;
 
 		int entity = CreateEntityByName("info_gamemode");
-		if(IsValidEntity(entity))
-		{
+		if (IsValidEntity(entity)) {
 			DispatchSpawn(entity);
 			HookSingleEntityOutput(entity, "OnCoop", vOnGamemode, true);
 			HookSingleEntityOutput(entity, "OnSurvival", vOnGamemode, true);
@@ -827,14 +748,14 @@ bool bIsAllowedGameMode()
 			HookSingleEntityOutput(entity, "OnScavenge", vOnGamemode, true);
 			ActivateEntity(entity);
 			AcceptEntityInput(entity, "PostSpawnActivate");
-			if(IsValidEntity(entity)) // Because sometimes "PostSpawnActivate" seems to kill the ent.
+			if (IsValidEntity(entity)) // Because sometimes "PostSpawnActivate" seems to kill the ent.
 				RemoveEdict(entity);// Because multiple plugins creating at once, avoid too many duplicate ents in the same frame
 		}
 
-		if(g_iCurrentMode == 0)
+		if (g_iCurrentMode == 0)
 			return false;
 
-		if(!(iModesTog & g_iCurrentMode))
+		if (!(iModesTog & g_iCurrentMode))
 			return false;
 	}
 
@@ -843,62 +764,55 @@ bool bIsAllowedGameMode()
 	Format(sGameMode, sizeof sGameMode, ",%s,", sGameMode);
 
 	g_esGeneral.g_cSettings[cSettingModes].GetString(sGameModes, sizeof sGameModes);
-	if(sGameModes[0])
-	{
+	if (sGameModes[0]) {
 		Format(sGameModes, sizeof sGameModes, ",%s,", sGameModes);
-		if(StrContains(sGameModes, sGameMode, false) == -1)
+		if (StrContains(sGameModes, sGameMode, false) == -1)
 			return false;
 	}
 
 	g_esGeneral.g_cSettings[cSettingModesOff].GetString(sGameModes, sizeof sGameModes);
-	if(sGameModes[0])
-	{
+	if (sGameModes[0]) {
 		Format(sGameModes, sizeof sGameModes, ",%s,", sGameModes);
-		if(StrContains(sGameModes, sGameMode, false) != -1)
+		if (StrContains(sGameModes, sGameMode, false) != -1)
 			return false;
 	}
 
 	return true;
 }
 
-void vOnGamemode(const char[] output, int caller, int activator, float delay)
-{
-	if(strcmp(output, "OnCoop") == 0)
+void vOnGamemode(const char[] output, int caller, int activator, float delay) {
+	if (strcmp(output, "OnCoop") == 0)
 		g_iCurrentMode = 1;
-	else if(strcmp(output, "OnSurvival") == 0)
+	else if (strcmp(output, "OnSurvival") == 0)
 		g_iCurrentMode = 2;
-	else if(strcmp(output, "OnVersus") == 0)
+	else if (strcmp(output, "OnVersus") == 0)
 		g_iCurrentMode = 4;
-	else if(strcmp(output, "OnScavenge") == 0)
+	else if (strcmp(output, "OnScavenge") == 0)
 		g_iCurrentMode = 8;
 }
 
-void vIniSQLite()
-{	
-	char Error[1024];
-	if((g_dbSQL = SQLite_UseDatabase("PointsSystem", Error, sizeof Error)) == null)
-		SetFailState("Could not connect to the database \"PointsSystem\" at the following error:\n%s", Error);
+void vIniSQLite() {	
+	char sError[1024];
+	if (!(g_dbSQL = SQLite_UseDatabase("PointsSystem", sError, sizeof sError)))
+		SetFailState("Could not connect to the database \"PointsSystem\" at the following error:\n%s", sError);
 
 	SQL_FastQuery(g_dbSQL, "CREATE TABLE IF NOT EXISTS PS_Core(SteamID NVARCHAR(32) NOT NULL DEFAULT '', Points INT NOT NULL DEFAULT 0, UnixTime INT NOT NULL DEFAULT 0);");
 }
 
-Action cmdHealPlayer(int client, int args)
-{
-	if(args == 0)
-	{
+Action cmdHealPlayer(int client, int args) {
+	if (args == 0) {
 		vCheatCommandEx(client, "give", "health");
 		SetEntPropFloat(client, Prop_Send, "m_healthBuffer", 0.0);
 		return Plugin_Handled;
 	}
 
-	if(args == 1)
-	{
+	if (args == 1) {
 		char arg[65];
 		GetCmdArg(1, arg, sizeof arg);
 		char target_name[MAX_TARGET_LENGTH];
 		int target_list[MAXPLAYERS], target_count;
 		bool tn_is_ml;
-		if((target_count = ProcessTargetString(
+		if ((target_count = ProcessTargetString(
 				arg,
 				client,
 				target_list,
@@ -911,12 +825,10 @@ Action cmdHealPlayer(int client, int args)
 			ReplyToTargetError(client, target_count);
 			return Plugin_Handled;
 		}
-		else
-		{
+		else {
 			//ShowActivity2(client, MSGTAG, " %t", "Give Health", target_name);
 
-			for (int i = 0; i < target_count; i++)
-			{
+			for (int i = 0; i < target_count; i++) {
 				int targetclient = target_list[i];
 				vCheatCommandEx(targetclient, "give", "health");
 				SetEntPropFloat(targetclient, Prop_Send, "m_healthBuffer", 0.0);
@@ -924,25 +836,20 @@ Action cmdHealPlayer(int client, int args)
 			return Plugin_Handled;
 		}
 	}
-	else
-	{
+	else {
 		ReplyToCommand(client, "%s%T", MSGTAG, "Usage sm_heal", client);
 		return Plugin_Handled;
 	}
 }
 
-Action cmdDelOld(int client, int args)
-{
-	if(args < 1)
-	{
+Action cmdDelOld(int client, int args) {
+	if (args < 1) {
 		ReplyToCommand(client, "sm_delold <days>");
 		return Plugin_Handled;
 	}
 	
-	if(args == 1)
-	{
-		if(g_dbSQL == null)
-		{
+	if (args == 1) {
+		if (!g_dbSQL) {
 			ReplyToCommand(client, "无效的数据库句柄");
 			return Plugin_Handled;
 		}
@@ -960,10 +867,8 @@ Action cmdDelOld(int client, int args)
 	return Plugin_Handled;
 }
 
-void vSQL_CallbackDelOld(Database db, DBResultSet results, const char[] error, any data)
-{
-	if(db == null || results == null)
-	{
+void vSQL_CallbackDelOld(Database db, DBResultSet results, const char[] error, any data) {
+	if (!db || !results) {
 		LogError(error);
 		return;
 	}
@@ -971,23 +876,18 @@ void vSQL_CallbackDelOld(Database db, DBResultSet results, const char[] error, a
 	ReplyToCommand(GetClientOfUserId(data), "总计删除玩家记录: %d 条", results.AffectedRows);
 }
 
-Action cmdListPoints(int client, int args)
-{
-	if(args == 0)
-	{
-		for(int i = 1; i <= MaxClients; i++)
-		{
-			if(IsClientInGame(i) && !IsFakeClient(i)) 
+Action cmdListPoints(int client, int args) {
+	if (args == 0) {
+		for (int i = 1; i <= MaxClients; i++) {
+			if (IsClientInGame(i) && !IsFakeClient(i)) 
 				ReplyToCommand(client, "%s %N: %d", MSGTAG, i, g_esPlayer[i].g_iPlayerPoints);
 		}
 	}
 	return Plugin_Handled;
 }
 
-Action cmdSetPoints(int client, int args)
-{
-	if(args == 2)
-	{
+Action cmdSetPoints(int client, int args) {
+	if (args == 2) {
 		char arg[MAX_NAME_LENGTH], arg2[32];
 		GetCmdArg(1, arg, sizeof arg);
 		GetCmdArg(2, arg2, sizeof arg2);
@@ -995,7 +895,7 @@ Action cmdSetPoints(int client, int args)
 		int target_list[MAXPLAYERS], target_count;
 		bool tn_is_ml;
 		int targetclient, amount = StringToInt(arg2);
-		if((target_count = ProcessTargetString(
+		if ((target_count = ProcessTargetString(
 				arg,
 				client,
 				target_list,
@@ -1009,8 +909,7 @@ Action cmdSetPoints(int client, int args)
 			return Plugin_Handled;
 		}
 		//ShowActivity2(client, MSGTAG, "%t", "Set Points", target_name, amount);
-		for (int i; i < target_count; i++)
-		{
+		for (int i; i < target_count; i++) {
 			targetclient = target_list[i];
 			g_esPlayer[targetclient].g_iPlayerPoints = amount;
 			vSQL_Save(targetclient);
@@ -1024,10 +923,8 @@ Action cmdSetPoints(int client, int args)
 	return Plugin_Handled;
 }
 
-Action cmdGivePoints(int client, int args)
-{
-	if(args == 2)
-	{
+Action cmdGivePoints(int client, int args) {
+	if (args == 2) {
 		char arg[MAX_NAME_LENGTH], arg2[32];
 		GetCmdArg(1, arg, sizeof arg);
 		GetCmdArg(2, arg2, sizeof arg2);
@@ -1035,7 +932,7 @@ Action cmdGivePoints(int client, int args)
 		int target_list[MAXPLAYERS], target_count;
 		bool tn_is_ml;
 		int targetclient, amount = StringToInt(arg2);
-		if((target_count = ProcessTargetString(
+		if ((target_count = ProcessTargetString(
 				arg,
 				client,
 				target_list,
@@ -1049,8 +946,7 @@ Action cmdGivePoints(int client, int args)
 			return Plugin_Handled;
 		}
 	
-		for (int i; i < target_count; i++)
-		{
+		for (int i; i < target_count; i++) {
 			targetclient = target_list[i];
 			g_esPlayer[targetclient].g_iPlayerPoints += amount;
 			vSQL_Save(targetclient);
@@ -1064,15 +960,12 @@ Action cmdGivePoints(int client, int args)
 	return Plugin_Handled;
 }
 
-Action cmdListModules(int client, int args)
-{
-	if(args == 0)
-	{
+Action cmdListModules(int client, int args) {
+	if (args == 0) {
 		ReplyToCommand(client, "%s %T", MSGTAG, "Modules", client);
 
 		int iLength = g_aModules.Length;
-		for(int i; i < iLength; i++)
-		{
+		for (int i; i < iLength; i++) {
 			char sModule[MODULES_SIZE];
 			g_aModules.GetString(i, sModule, MODULES_SIZE);
 			ReplyToCommand(client, "%d %s", i, sModule);
@@ -1081,39 +974,34 @@ Action cmdListModules(int client, int args)
 	return Plugin_Handled;
 }
 
-Action cmdShowPoints(int client, int args)
-{
-	if(args != 0 || !bIsModEnabled() || !bIsClientPlaying(client))
+Action cmdShowPoints(int client, int args) {
+	if (args || !bIsModEnabled() || !bIsClientPlaying(client))
 		return Plugin_Handled;
 	
 	ReplyToCommand(client, "%s %T", MSGTAG, "Your Points", client, g_esPlayer[client].g_iPlayerPoints);
 	return Plugin_Handled;
 }
 
-Action cmdBuyMenu(int client, int args)
-{
-	if(args != 0 || !bIsModEnabled() || !bIsClientPlaying(client))
+Action cmdBuyMenu(int client, int args) {
+	if (args || !bIsModEnabled() || !bIsClientPlaying(client))
 		return Plugin_Handled;
 
 	vBuildBuyMenu(client);
 	return Plugin_Handled;
 }
 
-Action cmdRepeatBuy(int client, int args)
-{
-	if(args != 0 || !bIsClientPlaying(client) || !bCheckPurchase(client, g_esPlayer[client].g_iItemCost))
+Action cmdRepeatBuy(int client, int args) {
+	if (args || !bIsClientPlaying(client) || !bCheckPurchase(client, g_esPlayer[client].g_iItemCost))
 		return Plugin_Handled;
 
-	if(strcmp(g_esPlayer[client].g_sCommand, "suicide") == 0)
-	{
-		if(bPerformSuicide(client))
+	if (strcmp(g_esPlayer[client].g_sCommand, "suicide") == 0) {
+		if (bPerformSuicide(client))
 			vRemovePoints(client, g_esPlayer[client].g_iItemCost);
 
 		return Plugin_Handled;
 	}
-	else
-	{
-		if(strcmp(g_esPlayer[client].g_sCommand, "give ammo") == 0)
+	else {
+		if (strcmp(g_esPlayer[client].g_sCommand, "give ammo") == 0)
 			vReloadAmmo(client, g_esPlayer[client].g_iItemCost, g_esPlayer[client].g_sCommand);
 		else
 		{
@@ -1124,66 +1012,53 @@ Action cmdRepeatBuy(int client, int args)
 	return Plugin_Handled;
 }
 
-bool bIsModEnabled()
-{
+bool bIsModEnabled() {
 	return g_bSettingAllow;
 }
 
-bool bIsClientPlaying(int client)
-{
+bool bIsClientPlaying(int client) {
 	return client > 0 && IsClientInGame(client) && GetClientTeam(client) > 1;
 }
 
-bool bIsRealClient(int client)
-{
+bool bIsRealClient(int client) {
 	return IsClientInGame(client) && !IsFakeClient(client);
 }
 
-bool bIsSurvivor(int client)
-{
+bool bIsSur(int client) {
 	return GetClientTeam(client) == 2;
 }
 
-bool bIsInfected(int client)
-{
+bool bIsInf(int client) {
 	return GetClientTeam(client) == 3;
 }
 
-bool bIsTank(int client)
-{
+bool bIsTank(int client) {
 	return GetEntProp(client, Prop_Send, "m_zombieClass") == 8;
 }
 
-void vSetPlayerStartPoints(int client)
-{
+void vSetPlayerStartPoints(int client) {
 	g_esPlayer[client].g_iPlayerPoints = g_esGeneral.g_cSettings[cSettingStartPoints].IntValue;
 }
 
-void vAddPoints(int client, int iPoints, const char[] sMessage)
-{
-	if(client > 0 && IsClientInGame(client) && !IsFakeClient(client))
-	{
+void vAddPoints(int client, int iPoints, const char[] sMessage) {
+	if (client > 0 && IsClientInGame(client) && !IsFakeClient(client)) {
 		g_esPlayer[client].g_iPlayerPoints += iPoints;
-		if(g_esGeneral.g_cSettings[cSettingNotifications].BoolValue)
+		if (g_esGeneral.g_cSettings[cSettingNotifications].BoolValue)
 			PrintToChat(client, "%s %T", MSGTAG, sMessage, client, iPoints);
 	}
 }
 
-void vRemovePoints(int client, int iPoints)
-{
+void vRemovePoints(int client, int iPoints) {
 	g_esPlayer[client].g_iPlayerPoints -= iPoints;
 }
 
-public void OnMapEnd()
-{
+public void OnMapEnd() {
 	g_bMapStarted = false;
-
 	g_esGeneral.g_iCounter[iTankSpawned] = 0;
 	g_esGeneral.g_iCounter[iWitchSpawned] = 0;
 }
 
-public void OnMapStart()
-{
+public void OnMapStart() {
 	g_bMapStarted = true;
 
 	GetCurrentMap(g_esGeneral.g_sCurrentMap, sizeof esGeneral::g_sCurrentMap);
@@ -1195,36 +1070,32 @@ public void OnMapStart()
 
 	int i;
 	int iLength = sizeof g_sMeleeModels;
-	for(; i < iLength; i++)
-	{
-		if(!IsModelPrecached(g_sMeleeModels[i]))
+	for (; i < iLength; i++) {
+		if (!IsModelPrecached(g_sMeleeModels[i]))
 			PrecacheModel(g_sMeleeModels[i], true);
 	}
 
 	iLength = sizeof g_sMeleeName;
 	char sBuffer[64];
-	for(i = 0; i < iLength; i++)
-	{
+	for (i = 0; i < iLength; i++) {
 		FormatEx(sBuffer, sizeof sBuffer, "scripts/melee/%s.txt", g_sMeleeName[i]);
-		if(!IsGenericPrecached(sBuffer))
+		if (!IsGenericPrecached(sBuffer))
 			PrecacheGeneric(sBuffer, true);
 	}
 
 	vGetMeleeClasses();
 }
 
-void vGetMeleeClasses()
-{
+void vGetMeleeClasses() {
 	int iMeleeStringTable = FindStringTable("MeleeWeapons");
 	g_iMeleeClassCount = GetStringTableNumStrings(iMeleeStringTable);
 
-	for(int i; i < g_iMeleeClassCount; i++)
+	for (int i; i < g_iMeleeClassCount; i++)
 		ReadStringTable(iMeleeStringTable, i, g_sMeleeClass[i], sizeof g_sMeleeClass[]);
 }
 
-public void OnClientPostAdminCheck(int client)
-{
-	if(IsFakeClient(client))
+public void OnClientPostAdminCheck(int client) {
+	if (IsFakeClient(client))
 		return;
 
 	vResetClientData(client);
@@ -1232,32 +1103,28 @@ public void OnClientPostAdminCheck(int client)
 	vSQL_Load(client);
 }
 
-public void OnClientDisconnect(int client)
-{
-	if(!IsFakeClient(client))
+public void OnClientDisconnect(int client) {
+	if (!IsFakeClient(client))
 		vSQL_Save(client);
 }
 
-public void OnClientDisconnect_Post(int client)
-{
+public void OnClientDisconnect_Post(int client) {
 	vResetClientData(client);
 	vSetPlayerStartPoints(client);
 }
 
-bool bCacheSteamID(int client)
-{
-	if(g_esPlayer[client].g_sSteamID[0] != '\0')
+bool bCacheSteamID(int client) {
+	if (g_esPlayer[client].g_sSteamID[0] != '\0')
 		return true;
 
-	if(GetClientAuthId(client, AuthId_Steam2, g_esPlayer[client].g_sSteamID, sizeof esPlayer::g_sSteamID))
+	if (GetClientAuthId(client, AuthId_Steam2, g_esPlayer[client].g_sSteamID, sizeof esPlayer::g_sSteamID))
 		return true;
 
 	g_esPlayer[client].g_sSteamID[0] = '\0';
 	return false;
 }
 
-void vResetClientData(int client)
-{
+void vResetClientData(int client) {
 	g_esPlayer[client].g_sSteamID[0] = '\0';
 	g_esPlayer[client].g_iKillCount = 0;
 	g_esPlayer[client].g_iHurtCount = 0;
@@ -1268,15 +1135,14 @@ void vResetClientData(int client)
 	g_esPlayer[client].g_bDataLoaded = false;
 }
 
-void vSQL_Save(int client)
-{
-	if(!g_esPlayer[client].g_bDataLoaded)
+void vSQL_Save(int client) {
+	if (!g_dbSQL)
 		return;
 
-	if(g_dbSQL == null)
+	if (!g_esPlayer[client].g_bDataLoaded)
 		return;
 
-	if(!bCacheSteamID(client))
+	if (!bCacheSteamID(client))
 		return;
 
 	char sQuery[1024];
@@ -1284,12 +1150,11 @@ void vSQL_Save(int client)
 	SQL_FastQuery(g_dbSQL, sQuery);
 }
 
-void vSQL_Load(int client)
-{
-	if(g_dbSQL == null)
+void vSQL_Load(int client) {
+	if (!g_dbSQL)
 		return;
 
-	if(!bCacheSteamID(client))
+	if (!bCacheSteamID(client))
 		return;
 
 	char sQuery[1024];
@@ -1297,22 +1162,19 @@ void vSQL_Load(int client)
 	g_dbSQL.Query(vSQL_CallbackLoad, sQuery, GetClientUserId(client));
 }
 
-void vSQL_CallbackLoad(Database db, DBResultSet results, const char[] error, any data)
-{
-	if(db == null || results == null)
-	{
+void vSQL_CallbackLoad(Database db, DBResultSet results, const char[] error, any data) {
+	if (!db || !results) {
 		LogError(error);
 		return;
 	}
 
 	int client;
-	if((client = GetClientOfUserId(data)) == 0)
+	if (!(client = GetClientOfUserId(data)))
 		return;
 
-	if(results.FetchRow())
+	if (results.FetchRow())
 		g_esPlayer[client].g_iPlayerPoints = results.FetchInt(1);
-	else
-	{
+	else {
 		char sQuery[1024];
 		FormatEx(sQuery, sizeof sQuery, "INSERT INTO PS_Core(SteamID, Points, UnixTime) VALUES ('%s', %d, %d);", g_esPlayer[client].g_sSteamID, g_esPlayer[client].g_iPlayerPoints, GetTime());
 		SQL_FastQuery(g_dbSQL, sQuery);
@@ -1321,201 +1183,171 @@ void vSQL_CallbackLoad(Database db, DBResultSet results, const char[] error, any
 	g_esPlayer[client].g_bDataLoaded = true;
 }
 
-void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
-{
+void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast) {
 	g_esGeneral.g_iCounter[iTankSpawned] = 0;
 	g_esGeneral.g_iCounter[iWitchSpawned] = 0;
 }
 
-void Event_InfectedDeath(Event event, const char[] name, bool dontBroadcast)
-{
+void Event_InfectedDeath(Event event, const char[] name, bool dontBroadcast) {
 	int attacker = GetClientOfUserId(event.GetInt("attacker"));
-	if(attacker == 0 || !bIsRealClient(attacker) || !bIsSurvivor(attacker))
+	if (!attacker || !bIsRealClient(attacker) || !bIsSur(attacker))
 		return;
 
-	if(event.GetBool("headshot"))
+	if (event.GetBool("headshot"))
 		vEventHeadShots(attacker);
 
 	int iReward = g_esGeneral.g_cPointRewards[cRewardSKillSpree].IntValue;
-	if(iReward > 0)
-	{
+	if (iReward > 0) {
 		g_esPlayer[attacker].g_iKillCount++;
 
 		int iRequired = g_esGeneral.g_cSettings[cSettingKillSpreeNum].IntValue;
-		if(g_esPlayer[attacker].g_iKillCount >= iRequired)
-		{
+		if (g_esPlayer[attacker].g_iKillCount >= iRequired) {
 			vAddPoints(attacker, iReward, "Killing Spree");
 			g_esPlayer[attacker].g_iKillCount -= iRequired;
 		}
 	}
 }
 
-void Event_PlayerIncapacitated(Event event, const char[] name, bool dontBroadcast)
-{
+void Event_PlayerIncapacitated(Event event, const char[] name, bool dontBroadcast) {
 	int attacker = GetClientOfUserId(event.GetInt("attacker"));
-	if(attacker == 0 || !bIsRealClient(attacker) || !bIsInfected(attacker))
+	if (!attacker || !bIsRealClient(attacker) || !bIsInf(attacker))
 		return;
 
 	int iIncapPoints = g_esGeneral.g_cPointRewards[cRewardIIncapS].IntValue;
-	if(iIncapPoints > 0)
+	if (iIncapPoints > 0)
 		vAddPoints(attacker, iIncapPoints, "Incapped Survivor");
 }
 
-void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast)
-{
+void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast) {
 	int attacker = GetClientOfUserId(event.GetInt("attacker"));
-	if(attacker == 0 || !bIsRealClient(attacker))
+	if (!attacker || !bIsRealClient(attacker))
 		return;
 
 	int client =GetClientOfUserId(event.GetInt("userid"));
-	switch(GetClientTeam(attacker))
-	{
-		case 2:
-		{
-			if(client && bIsInfected(client) && !bIsTank(client))
-			{
-				if(g_esPlayer[attacker].g_iLeechHealth && !GetEntProp(attacker, Prop_Send, "m_isIncapacitated"))
+	switch (GetClientTeam(attacker)) {
+		case 2: {
+			if (client && bIsInf(client) && !bIsTank(client)) {
+				if (g_esPlayer[attacker].g_iLeechHealth && !GetEntProp(attacker, Prop_Send, "m_isIncapacitated"))
 					SetEntityHealth(attacker, GetClientHealth(attacker) + g_esPlayer[attacker].g_iLeechHealth); 
 
-				if(event.GetBool("headshot"))
+				if (event.GetBool("headshot"))
 					vEventHeadShots(attacker);
 			
 				int iReward = g_esGeneral.g_cPointRewards[cRewardSKillI].IntValue;
-				if(iReward > 0)
+				if (iReward > 0)
 					vAddPoints(attacker, iReward, "Killed SI");
 			}
 		}
 
-		case 3:
-		{
-			if(client && bIsSurvivor(client)) // If the person killed by the infected is a survivor
-			{
+		case 3: {
+			if (client && bIsSur(client)) {// If the person killed by the infected is a survivor
 				int iReward = g_esGeneral.g_cPointRewards[cRewardIKillS].IntValue;
-				if(iReward > 0)
+				if (iReward > 0)
 					vAddPoints(attacker, iReward, "Killed Survivor");
 			}
 		}
 	}
 }
 
-void vEventHeadShots(int client)
-{
+void vEventHeadShots(int client) {
 	int iReward = g_esGeneral.g_cPointRewards[cRewardSHeadShots].IntValue;
-	if(iReward > 0)
-	{
+	if (iReward > 0) {
 		g_esPlayer[client].g_iHeadShotCount++;
 
 		int iRequired = g_esGeneral.g_cSettings[cSettingHeadShotNum].IntValue;
-		if(g_esPlayer[client].g_iHeadShotCount >= iRequired)
-		{
+		if (g_esPlayer[client].g_iHeadShotCount >= iRequired) {
 			vAddPoints(client, iReward, "Head Hunter");
 			g_esPlayer[client].g_iHeadShotCount -= iRequired;
 		}
 	}
 }
 
-void Event_TankKilled(Event event, const char[] name, bool dontBroadcast)
-{
+void Event_TankKilled(Event event, const char[] name, bool dontBroadcast) {
 	int attacker = GetClientOfUserId(event.GetInt("attacker"));
-	if(attacker == 0 || !bIsRealClient(attacker) || !bIsSurvivor(attacker))
+	if (!attacker || !bIsRealClient(attacker) || !bIsSur(attacker))
 		return;
 
-	if(event.GetBool("solo"))
-	{
+	if (event.GetBool("solo")) {
 		int iReward = g_esGeneral.g_cPointRewards[cRewardSSoloTank].IntValue;
-		if(iReward > 0)
+		if (iReward > 0)
 			vAddPoints(attacker, iReward, "TANK SOLO");
 	}
-	else
-	{
+	else {
 		int iReward = g_esGeneral.g_cPointRewards[cRewardSKillTank].IntValue;
-		if(iReward > 0)
-		{
-			for(int i = 1; i <= MaxClients; i++)
-			{
-				if(bIsRealClient(i) && bIsSurvivor(i) && IsPlayerAlive(i))
+		if (iReward > 0) {
+			for (int i = 1; i <= MaxClients; i++) {
+				if (bIsRealClient(i) && bIsSur(i) && IsPlayerAlive(i))
 					vAddPoints(i, iReward, "Killed Tank");
 			}
 		}
 	}
 }
 
-void Event_WitchKilled(Event event, const char[] name, bool dontBroadcast)
-{
+void Event_WitchKilled(Event event, const char[] name, bool dontBroadcast) {
 	int client = GetClientOfUserId(event.GetInt("userid"));
-	if(client == 0 || !bIsRealClient(client) || !bIsSurvivor(client))
+	if (!client || !bIsRealClient(client) || !bIsSur(client))
 		return;
 
 	int iReward = g_esGeneral.g_cPointRewards[cRewardSKillWitch].IntValue;
-	if(iReward > 0)
+	if (iReward > 0)
 		vAddPoints(client, iReward, "Killed Witch");
 
-	if(event.GetBool("oneshot"))
-	{
+	if (event.GetBool("oneshot")) {
 		iReward = g_esGeneral.g_cPointRewards[cRewardSCrownWitch].IntValue;
-		if(iReward > 0)
+		if (iReward > 0)
 			vAddPoints(client, iReward, "Crowned Witch");
 	}
 }
 
-void Event_HealSuccess(Event event, const char[] name, bool dontBroadcast)
-{
+void Event_HealSuccess(Event event, const char[] name, bool dontBroadcast) {
 	int client = GetClientOfUserId(event.GetInt("userid"));
-	if(client == 0 || client == GetClientOfUserId(event.GetInt("subject")) || !bIsRealClient(client) || !bIsSurvivor(client))
+	if (!client || client == GetClientOfUserId(event.GetInt("subject")) || !bIsRealClient(client) || !bIsSur(client))
 		return;
 	
-	if(event.GetInt("health_restored") > 39)
-	{
+	if (event.GetInt("health_restored") > 39) {
 		int iReward = g_esGeneral.g_cPointRewards[cRewardSTeamHeal].IntValue;
-		if(iReward > 0)
+		if (iReward > 0)
 			vAddPoints(client, iReward, "Team Heal");
 	}
-	else
-	{
+	else {
 		int iReward = g_esGeneral.g_cPointRewards[cRewardSHealFarm].IntValue;
-		if(iReward > 0)
+		if (iReward > 0)
 			vAddPoints(client, iReward, "Team Heal Warning");
 	}
 }
 
-void Event_AwardEarned(Event event, const char[] name, bool dontBroadcast)
-{
-	if(event.GetInt("award") != 67)
+void Event_AwardEarned(Event event, const char[] name, bool dontBroadcast) {
+	if (event.GetInt("award") != 67)
 		return;
 
 	int client = GetClientOfUserId(event.GetInt("userid"));
-	if(client == 0 || !bIsRealClient(client) || !bIsSurvivor(client))
+	if (!client || !bIsRealClient(client) || !bIsSur(client))
 		return;
 
 	
 	int iReward = g_esGeneral.g_cPointRewards[cRewardSProtect].IntValue;
-	if(iReward > 0)
-	{
+	if (iReward > 0) {
 		g_esPlayer[client].g_iProtectCount++;
-		if(g_esPlayer[client].g_iProtectCount >= 6)
-		{
+		if (g_esPlayer[client].g_iProtectCount >= 6) {
 			vAddPoints(client, iReward, "Protect");
 			g_esPlayer[client].g_iProtectCount -= 6;
 		}
 	}
 }
 
-void Event_ReviveSuccess(Event event, const char[] name, bool dontBroadcast)
-{
+void Event_ReviveSuccess(Event event, const char[] name, bool dontBroadcast) {
 	int client = GetClientOfUserId(event.GetInt("userid"));
-	if(client == 0 || client == GetClientOfUserId(event.GetInt("subject")) || !bIsRealClient(client) || !bIsSurvivor(client))
+	if (!client || client == GetClientOfUserId(event.GetInt("subject")) || !bIsRealClient(client) || !bIsSur(client))
 		return;
 
-	if(event.GetBool("ledge_hang"))
-	{
+	if (event.GetBool("ledge_hang")) {
 		int iReward = g_esGeneral.g_cPointRewards[cRewardSTeamLedge].IntValue;
-		if(iReward > 0)
+		if (iReward > 0)
 			vAddPoints(client, iReward, "Ledge Revive");
 	}
-	else
-	{
+	else {
 		int iReward = g_esGeneral.g_cPointRewards[cRewardSTeamRevive].IntValue;
-		if(iReward > 0)
+		if (iReward > 0)
 			vAddPoints(client, iReward, "Revive");
 	}
 }
@@ -1523,127 +1355,111 @@ void Event_ReviveSuccess(Event event, const char[] name, bool dontBroadcast)
 void Event_DefibrillatorUsed(Event event, const char[] name, bool dontBroadcast)
 { // Defib
 	int client = GetClientOfUserId(event.GetInt("userid"));
-	if(client == 0 || !bIsRealClient(client) || !bIsSurvivor(client))
+	if (!client || !bIsRealClient(client) || !bIsSur(client))
 		return;
 	
 	int iReward = g_esGeneral.g_cPointRewards[cRewardSTeamDefib].IntValue;
-	if(iReward > 0)
+	if (iReward > 0)
 		vAddPoints(client, iReward, "Defib");
 }
 
-void Event_ChokeStart(Event event, const char[] name, bool dontBroadcast)
-{
+void Event_ChokeStart(Event event, const char[] name, bool dontBroadcast) {
 	int client = GetClientOfUserId(event.GetInt("userid"));
-	if(client == 0 || !bIsRealClient(client) || !bIsInfected(client))
+	if (!client || !bIsRealClient(client) || !bIsInf(client))
 		return;
 	
 	int iReward = g_esGeneral.g_cPointRewards[cRewardIChokeS].IntValue;
-	if(iReward > 0)
+	if (iReward > 0)
 		vAddPoints(client, iReward, "Smoke");
 }
 
-void Event_PlayerNowIt(Event event, const char[] name, bool dontBroadcast)
-{
+void Event_PlayerNowIt(Event event, const char[] name, bool dontBroadcast) {
 	int attacker = GetClientOfUserId(event.GetInt("attacker"));
-	if(attacker == 0 || !bIsRealClient(attacker))
+	if (!attacker || !bIsRealClient(attacker))
 		return;
 
-	switch(GetClientTeam(attacker))
-	{
-		case 2:
-		{
+	switch (GetClientTeam(attacker)) {
+		case 2: {
 			int client = GetClientOfUserId(event.GetInt("userid"));
-			if(client && bIsInfected(client) && bIsTank(client))
-			{
+			if (client && bIsInf(client) && bIsTank(client)) {
 				int iReward = g_esGeneral.g_cPointRewards[cRewardSBileTank].IntValue;
-				if(iReward > 0)
+				if (iReward > 0)
 					vAddPoints(attacker, iReward, "Biled");
 			}
 		}
 
-		case 3:
-		{
+		case 3: {
 			int iReward = g_esGeneral.g_cPointRewards[cRewardIVomitS].IntValue;
-			if(iReward > 0)
+			if (iReward > 0)
 				vAddPoints(attacker, iReward, "Boom");
 		}
 	}
 }
 
-void Event_LungePounce(Event event, const char[] name, bool dontBroadcast)
-{
+void Event_LungePounce(Event event, const char[] name, bool dontBroadcast) {
 	int client = GetClientOfUserId(event.GetInt("userid"));
-	if(client == 0 || !bIsRealClient(client) || !bIsInfected(client))
+	if (!client || !bIsRealClient(client) || !bIsInf(client))
 		return;
 
 	int iReward = g_esGeneral.g_cPointRewards[cRewardIPounceS].IntValue;
-	if(iReward > 0)
+	if (iReward > 0)
 		vAddPoints(client, iReward, "Pounce");
 }
 
-void Event_JockeyRide(Event event, const char[] name, bool dontBroadcast)
-{
+void Event_JockeyRide(Event event, const char[] name, bool dontBroadcast) {
 	int client = GetClientOfUserId(event.GetInt("userid"));
-	if(client == 0 || !bIsRealClient(client) || !bIsInfected(client))
+	if (!client || !bIsRealClient(client) || !bIsInf(client))
 		return;
 
 	int iReward = g_esGeneral.g_cPointRewards[cRewardIRideS].IntValue;
-	if(iReward > 0)
+	if (iReward > 0)
 		vAddPoints(client, iReward, "Jockey Ride");
 }
 
-void Event_ChargerCarryStart(Event event, const char[] name, bool dontBroadcast)
-{
+void Event_ChargerCarryStart(Event event, const char[] name, bool dontBroadcast) {
 	int client = GetClientOfUserId(event.GetInt("userid"));
-	if(client == 0 || !bIsRealClient(client) || !bIsInfected(client))
+	if (!client || !bIsRealClient(client) || !bIsInf(client))
 		return;
 	
 	int iReward = g_esGeneral.g_cPointRewards[cRewardIChargeS].IntValue;
-	if(iReward > 0)
+	if (iReward > 0)
 		vAddPoints(client, iReward, "Charge");
 }
 
-void Event_ChargerImpact(Event event, const char[] name, bool dontBroadcast)
-{
+void Event_ChargerImpact(Event event, const char[] name, bool dontBroadcast) {
 	int client = GetClientOfUserId(event.GetInt("userid"));
-	if(client == 0 || !bIsRealClient(client) || !bIsInfected(client))
+	if (!client || !bIsRealClient(client) || !bIsInf(client))
 		return;
 	
 	int iReward = g_esGeneral.g_cPointRewards[cRewardIImpactS].IntValue;
-	if(iReward > 0)
+	if (iReward > 0)
 		vAddPoints(client, iReward, "Charge Collateral");
 }
 
-void Event_PlayerHurt(Event event, const char[] name, bool dontBroadcast)
-{
+void Event_PlayerHurt(Event event, const char[] name, bool dontBroadcast) {
 	int attacker = GetClientOfUserId(event.GetInt("attacker"));
-	if(attacker == 0 || !bIsRealClient(attacker) || !bIsInfected(attacker))
+	if (!attacker || !bIsRealClient(attacker) || !bIsInf(attacker))
 		return;
 
 	int client = GetClientOfUserId(event.GetInt("userid"));
-	if(client == 0 || !bIsSurvivor(client))
+	if (!client || !bIsSur(client))
 		return;
 
 	g_esPlayer[attacker].g_iHurtCount++;
 	int iReward = g_esGeneral.g_cPointRewards[cRewardIHurtS].IntValue;
-	if(iReward > 0)
-	{
+	if (iReward > 0) {
 		int iDamageType = event.GetInt("type");
-		if(bIsFireDamage(iDamageType)) // If infected is dealing fire damage, ignore
+		if (bIsFireDamage(iDamageType)) // If infected is dealing fire damage, ignore
 			return;
 	
-		if(bIsSpitterDamage(iDamageType))
-		{
-			if(g_esPlayer[attacker].g_iHurtCount >= 8)
-			{
+		if (bIsSpitterDamage(iDamageType)) {
+			if (g_esPlayer[attacker].g_iHurtCount >= 8) {
 				vAddPoints(attacker, iReward, "Spit Damage");
 				g_esPlayer[attacker].g_iHurtCount -= 8;
 			}
 		}
-		else
-		{
-			if(g_esPlayer[attacker].g_iHurtCount >= 3)
-			{
+		else {
+			if (g_esPlayer[attacker].g_iHurtCount >= 3) {
 				vAddPoints(attacker, iReward, "Damage");
 				g_esPlayer[attacker].g_iHurtCount -= 3;
 			}
@@ -1651,226 +1467,184 @@ void Event_PlayerHurt(Event event, const char[] name, bool dontBroadcast)
 	}
 }
 
-bool bIsFireDamage(int iDamageType)
-{
+bool bIsFireDamage(int iDamageType) {
 	return iDamageType == 8 || iDamageType == 2056;
 }
 
-bool bIsSpitterDamage(int iDamageType)
-{
+bool bIsSpitterDamage(int iDamageType) {
    return iDamageType == 263168 || iDamageType == 265216;
 }
 
-bool bCheckPurchase(int client, int iCost)
-{
+bool bCheckPurchase(int client, int iCost) {
 	return bIsItemEnabled(client, iCost) && bHasEnoughPoints(client, iCost);
 }
 
-bool bIsItemEnabled(int client, int iCost)
-{
-	if(iCost >= 0)
+bool bIsItemEnabled(int client, int iCost) {
+	if (iCost >= 0)
 		return true;
 
 	ReplyToCommand(client, "%s %T", MSGTAG, "Item Disabled", client);
 	return false;
 }
 
-bool bHasEnoughPoints(int client, int iCost)
-{
-	if(g_esPlayer[client].g_iPlayerPoints >= iCost)
+bool bHasEnoughPoints(int client, int iCost) {
+	if (g_esPlayer[client].g_iPlayerPoints >= iCost)
 		return true;
 
 	ReplyToCommand(client, "%s %T", MSGTAG, "Insufficient Funds", client);
 	return false;
 }
 
-void vJoinInfected(int client, int iCost)
-{
-	if(bIsSurvivor(client))
-	{
+void vJoinInfected(int client, int iCost) {
+	if (bIsSur(client)) {
 		ChangeClientTeam(client, 3);
 		vRemovePoints(client, iCost);
 	}
 }
 
-bool bPerformSuicide(int client)
-{
-	if(bIsInfected(client) && IsPlayerAlive(client))
-	{
+bool bPerformSuicide(int client) {
+	if (bIsInf(client) && IsPlayerAlive(client)) {
 		ForcePlayerSuicide(client);
 		return true;
 	}
 	return false;
 }
 
-void vBuildBuyMenu(int client)
-{
-	switch(GetClientTeam(client))
-	{
-		case 2:
-		{
-			char sInfo[32];
+void vBuildBuyMenu(int client) {
+	switch (GetClientTeam(client)) {
+		case 2: {
+			char info[32];
 			Menu menu = new Menu(iSurvivorMenuHandler);
-			FormatEx(sInfo, sizeof sInfo, "%T", "Points Left", client, g_esPlayer[client].g_iPlayerPoints);
-			menu.SetTitle(sInfo);
+			FormatEx(info, sizeof info, "%T", "Points Left", client, g_esPlayer[client].g_iPlayerPoints);
+			menu.SetTitle(info);
 
-			if(g_esGeneral.g_cCategories[cCategoryWeapon].IntValue == 1)
-			{
-				FormatEx(sInfo, sizeof sInfo, "%T", "Weapons", client);
-				menu.AddItem("w", sInfo);
+			if (g_esGeneral.g_cCategories[cCategoryWeapon].IntValue == 1) {
+				FormatEx(info, sizeof info, "%T", "Weapons", client);
+				menu.AddItem("w", info);
 			}
-			if(g_esGeneral.g_cCategories[cCategoryUpgrade].IntValue == 1)
-			{
-				FormatEx(sInfo, sizeof sInfo, "%T", "Upgrades", client);
-				menu.AddItem("u", sInfo);
+			if (g_esGeneral.g_cCategories[cCategoryUpgrade].IntValue == 1) {
+				FormatEx(info, sizeof info, "%T", "Upgrades", client);
+				menu.AddItem("u", info);
 			}
-			if(g_esGeneral.g_cCategories[cCategoryHealth].IntValue == 1)
-			{
-				FormatEx(sInfo, sizeof sInfo, "%T", "Health", client);
-				menu.AddItem("h", sInfo);
+			if (g_esGeneral.g_cCategories[cCategoryHealth].IntValue == 1) {
+				FormatEx(info, sizeof info, "%T", "Health", client);
+				menu.AddItem("h", info);
 			}
-			if(g_esGeneral.g_cCategories[cCategoryTraitor].IntValue == 1)
-			{
-				FormatEx(sInfo, sizeof sInfo, "%T", "Traitor", client);
-				menu.AddItem("i", sInfo);
+			if (g_esGeneral.g_cCategories[cCategoryTraitor].IntValue == 1) {
+				FormatEx(info, sizeof info, "%T", "Traitor", client);
+				menu.AddItem("i", info);
 			}
-			if(g_esGeneral.g_cCategories[cCategorySpecial].IntValue == 1)
+			if (g_esGeneral.g_cCategories[cCategorySpecial].IntValue == 1)
 				menu.AddItem("s", "特殊");
 
 			menu.Display(client, MENU_TIME_FOREVER);
 		}
 
-		case 3:
-		{
-			char sInfo[32];
+		case 3: {
+			char info[32];
 			Menu menu = new Menu(iInfectedMenuHandler);
-			FormatEx(sInfo, sizeof sInfo, "%T", "Points Left", client, g_esPlayer[client].g_iPlayerPoints);
-			menu.SetTitle(sInfo);
-			if(g_esGeneral.g_cItemCosts[cCostPZHeal].IntValue > -1)
-			{
-				FormatEx(sInfo, sizeof sInfo, "%T", "Heal", client);
-				menu.AddItem("heal", sInfo);
+			FormatEx(info, sizeof info, "%T", "Points Left", client, g_esPlayer[client].g_iPlayerPoints);
+			menu.SetTitle(info);
+			if (g_esGeneral.g_cItemCosts[cCostPZHeal].IntValue > -1) {
+				FormatEx(info, sizeof info, "%T", "Heal", client);
+				menu.AddItem("heal", info);
 			}
-			if(g_esGeneral.g_cItemCosts[cCostSuicide].IntValue > -1)
-			{
-				FormatEx(sInfo, sizeof sInfo, "%T", "Suicide", client);
-				menu.AddItem("suicide", sInfo);
+			if (g_esGeneral.g_cItemCosts[cCostSuicide].IntValue > -1) {
+				FormatEx(info, sizeof info, "%T", "Suicide", client);
+				menu.AddItem("suicide", info);
 			}
-			if(g_esGeneral.g_cItemCosts[cCostSmoker].IntValue > -1)
-			{
-				FormatEx(sInfo, sizeof sInfo, "%T", "Smoker", client);
-				menu.AddItem("smoker", sInfo);
+			if (g_esGeneral.g_cItemCosts[cCostSmoker].IntValue > -1) {
+				FormatEx(info, sizeof info, "%T", "Smoker", client);
+				menu.AddItem("smoker", info);
 			}
-			if(g_esGeneral.g_cItemCosts[cCostBoomer].IntValue > -1)
-			{
-				FormatEx(sInfo, sizeof sInfo, "%T", "Boomer", client);
-				menu.AddItem("boomer", sInfo);
+			if (g_esGeneral.g_cItemCosts[cCostBoomer].IntValue > -1) {
+				FormatEx(info, sizeof info, "%T", "Boomer", client);
+				menu.AddItem("boomer", info);
 			}
-			if(g_esGeneral.g_cItemCosts[cCostHunter].IntValue > -1)
-			{
-				FormatEx(sInfo, sizeof sInfo, "%T", "Hunter", client);
-				menu.AddItem("hunter", sInfo);
+			if (g_esGeneral.g_cItemCosts[cCostHunter].IntValue > -1) {
+				FormatEx(info, sizeof info, "%T", "Hunter", client);
+				menu.AddItem("hunter", info);
 			}
-			if(g_esGeneral.g_cItemCosts[cCostSpitter].IntValue > -1)
-			{
-				FormatEx(sInfo, sizeof sInfo, "%T", "Spitter", client);
-				menu.AddItem("spitter", sInfo);
+			if (g_esGeneral.g_cItemCosts[cCostSpitter].IntValue > -1) {
+				FormatEx(info, sizeof info, "%T", "Spitter", client);
+				menu.AddItem("spitter", info);
 			}
-			if(g_esGeneral.g_cItemCosts[cCostJockey].IntValue > -1)
-			{
-				FormatEx(sInfo, sizeof sInfo, "%T", "Jockey", client);
-				menu.AddItem("jockey", sInfo);
+			if (g_esGeneral.g_cItemCosts[cCostJockey].IntValue > -1) {
+				FormatEx(info, sizeof info, "%T", "Jockey", client);
+				menu.AddItem("jockey", info);
 			}
-			if(g_esGeneral.g_cItemCosts[cCostCharger].IntValue > -1)
-			{
-				FormatEx(sInfo, sizeof sInfo, "%T", "Charger", client);
-				menu.AddItem("charger", sInfo);
+			if (g_esGeneral.g_cItemCosts[cCostCharger].IntValue > -1) {
+				FormatEx(info, sizeof info, "%T", "Charger", client);
+				menu.AddItem("charger", info);
 			}
-			if(g_esGeneral.g_cItemCosts[cCostTank].IntValue > -1)
-			{
-				FormatEx(sInfo, sizeof sInfo, "%T", "Tank", client);
-				menu.AddItem("tank", sInfo);
+			if (g_esGeneral.g_cItemCosts[cCostTank].IntValue > -1) {
+				FormatEx(info, sizeof info, "%T", "Tank", client);
+				menu.AddItem("tank", info);
 			}
-			if(strcmp(g_esGeneral.g_sCurrentMap, "c6m1_riverbank", false) == 0 && g_esGeneral.g_cItemCosts[cCostWitch].IntValue > -1)
-			{
-				FormatEx(sInfo, sizeof sInfo, "%T", "Witch Bride", client);
-				menu.AddItem("witch_bride", sInfo);
+			if (strcmp(g_esGeneral.g_sCurrentMap, "c6m1_riverbank", false) == 0 && g_esGeneral.g_cItemCosts[cCostWitch].IntValue > -1) {
+				FormatEx(info, sizeof info, "%T", "Witch Bride", client);
+				menu.AddItem("witch_bride", info);
 			}
-			else if(g_esGeneral.g_cItemCosts[cCostWitch].IntValue > -1)
-			{
-				FormatEx(sInfo, sizeof sInfo, "%T", "Witch", client);
-				menu.AddItem("witch", sInfo);
+			else if (g_esGeneral.g_cItemCosts[cCostWitch].IntValue > -1) {
+				FormatEx(info, sizeof info, "%T", "Witch", client);
+				menu.AddItem("witch", info);
 			}
-			if(g_esGeneral.g_cItemCosts[cCostHorde].IntValue > -1)
-			{
-				FormatEx(sInfo, sizeof sInfo, "%T", "Horde", client);
-				menu.AddItem("horde", sInfo);
+			if (g_esGeneral.g_cItemCosts[cCostHorde].IntValue > -1) {
+				FormatEx(info, sizeof info, "%T", "Horde", client);
+				menu.AddItem("horde", info);
 			}
-			if(g_esGeneral.g_cItemCosts[cCostMob].IntValue > -1)
-			{
-				FormatEx(sInfo, sizeof sInfo, "%T", "Mob", client);
-				menu.AddItem("mob", sInfo);
+			if (g_esGeneral.g_cItemCosts[cCostMob].IntValue > -1) {
+				FormatEx(info, sizeof info, "%T", "Mob", client);
+				menu.AddItem("mob", info);
 			}
 			menu.Display(client, MENU_TIME_FOREVER);
 		}
 	}
 }
 
-void vBuildWeaponMenu(int client)
-{
-	char sInfo[32];
+void vBuildWeaponMenu(int client) {
+	char info[32];
 	Menu menu = new Menu(iWeaponMenuHandler);
-	FormatEx(sInfo, sizeof sInfo,"%T", "Points Left", client, g_esPlayer[client].g_iPlayerPoints);
-	menu.SetTitle(sInfo);
-	if(g_esGeneral.g_cCategories[cCategoryMelee].IntValue == 1)
-	{
-		FormatEx(sInfo, sizeof sInfo, "%T", "Melee", client);
-		menu.AddItem("a", sInfo);
+	FormatEx(info, sizeof info,"%T", "Points Left", client, g_esPlayer[client].g_iPlayerPoints);
+	menu.SetTitle(info);
+	if (g_esGeneral.g_cCategories[cCategoryMelee].IntValue == 1) {
+		FormatEx(info, sizeof info, "%T", "Melee", client);
+		menu.AddItem("a", info);
 	}
-	if(g_esGeneral.g_cCategories[cCategorySniper].IntValue == 1)
-	{
-		FormatEx(sInfo, sizeof sInfo, "%T", "Sniper Rifles", client);
-		menu.AddItem("b", sInfo);
+	if (g_esGeneral.g_cCategories[cCategorySniper].IntValue == 1) {
+		FormatEx(info, sizeof info, "%T", "Sniper Rifles", client);
+		menu.AddItem("b", info);
 	}
-	if(g_esGeneral.g_cCategories[cCategoryRifle].IntValue == 1)
-	{
-		FormatEx(sInfo, sizeof sInfo, "%T", "Assault Rifles", client);
-		menu.AddItem("c", sInfo);
+	if (g_esGeneral.g_cCategories[cCategoryRifle].IntValue == 1) {
+		FormatEx(info, sizeof info, "%T", "Assault Rifles", client);
+		menu.AddItem("c", info);
 	}
-	if(g_esGeneral.g_cCategories[cCategoryShotgun].IntValue == 1)
-	{
-		FormatEx(sInfo, sizeof sInfo, "%T", "Shotguns", client);
-		menu.AddItem("d", sInfo);
+	if (g_esGeneral.g_cCategories[cCategoryShotgun].IntValue == 1) {
+		FormatEx(info, sizeof info, "%T", "Shotguns", client);
+		menu.AddItem("d", info);
 	}
-	if(g_esGeneral.g_cCategories[cCategorySMG].IntValue == 1)
-	{
-		FormatEx(sInfo, sizeof sInfo, "%T", "Submachine Guns", client);
-		menu.AddItem("e", sInfo);
+	if (g_esGeneral.g_cCategories[cCategorySMG].IntValue == 1) {
+		FormatEx(info, sizeof info, "%T", "Submachine Guns", client);
+		menu.AddItem("e", info);
 	}
-	if(g_esGeneral.g_cCategories[cCategoryThrowable].IntValue == 1)
-	{
-		FormatEx(sInfo, sizeof sInfo, "%T", "Throwables", client);
-		menu.AddItem("f", sInfo);
+	if (g_esGeneral.g_cCategories[cCategoryThrowable].IntValue == 1) {
+		FormatEx(info, sizeof info, "%T", "Throwables", client);
+		menu.AddItem("f", info);
 	}
-	if(g_esGeneral.g_cCategories[cCategoryMisc].IntValue == 1)
-	{
-		FormatEx(sInfo, sizeof sInfo, "%T", "Misc", client);
-		menu.AddItem("g", sInfo);
+	if (g_esGeneral.g_cCategories[cCategoryMisc].IntValue == 1) {
+		FormatEx(info, sizeof info, "%T", "Misc", client);
+		menu.AddItem("g", info);
 	}
 	menu.ExitBackButton = true;
 	menu.Display(client, MENU_TIME_FOREVER);
 }
 
-int iSurvivorMenuHandler(Menu menu, MenuAction action, int param1, int param2)
-{
-	switch(action)
-	{
-		case MenuAction_Select:
-		{
-			char sItem[2];
-			menu.GetItem(param2, sItem, sizeof sItem);
-			switch(sItem[0])
-			{
+int iSurvivorMenuHandler(Menu menu, MenuAction action, int param1, int param2) {
+	switch (action) {
+		case MenuAction_Select: {
+			char item[2];
+			menu.GetItem(param2, item, sizeof item);
+			switch (item[0]) {
 				case 'w':
 					vBuildWeaponMenu(param1);
 
@@ -1880,18 +1654,17 @@ int iSurvivorMenuHandler(Menu menu, MenuAction action, int param1, int param2)
 				case 'u':
 					vBuildUpgradeMenu(param1);
 
-				case 'i':
-				{
+				case 'i': {
 					g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostTraitor].IntValue;
 
-					char sInfo[32];
+					char info[32];
 					Menu menu1 = new Menu(iTraitorMenuHandler);
-					FormatEx(sInfo, sizeof sInfo,"%T", "Cost", param1, g_esPlayer[param1].g_iItemCost);
-					menu1.SetTitle(sInfo);
-					FormatEx(sInfo, sizeof sInfo,"%T", "Yes", param1);
-					menu1.AddItem("y", sInfo);
-					FormatEx(sInfo, sizeof sInfo,"%T", "No", param1);
-					menu1.AddItem("n", sInfo);
+					FormatEx(info, sizeof info,"%T", "Cost", param1, g_esPlayer[param1].g_iItemCost);
+					menu1.SetTitle(info);
+					FormatEx(info, sizeof info,"%T", "Yes", param1);
+					menu1.AddItem("y", info);
+					FormatEx(info, sizeof info,"%T", "No", param1);
+					menu1.AddItem("n", info);
 					menu1.ExitButton = true;
 					menu1.ExitBackButton = true;
 					menu1.Display(param1, MENU_TIME_FOREVER);
@@ -1901,6 +1674,7 @@ int iSurvivorMenuHandler(Menu menu, MenuAction action, int param1, int param2)
 					vBuildSpecialMenu(param1);
 			}
 		}
+
 		case MenuAction_End:
 			delete menu;
 	}
@@ -1908,36 +1682,32 @@ int iSurvivorMenuHandler(Menu menu, MenuAction action, int param1, int param2)
 	return 0;
 }
 
-int iTraitorMenuHandler(Menu menu, MenuAction action, int param1, int param2)
-{
-	switch(action)
-	{
-		case MenuAction_Select:
-		{
-			char sItem[2];
-			menu.GetItem(param2, sItem, sizeof sItem);
-			switch(sItem[0])
-			{
+int iTraitorMenuHandler(Menu menu, MenuAction action, int param1, int param2) {
+	switch (action) {
+		case MenuAction_Select: {
+			char item[2];
+			menu.GetItem(param2, item, sizeof item);
+			switch (item[0]) {
 				case 'n':
 					vBuildBuyMenu(param1);
 
-				case 'y':
-				{
-					if(!bHasEnoughPoints(param1, g_esPlayer[param1].g_iItemCost))
+				case 'y': {
+					if (!bHasEnoughPoints(param1, g_esPlayer[param1].g_iItemCost))
 						return 0;
 
-					if(iGetPlayerSurvivor() < g_esGeneral.g_cSettings[cSettingSurvivorRequired].IntValue || iGetPlayerZombie() >= g_esGeneral.g_cSettings[cSettingTraitorLimit].IntValue)
+					if (iGetPlayerSurvivor() < g_esGeneral.g_cSettings[cSettingSurvivorRequired].IntValue || iGetPlayerZombie() >= g_esGeneral.g_cSettings[cSettingTraitorLimit].IntValue)
 						PrintToChat(param1,  "%T", "Traitor Limit", param1);
 					else
 						vJoinInfected(param1, g_esPlayer[param1].g_iItemCost);
 				}
 			}
 		}
-		case MenuAction_Cancel:
-		{
-			if(param2 == MenuCancel_ExitBack)
+	
+		case MenuAction_Cancel: {
+			if (param2 == MenuCancel_ExitBack)
 				vBuildBuyMenu(param1);
 		}
+	
 		case MenuAction_End:
 			delete menu;
 	}
@@ -1945,38 +1715,30 @@ int iTraitorMenuHandler(Menu menu, MenuAction action, int param1, int param2)
 	return 0;
 }
 
-int iGetPlayerSurvivor()
-{
+int iGetPlayerSurvivor() {
 	int iSurvivor;
-	for(int i = 1; i <= MaxClients; i++)
-	{
-		if(IsClientInGame(i) && !IsFakeClient(i) && GetClientTeam(i) == 2)
+	for (int i = 1; i <= MaxClients; i++) {
+		if (IsClientInGame(i) && !IsFakeClient(i) && GetClientTeam(i) == 2)
 			iSurvivor++;
 	}
 	return iSurvivor;
 }
 
-int iGetPlayerZombie()
-{
+int iGetPlayerZombie() {
 	int iZombie;
-	for(int i = 1; i <= MaxClients; i++)
-	{
-		if(IsClientInGame(i) && !IsFakeClient(i) && GetClientTeam(i) == 3)
+	for (int i = 1; i <= MaxClients; i++) {
+		if (IsClientInGame(i) && !IsFakeClient(i) && GetClientTeam(i) == 3)
 			iZombie++;
 	}
 	return iZombie;
 }
 
-int iWeaponMenuHandler(Menu menu, MenuAction action, int param1, int param2)
-{
-	switch(action)
-	{
-		case MenuAction_Select:
-		{
-			char sItem[2];
-			menu.GetItem(param2, sItem, sizeof sItem);
-			switch(sItem[0])
-			{
+int iWeaponMenuHandler(Menu menu, MenuAction action, int param1, int param2) {
+	switch (action) {
+		case MenuAction_Select: {
+			char item[2];
+			menu.GetItem(param2, item, sizeof item);
+			switch (item[0]) {
 				case 'a':
 					vBuildMeleeMenu(param1);
 			
@@ -1999,11 +1761,12 @@ int iWeaponMenuHandler(Menu menu, MenuAction action, int param1, int param2)
 					vBuildMiscMenu(param1);
 			}
 		}
-		case MenuAction_Cancel:
-		{
-			if(param2 == MenuCancel_ExitBack)
+
+		case MenuAction_Cancel: {
+			if (param2 == MenuCancel_ExitBack)
 				vBuildBuyMenu(param1);
 		}
+		
 		case MenuAction_End:
 			delete menu;
 	}
@@ -2011,130 +1774,110 @@ int iWeaponMenuHandler(Menu menu, MenuAction action, int param1, int param2)
 	return 0;
 }
 
-void vBuildMeleeMenu(int client)
-{
-	char sInfo[32];
+void vBuildMeleeMenu(int client) {
+	char info[32];
 	Menu menu = new Menu(iMeleeMenuHandler);
-	FormatEx(sInfo, sizeof sInfo,"%T", "Points Left", client, g_esPlayer[client].g_iPlayerPoints);
-	menu.SetTitle(sInfo);
-	for(int i; i < g_iMeleeClassCount; i++)
-	{
+	FormatEx(info, sizeof info,"%T", "Points Left", client, g_esPlayer[client].g_iPlayerPoints);
+	menu.SetTitle(info);
+	for (int i; i < g_iMeleeClassCount; i++) {
 		int iPos = iGetMeleePos(g_sMeleeClass[i]);
 		int iCost = iPos != -1 ? g_esGeneral.g_cItemCosts[iPos + cCostFireaxe].IntValue : g_esGeneral.g_cItemCosts[cCostCustomMelee].IntValue;
 
-		if(iCost < 0)
+		if (iCost < 0)
 			continue;
 
-		if(iPos != -1)
-			FormatEx(sInfo, sizeof sInfo, "%T", g_sMeleeClass[i], client);
+		if (iPos != -1)
+			FormatEx(info, sizeof info, "%T", g_sMeleeClass[i], client);
 		else
-			FormatEx(sInfo, sizeof sInfo, g_sMeleeClass[i]);
-		menu.AddItem(g_sMeleeClass[i], sInfo);
+			FormatEx(info, sizeof info, g_sMeleeClass[i]);
+		menu.AddItem(g_sMeleeClass[i], info);
 	}
 	menu.ExitBackButton = true;
 	menu.Display(client, MENU_TIME_FOREVER);
 }
 
-int iGetMeleePos(const char[] sMelee)
-{
-	for(int i; i < sizeof g_sMeleeName; i++)
-	{
-		if(strcmp(g_sMeleeName[i], sMelee) == 0)
+int iGetMeleePos(const char[] sMelee) {
+	for (int i; i < sizeof g_sMeleeName; i++) {
+		if (strcmp(g_sMeleeName[i], sMelee) == 0)
 			return i;
 	}
 	return -1;
 }
 
-void vBuildSniperMenu(int client)
-{
-	char sInfo[32];
+void vBuildSniperMenu(int client) {
+	char info[32];
 	Menu menu = new Menu(iSniperMenuHandler);
-	FormatEx(sInfo, sizeof sInfo,"%T", "Points Left", client, g_esPlayer[client].g_iPlayerPoints);
-	menu.SetTitle(sInfo);
-	if(g_esGeneral.g_cItemCosts[cCostHunting].IntValue > -1)
-	{
-		FormatEx(sInfo, sizeof sInfo, "%T", "Hunting Rifle", client);
-		menu.AddItem("hunting_rifle", sInfo);
+	FormatEx(info, sizeof info,"%T", "Points Left", client, g_esPlayer[client].g_iPlayerPoints);
+	menu.SetTitle(info);
+	if (g_esGeneral.g_cItemCosts[cCostHunting].IntValue > -1) {
+		FormatEx(info, sizeof info, "%T", "Hunting Rifle", client);
+		menu.AddItem("hunting_rifle", info);
 	}
-	if(g_esGeneral.g_cItemCosts[cCostMilitary].IntValue > -1)
-	{
-		FormatEx(sInfo, sizeof sInfo, "%T", "Military Sniper Rifle", client);
-		menu.AddItem("sniper_military", sInfo);
+	if (g_esGeneral.g_cItemCosts[cCostMilitary].IntValue > -1) {
+		FormatEx(info, sizeof info, "%T", "Military Sniper Rifle", client);
+		menu.AddItem("sniper_military", info);
 	}
-	if(g_esGeneral.g_cItemCosts[cCostAWP].IntValue > -1)
-	{
-		FormatEx(sInfo, sizeof sInfo, "%T", "AWP Sniper Rifle", client);
-		menu.AddItem("sniper_awp", sInfo);
+	if (g_esGeneral.g_cItemCosts[cCostAWP].IntValue > -1) {
+		FormatEx(info, sizeof info, "%T", "AWP Sniper Rifle", client);
+		menu.AddItem("sniper_awp", info);
 	}
-	if(g_esGeneral.g_cItemCosts[cCostScout].IntValue > -1)
-	{
-		FormatEx(sInfo, sizeof sInfo, "%T", "Scout Sniper Rifle", client);
-		menu.AddItem("sniper_scout", sInfo);
+	if (g_esGeneral.g_cItemCosts[cCostScout].IntValue > -1) {
+		FormatEx(info, sizeof info, "%T", "Scout Sniper Rifle", client);
+		menu.AddItem("sniper_scout", info);
 	}
 	menu.ExitBackButton = true;
 	menu.Display(client, MENU_TIME_FOREVER);
 }
 
-void vBuildRifleMenu(int client)
-{
-	char sInfo[32];
+void vBuildRifleMenu(int client) {
+	char info[32];
 	Menu menu = new Menu(iRifleMenuHandler);
-	FormatEx(sInfo, sizeof sInfo,"%T", "Points Left", client, g_esPlayer[client].g_iPlayerPoints);
-	menu.SetTitle(sInfo);
-	if(g_esGeneral.g_cItemCosts[cCostM60].IntValue > -1)
-	{
-		FormatEx(sInfo, sizeof sInfo, "%T", "M60 Assault Rifle", client);
-		menu.AddItem("rifle_m60", sInfo);
+	FormatEx(info, sizeof info,"%T", "Points Left", client, g_esPlayer[client].g_iPlayerPoints);
+	menu.SetTitle(info);
+	if (g_esGeneral.g_cItemCosts[cCostM60].IntValue > -1) {
+		FormatEx(info, sizeof info, "%T", "M60 Assault Rifle", client);
+		menu.AddItem("rifle_m60", info);
 	}
-	if(g_esGeneral.g_cItemCosts[cCostM16].IntValue > -1)
-	{
-		FormatEx(sInfo, sizeof sInfo, "%T", "M16 Assault Rifle", client);
-		menu.AddItem("rifle", sInfo);
+	if (g_esGeneral.g_cItemCosts[cCostM16].IntValue > -1) {
+		FormatEx(info, sizeof info, "%T", "M16 Assault Rifle", client);
+		menu.AddItem("rifle", info);
 	}
-	if(g_esGeneral.g_cItemCosts[cCostSCAR].IntValue > -1)
-	{
-		FormatEx(sInfo, sizeof sInfo, "%T", "SCAR-L Assault Rifle", client);
-		menu.AddItem("rifle_desert", sInfo);
+	if (g_esGeneral.g_cItemCosts[cCostSCAR].IntValue > -1) {
+		FormatEx(info, sizeof info, "%T", "SCAR-L Assault Rifle", client);
+		menu.AddItem("rifle_desert", info);
 	}
-	if(g_esGeneral.g_cItemCosts[cCostAK47].IntValue > -1)
-	{
-		FormatEx(sInfo, sizeof sInfo, "%T", "AK-47 Assault Rifle", client);
-		menu.AddItem("rifle_ak47", sInfo);
+	if (g_esGeneral.g_cItemCosts[cCostAK47].IntValue > -1) {
+		FormatEx(info, sizeof info, "%T", "AK-47 Assault Rifle", client);
+		menu.AddItem("rifle_ak47", info);
 	}
-	if(g_esGeneral.g_cItemCosts[cCostSG552].IntValue > -1)
-	{
-		FormatEx(sInfo, sizeof sInfo, "%T", "SG552 Assault Rifle", client);
-		menu.AddItem("rifle_sg552", sInfo);
+	if (g_esGeneral.g_cItemCosts[cCostSG552].IntValue > -1) {
+		FormatEx(info, sizeof info, "%T", "SG552 Assault Rifle", client);
+		menu.AddItem("rifle_sg552", info);
 	}
 	menu.ExitBackButton = true;
 	menu.Display(client, MENU_TIME_FOREVER);
 }
 
-void vBuildShotgunMenu(int client)
-{
-	char sInfo[32];
+void vBuildShotgunMenu(int client) {
+	char info[32];
 	Menu menu = new Menu(iShotgunMenuHandler);
-	FormatEx(sInfo, sizeof sInfo,"%T", "Points Left", client, g_esPlayer[client].g_iPlayerPoints);
-	menu.SetTitle(sInfo);
-	if(g_esGeneral.g_cItemCosts[cCostPump].IntValue > -1)
-	{
-		FormatEx(sInfo, sizeof sInfo, "%T", "Pump Shotgun", client);
-		menu.AddItem("pumpshotgun", sInfo);
+	FormatEx(info, sizeof info,"%T", "Points Left", client, g_esPlayer[client].g_iPlayerPoints);
+	menu.SetTitle(info);
+	if (g_esGeneral.g_cItemCosts[cCostPump].IntValue > -1) {
+		FormatEx(info, sizeof info, "%T", "Pump Shotgun", client);
+		menu.AddItem("pumpshotgun", info);
 	}
-	if(g_esGeneral.g_cItemCosts[cCostChrome].IntValue > -1)
-	{
-		FormatEx(sInfo, sizeof sInfo, "%T", "Chrome Shotgun", client);
-		menu.AddItem("shotgun_chrome", sInfo);
+	if (g_esGeneral.g_cItemCosts[cCostChrome].IntValue > -1) {
+		FormatEx(info, sizeof info, "%T", "Chrome Shotgun", client);
+		menu.AddItem("shotgun_chrome", info);
 	}
-	if(g_esGeneral.g_cItemCosts[cCostAuto].IntValue > -1)
-	{
-		FormatEx(sInfo, sizeof sInfo, "%T", "Tactical Shotgun", client);
-		menu.AddItem("autoshotgun", sInfo);
+	if (g_esGeneral.g_cItemCosts[cCostAuto].IntValue > -1) {
+		FormatEx(info, sizeof info, "%T", "Tactical Shotgun", client);
+		menu.AddItem("autoshotgun", info);
 	}
-	if(g_esGeneral.g_cItemCosts[cCostSPAS].IntValue > -1)
-	{
-		FormatEx(sInfo, sizeof sInfo, "%T", "SPAS Shotgun", client);
-		menu.AddItem("shotgun_spas", sInfo);
+	if (g_esGeneral.g_cItemCosts[cCostSPAS].IntValue > -1) {
+		FormatEx(info, sizeof info, "%T", "SPAS Shotgun", client);
+		menu.AddItem("shotgun_spas", info);
 	}
 	menu.ExitBackButton = true;
 	menu.Display(client, MENU_TIME_FOREVER);
@@ -2142,184 +1885,153 @@ void vBuildShotgunMenu(int client)
 
 void vBuildSMGMenu(int client)
 {
-	char sInfo[32];
+	char info[32];
 	Menu menu = new Menu(iSMGMenuHandler);
-	FormatEx(sInfo, sizeof sInfo,"%T", "Points Left", client, g_esPlayer[client].g_iPlayerPoints);
-	menu.SetTitle(sInfo);
-	if(g_esGeneral.g_cItemCosts[cCostUZI].IntValue > -1)
-	{
-		FormatEx(sInfo, sizeof sInfo, "%T", "Uzi", client);
-		menu.AddItem("smg", sInfo);
+	FormatEx(info, sizeof info,"%T", "Points Left", client, g_esPlayer[client].g_iPlayerPoints);
+	menu.SetTitle(info);
+	if (g_esGeneral.g_cItemCosts[cCostUZI].IntValue > -1) {
+		FormatEx(info, sizeof info, "%T", "Uzi", client);
+		menu.AddItem("smg", info);
 	}
-	if(g_esGeneral.g_cItemCosts[cCostSilenced].IntValue > -1)
-	{
-		FormatEx(sInfo, sizeof sInfo, "%T", "Silenced SMG", client);
-		menu.AddItem("smg_silenced", sInfo);
+	if (g_esGeneral.g_cItemCosts[cCostSilenced].IntValue > -1) {
+		FormatEx(info, sizeof info, "%T", "Silenced SMG", client);
+		menu.AddItem("smg_silenced", info);
 	}
-	if(g_esGeneral.g_cItemCosts[cCostMP5].IntValue > -1)
-	{
-		FormatEx(sInfo, sizeof sInfo, "%T", "MP5 SMG", client);
-		menu.AddItem("smg_mp5", sInfo);
+	if (g_esGeneral.g_cItemCosts[cCostMP5].IntValue > -1) {
+		FormatEx(info, sizeof info, "%T", "MP5 SMG", client);
+		menu.AddItem("smg_mp5", info);
 	}
 	menu.ExitBackButton = true;
 	menu.Display(client, MENU_TIME_FOREVER);
 }
 
-void vBuildHealthMenu(int client)
-{
-	char sInfo[32];
+void vBuildHealthMenu(int client) {
+	char info[32];
 	Menu menu = new Menu(iHealthMenuHandler);
-	FormatEx(sInfo, sizeof sInfo,"%T", "Points Left", client, g_esPlayer[client].g_iPlayerPoints);
-	menu.SetTitle(sInfo);
-	if(g_esGeneral.g_cItemCosts[cCostHealthKit].IntValue > -1)
-	{
-		FormatEx(sInfo, sizeof sInfo, "%T", "First Aid Kit", client);
-		menu.AddItem("first_aid_kit", sInfo);
+	FormatEx(info, sizeof info,"%T", "Points Left", client, g_esPlayer[client].g_iPlayerPoints);
+	menu.SetTitle(info);
+	if (g_esGeneral.g_cItemCosts[cCostHealthKit].IntValue > -1) {
+		FormatEx(info, sizeof info, "%T", "First Aid Kit", client);
+		menu.AddItem("first_aid_kit", info);
 	}
-	if(g_esGeneral.g_cItemCosts[cCostDefib].IntValue > -1)
-	{
-		FormatEx(sInfo, sizeof sInfo, "%T", "Defibrillator", client);
-		menu.AddItem("defibrillator", sInfo);
+	if (g_esGeneral.g_cItemCosts[cCostDefib].IntValue > -1) {
+		FormatEx(info, sizeof info, "%T", "Defibrillator", client);
+		menu.AddItem("defibrillator", info);
 	}
-	if(g_esGeneral.g_cItemCosts[cCostPills].IntValue > -1)
-	{
-		FormatEx(sInfo, sizeof sInfo, "%T", "Pills", client);
-		menu.AddItem("pain_pills", sInfo);
+	if (g_esGeneral.g_cItemCosts[cCostPills].IntValue > -1) {
+		FormatEx(info, sizeof info, "%T", "Pills", client);
+		menu.AddItem("pain_pills", info);
 	}
-	if(g_esGeneral.g_cItemCosts[cCostAdren].IntValue > -1)
-	{
-		FormatEx(sInfo, sizeof sInfo, "%T", "Adrenaline", client);
-		menu.AddItem("adrenaline", sInfo);
+	if (g_esGeneral.g_cItemCosts[cCostAdren].IntValue > -1) {
+		FormatEx(info, sizeof info, "%T", "Adrenaline", client);
+		menu.AddItem("adrenaline", info);
 	}
-	if(g_esGeneral.g_cItemCosts[cCostHeal].IntValue > -1)
-	{
-		FormatEx(sInfo, sizeof sInfo, "%T", "Full Heal", client);
-		menu.AddItem("health", sInfo);
+	if (g_esGeneral.g_cItemCosts[cCostHeal].IntValue > -1) {
+		FormatEx(info, sizeof info, "%T", "Full Heal", client);
+		menu.AddItem("health", info);
 	}
 	menu.ExitBackButton = true;
 	menu.Display(client, MENU_TIME_FOREVER);
 }
 
-void vBuildThrowableMenu(int client)
-{
-	char sInfo[32];
+void vBuildThrowableMenu(int client) {
+	char info[32];
 	Menu menu = new Menu(iThrowableMenuHandler);
-	FormatEx(sInfo, sizeof sInfo,"%T", "Points Left", client, g_esPlayer[client].g_iPlayerPoints);
-	menu.SetTitle(sInfo);
-	if(g_esGeneral.g_cItemCosts[cCostMolotov].IntValue > -1)
-	{
-		FormatEx(sInfo, sizeof sInfo, "%T", "Molotov", client);
-		menu.AddItem("molotov", sInfo);
+	FormatEx(info, sizeof info,"%T", "Points Left", client, g_esPlayer[client].g_iPlayerPoints);
+	menu.SetTitle(info);
+	if (g_esGeneral.g_cItemCosts[cCostMolotov].IntValue > -1) {
+		FormatEx(info, sizeof info, "%T", "Molotov", client);
+		menu.AddItem("molotov", info);
 	}
-	if(g_esGeneral.g_cItemCosts[cCostPipe].IntValue > -1)
-	{
-		FormatEx(sInfo, sizeof sInfo, "%T", "Pipe Bomb", client);
-		menu.AddItem("pipe_bomb", sInfo);
+	if (g_esGeneral.g_cItemCosts[cCostPipe].IntValue > -1) {
+		FormatEx(info, sizeof info, "%T", "Pipe Bomb", client);
+		menu.AddItem("pipe_bomb", info);
 	}
-	if(g_esGeneral.g_cItemCosts[cCostBile].IntValue > -1)
-	{
-		FormatEx(sInfo, sizeof sInfo, "%T", "Bile Bomb", client);
-		menu.AddItem("vomitjar", sInfo);
+	if (g_esGeneral.g_cItemCosts[cCostBile].IntValue > -1) {
+		FormatEx(info, sizeof info, "%T", "Bile Bomb", client);
+		menu.AddItem("vomitjar", info);
 	}
 	menu.ExitBackButton = true;
 	menu.Display(client, MENU_TIME_FOREVER);
 }
 
-void vBuildMiscMenu(int client)
-{
-	char sInfo[32];
+void vBuildMiscMenu(int client) {
+	char info[32];
 	Menu menu = new Menu(iMiscMenuHandler);
-	FormatEx(sInfo, sizeof sInfo,"%T", "Points Left", client, g_esPlayer[client].g_iPlayerPoints);
-	menu.SetTitle(sInfo);
-	if(g_esGeneral.g_cItemCosts[cCostGrenade].IntValue > -1)
-	{
-		FormatEx(sInfo, sizeof sInfo, "%T", "Grenade Launcher", client);
-		menu.AddItem("grenade_launcher", sInfo);
+	FormatEx(info, sizeof info,"%T", "Points Left", client, g_esPlayer[client].g_iPlayerPoints);
+	menu.SetTitle(info);
+	if (g_esGeneral.g_cItemCosts[cCostGrenade].IntValue > -1) {
+		FormatEx(info, sizeof info, "%T", "Grenade Launcher", client);
+		menu.AddItem("grenade_launcher", info);
 	}
-	if(g_esGeneral.g_cItemCosts[cCostP220].IntValue > -1)
-	{
-		FormatEx(sInfo, sizeof sInfo, "%T", "P220 Pistol", client);
-		menu.AddItem("pistol", sInfo);
+	if (g_esGeneral.g_cItemCosts[cCostP220].IntValue > -1) {
+		FormatEx(info, sizeof info, "%T", "P220 Pistol", client);
+		menu.AddItem("pistol", info);
 	}
-	if(g_esGeneral.g_cItemCosts[cCostMagnum].IntValue > -1)
-	{
-		FormatEx(sInfo, sizeof sInfo, "%T", "Magnum Pistol", client);
-		menu.AddItem("pistol_magnum", sInfo);
+	if (g_esGeneral.g_cItemCosts[cCostMagnum].IntValue > -1) {
+		FormatEx(info, sizeof info, "%T", "Magnum Pistol", client);
+		menu.AddItem("pistol_magnum", info);
 	}
-	if(g_esGeneral.g_cItemCosts[cCostChainsaw].IntValue > -1)
-	{
-		FormatEx(sInfo, sizeof sInfo, "%T", "Chainsaw", client);
-		menu.AddItem("chainsaw", sInfo);
+	if (g_esGeneral.g_cItemCosts[cCostChainsaw].IntValue > -1) {
+		FormatEx(info, sizeof info, "%T", "Chainsaw", client);
+		menu.AddItem("chainsaw", info);
 	}
-	if(g_esGeneral.g_cItemCosts[cCostGnome].IntValue > -1)
-	{
-		FormatEx(sInfo, sizeof sInfo, "%T", "Gnome", client);
-		menu.AddItem("gnome", sInfo);
+	if (g_esGeneral.g_cItemCosts[cCostGnome].IntValue > -1) {
+		FormatEx(info, sizeof info, "%T", "Gnome", client);
+		menu.AddItem("gnome", info);
 	}
-	if(strcmp(g_esGeneral.g_sCurrentMap, "c1m2_streets", false) != 0 && g_esGeneral.g_cItemCosts[cCostCola].IntValue > -1)
-	{
-		FormatEx(sInfo, sizeof sInfo, "%T", "Cola Bottles", client);
-		menu.AddItem("cola_bottles", sInfo);
+	if (strcmp(g_esGeneral.g_sCurrentMap, "c1m2_streets", false) != 0 && g_esGeneral.g_cItemCosts[cCostCola].IntValue > -1) {
+		FormatEx(info, sizeof info, "%T", "Cola Bottles", client);
+		menu.AddItem("cola_bottles", info);
 	}
-	if(g_esGeneral.g_cItemCosts[cCostFireworks].IntValue > -1)
-	{
-		FormatEx(sInfo, sizeof sInfo, "%T", "Fireworks Crate", client);
-		menu.AddItem("fireworkcrate", sInfo);
+	if (g_esGeneral.g_cItemCosts[cCostFireworks].IntValue > -1) {
+		FormatEx(info, sizeof info, "%T", "Fireworks Crate", client);
+		menu.AddItem("fireworkcrate", info);
 	}
-	if(g_iCurrentMode != 8 && g_esGeneral.g_cItemCosts[cCostGasCan].IntValue > -1)
-	{
-		FormatEx(sInfo, sizeof sInfo, "%T", "Gascan", client);
-		menu.AddItem("gascan", sInfo);
+	if (g_iCurrentMode != 8 && g_esGeneral.g_cItemCosts[cCostGasCan].IntValue > -1) {
+		FormatEx(info, sizeof info, "%T", "Gascan", client);
+		menu.AddItem("gascan", info);
 	}
-	if(g_esGeneral.g_cItemCosts[cCostOxygen].IntValue > -1)
-	{
-		FormatEx(sInfo, sizeof sInfo, "%T", "Oxygen Tank", client);
-		menu.AddItem("oxygentank", sInfo);
+	if (g_esGeneral.g_cItemCosts[cCostOxygen].IntValue > -1) {
+		FormatEx(info, sizeof info, "%T", "Oxygen Tank", client);
+		menu.AddItem("oxygentank", info);
 	}
-	if(g_esGeneral.g_cItemCosts[cCostPropane].IntValue > -1)
-	{
-		FormatEx(sInfo, sizeof sInfo, "%T", "Propane Tank", client);
-		menu.AddItem("propanetank", sInfo);
+	if (g_esGeneral.g_cItemCosts[cCostPropane].IntValue > -1) {
+		FormatEx(info, sizeof info, "%T", "Propane Tank", client);
+		menu.AddItem("propanetank", info);
 	}
 	menu.ExitBackButton = true;
 	menu.Display(client, MENU_TIME_FOREVER);
 }
 
-void vBuildUpgradeMenu(int client)
-{
-	char sInfo[32];
+void vBuildUpgradeMenu(int client) {
+	char info[32];
 	Menu menu = new Menu(iUpgradeMenuHandler);
-	FormatEx(sInfo, sizeof sInfo,"%T", "Points Left", client, g_esPlayer[client].g_iPlayerPoints);
-	menu.SetTitle(sInfo);
-	if(g_esGeneral.g_cItemCosts[cCostLaserSight].IntValue > -1)
-	{
-		FormatEx(sInfo, sizeof sInfo, "%T", "Laser Sight", client);
-		menu.AddItem("laser_sight", sInfo);
+	FormatEx(info, sizeof info,"%T", "Points Left", client, g_esPlayer[client].g_iPlayerPoints);
+	menu.SetTitle(info);
+	if (g_esGeneral.g_cItemCosts[cCostLaserSight].IntValue > -1) {
+		FormatEx(info, sizeof info, "%T", "Laser Sight", client);
+		menu.AddItem("laser_sight", info);
 	}
-	if(g_esGeneral.g_cItemCosts[cCostExplosiveAmmo].IntValue > -1)
-	{
-		FormatEx(sInfo, sizeof sInfo, "%T", "Explosive Ammo", client);
-		menu.AddItem("explosive_ammo", sInfo);
+	if (g_esGeneral.g_cItemCosts[cCostExplosiveAmmo].IntValue > -1) {
+		FormatEx(info, sizeof info, "%T", "Explosive Ammo", client);
+		menu.AddItem("explosive_ammo", info);
 	}
-	if(g_esGeneral.g_cItemCosts[cCostIncendiaryAmmo].IntValue > -1)
-	{
-		FormatEx(sInfo, sizeof sInfo, "%T", "Incendiary Ammo", client);
-		menu.AddItem("incendiary_ammo", sInfo);
+	if (g_esGeneral.g_cItemCosts[cCostIncendiaryAmmo].IntValue > -1) {
+		FormatEx(info, sizeof info, "%T", "Incendiary Ammo", client);
+		menu.AddItem("incendiary_ammo", info);
 	}
-	if(g_esGeneral.g_cItemCosts[cCostExplosivePack].IntValue > -1)
-	{
-		FormatEx(sInfo, sizeof sInfo, "%T", "Explosive Ammo Pack", client);
-		menu.AddItem("upgradepack_explosive", sInfo);
+	if (g_esGeneral.g_cItemCosts[cCostExplosivePack].IntValue > -1) {
+		FormatEx(info, sizeof info, "%T", "Explosive Ammo Pack", client);
+		menu.AddItem("upgradepack_explosive", info);
 	}
-	if(g_esGeneral.g_cItemCosts[cCostIncendiaryPack].IntValue > -1)
-	{
-		FormatEx(sInfo, sizeof sInfo, "%T", "Incendiary Ammo Pack", client);
-		menu.AddItem("upgradepack_incendiary", sInfo);
+	if (g_esGeneral.g_cItemCosts[cCostIncendiaryPack].IntValue > -1) {
+		FormatEx(info, sizeof info, "%T", "Incendiary Ammo Pack", client);
+		menu.AddItem("upgradepack_incendiary", info);
 	}
-	if(g_esGeneral.g_cItemCosts[cCostAmmo].IntValue > -1)
-	{
-		FormatEx(sInfo, sizeof sInfo, "%T", "Ammo", client);
-		menu.AddItem("ammo", sInfo);
+	if (g_esGeneral.g_cItemCosts[cCostAmmo].IntValue > -1) {
+		FormatEx(info, sizeof info, "%T", "Ammo", client);
+		menu.AddItem("ammo", info);
 	}
 	menu.ExitBackButton = true;
 	menu.Display(client, MENU_TIME_FOREVER);
@@ -2327,23 +2039,21 @@ void vBuildUpgradeMenu(int client)
 
 int iMeleeMenuHandler(Menu menu, MenuAction action, int param1, int param2)
 {
-	switch(action)
-	{
-		case MenuAction_Select:
-		{
-			char sItem[32];
-			menu.GetItem(param2, sItem, sizeof sItem);
-			FormatEx(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "give %s", sItem);
-			int sequence = iGetMeleePos(sItem);
-			if(sequence != -1)
+	switch (action) {
+		case MenuAction_Select: {
+			char item[32];
+			menu.GetItem(param2, item, sizeof item);
+			FormatEx(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "give %s", item);
+			int sequence = iGetMeleePos(item);
+			if (sequence != -1)
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[sequence + 25].IntValue;
 			else
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostCustomMelee].IntValue;
 			vDisplayMeleeConfirmMenu(param1);
 		}
-		case MenuAction_Cancel:
-		{
-			if(param2 == MenuCancel_ExitBack)
+
+		case MenuAction_Cancel: {
+			if (param2 == MenuCancel_ExitBack)
 				vBuildWeaponMenu(param1);
 		}
 		case MenuAction_End:
@@ -2353,36 +2063,31 @@ int iMeleeMenuHandler(Menu menu, MenuAction action, int param1, int param2)
 	return 0;
 }
 
-int iSMGMenuHandler(Menu menu, MenuAction action, int param1, int param2)
-{
-	switch(action)
-	{
-		case MenuAction_Select:
-		{
-			char sItem[32];
-			menu.GetItem(param2, sItem, sizeof sItem);
-			if(strcmp(sItem, "smg") == 0)
-			{
+int iSMGMenuHandler(Menu menu, MenuAction action, int param1, int param2) {
+	switch (action) {
+		case MenuAction_Select: {
+			char item[32];
+			menu.GetItem(param2, item, sizeof item);
+			if (strcmp(item, "smg") == 0) {
 				strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "give smg");
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostUZI].IntValue;
 			}
-			else if(strcmp(sItem, "smg_silenced") == 0)
-			{
+			else if (strcmp(item, "smg_silenced") == 0) {
 				strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "give smg_silenced");
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostSilenced].IntValue;
 			}
-			else if(strcmp(sItem, "smg_mp5") == 0)
-			{
+			else if (strcmp(item, "smg_mp5") == 0) {
 				strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "give smg_mp5");
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostMP5].IntValue;
 			}
 			vDisplaySMGConfirmMenu(param1);
 		}
-		case MenuAction_Cancel:
-		{
-			if(param2 == MenuCancel_ExitBack)
+
+		case MenuAction_Cancel: {
+			if (param2 == MenuCancel_ExitBack)
 				vBuildWeaponMenu(param1);
 		}
+
 		case MenuAction_End:
 			delete menu;
 	}
@@ -2390,46 +2095,39 @@ int iSMGMenuHandler(Menu menu, MenuAction action, int param1, int param2)
 	return 0;
 }
 
-int iRifleMenuHandler(Menu menu, MenuAction action, int param1, int param2)
-{
-	switch(action)
-	{
-		case MenuAction_Select:
-		{
-			char sItem[32];
-			menu.GetItem(param2, sItem, sizeof sItem);
-			if(strcmp(sItem, "rifle") == 0)
-			{
+int iRifleMenuHandler(Menu menu, MenuAction action, int param1, int param2) {
+	switch (action) {
+		case MenuAction_Select: {
+			char item[32];
+			menu.GetItem(param2, item, sizeof item);
+			if (strcmp(item, "rifle") == 0) {
 				strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "give rifle");
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostM16].IntValue;
 			}
-			else if(strcmp(sItem, "rifle_desert") == 0)
-			{
+			else if (strcmp(item, "rifle_desert") == 0) {
 				strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "give rifle_desert");
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostSCAR].IntValue;
 			}
-			else if(strcmp(sItem, "rifle_ak47") == 0)
-			{
+			else if (strcmp(item, "rifle_ak47") == 0) {
 				strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "give rifle_ak47");
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostAK47].IntValue;
 			}
-			else if(strcmp(sItem, "rifle_sg552") == 0)
-			{
+			else if (strcmp(item, "rifle_sg552") == 0) {
 				strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "give rifle_sg552");
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostSG552].IntValue;
 			}
-			else if(strcmp(sItem, "rifle_m60") == 0)
-			{
+			else if (strcmp(item, "rifle_m60") == 0) {
 				strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "give rifle_m60");
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostM60].IntValue;
 			}
 			vDisplayRifleConfirmMenu(param1);
 		}
-		case MenuAction_Cancel:
-		{
-			if(param2 == MenuCancel_ExitBack)
+
+		case MenuAction_Cancel: {
+			if (param2 == MenuCancel_ExitBack)
 				vBuildWeaponMenu(param1);
 		}
+
 		case MenuAction_End:
 			delete menu;
 	}
@@ -2437,41 +2135,35 @@ int iRifleMenuHandler(Menu menu, MenuAction action, int param1, int param2)
 	return 0;
 }
 
-int iSniperMenuHandler(Menu menu, MenuAction action, int param1, int param2)
-{
-	switch(action)
-	{
-		case MenuAction_Select:
-		{
-			char sItem[32];
-			menu.GetItem(param2, sItem, sizeof sItem);
-			if(strcmp(sItem, "hunting_rifle") == 0)
-			{
+int iSniperMenuHandler(Menu menu, MenuAction action, int param1, int param2) {
+	switch (action) {
+		case MenuAction_Select: {
+			char item[32];
+			menu.GetItem(param2, item, sizeof item);
+			if (strcmp(item, "hunting_rifle") == 0) {
 				strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "give hunting_rifle");
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostHunting].IntValue;
 			}
-			else if(strcmp(sItem, "sniper_scout") == 0)
-			{
+			else if (strcmp(item, "sniper_scout") == 0) {
 				strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "give sniper_scout");
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostScout].IntValue;
 			}
-			else if(strcmp(sItem, "sniper_awp") == 0)
-			{
+			else if (strcmp(item, "sniper_awp") == 0) {
 				strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "give sniper_awp");
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostAWP].IntValue;
 			}
-			else if(strcmp(sItem, "sniper_military") == 0)
-			{
+			else if (strcmp(item, "sniper_military") == 0) {
 				strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "give sniper_military");
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostMilitary].IntValue;
 			}
 			vDisplaySniperConfirmMenu(param1);
 		}
-		case MenuAction_Cancel:
-		{
-			if(param2 == MenuCancel_ExitBack)
+	
+		case MenuAction_Cancel: {
+			if (param2 == MenuCancel_ExitBack)
 				vBuildWeaponMenu(param1);
 		}
+
 		case MenuAction_End:
 			delete menu;
 	}
@@ -2479,41 +2171,35 @@ int iSniperMenuHandler(Menu menu, MenuAction action, int param1, int param2)
 	return 0;
 }
 
-int iShotgunMenuHandler(Menu menu, MenuAction action, int param1, int param2)
-{
-	switch(action)
-	{
-		case MenuAction_Select:
-		{
-			char sItem[32];
-			menu.GetItem(param2, sItem, sizeof sItem);
-			if(strcmp(sItem, "pumpshotgun") == 0)
-			{
+int iShotgunMenuHandler(Menu menu, MenuAction action, int param1, int param2) {
+	switch (action) {
+		case MenuAction_Select: {
+			char item[32];
+			menu.GetItem(param2, item, sizeof item);
+			if (strcmp(item, "pumpshotgun") == 0) {
 				strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "give pumpshotgun");
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostPump].IntValue;
 			}
-			else if(strcmp(sItem, "shotgun_chrome") == 0)
-			{
+			else if (strcmp(item, "shotgun_chrome") == 0) {
 				strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "give shotgun_chrome");
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostChrome].IntValue;
 			}
-			else if(strcmp(sItem, "autoshotgun") == 0)
-			{
+			else if (strcmp(item, "autoshotgun") == 0) {
 				strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "give autoshotgun");
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostAuto].IntValue;
 			}
-			else if(strcmp(sItem, "shotgun_spas") == 0)
-			{
+			else if (strcmp(item, "shotgun_spas") == 0) {
 				strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "give shotgun_spas");
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostSPAS].IntValue;
 			}
 			vDisplayShotgunConfirmMenu(param1);
 		}
-		case MenuAction_Cancel:
-		{
-			if(param2 == MenuCancel_ExitBack)
+
+		case MenuAction_Cancel: {
+			if (param2 == MenuCancel_ExitBack)
 				vBuildWeaponMenu(param1);
 		}
+
 		case MenuAction_End:
 			delete menu;
 	}
@@ -2521,36 +2207,31 @@ int iShotgunMenuHandler(Menu menu, MenuAction action, int param1, int param2)
 	return 0;
 }
 
-int iThrowableMenuHandler(Menu menu, MenuAction action, int param1, int param2)
-{
-	switch(action)
-	{
-		case MenuAction_Select:
-		{
-			char sItem[32];
-			menu.GetItem(param2, sItem, sizeof sItem);
-			if(strcmp(sItem, "molotov") == 0)
-			{
+int iThrowableMenuHandler(Menu menu, MenuAction action, int param1, int param2) {
+	switch (action) {
+		case MenuAction_Select: {
+			char item[32];
+			menu.GetItem(param2, item, sizeof item);
+			if (strcmp(item, "molotov") == 0) {
 				strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "give molotov");
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostMolotov].IntValue;
 			}
-			else if(strcmp(sItem, "pipe_bomb") == 0)
-			{
+			else if (strcmp(item, "pipe_bomb") == 0) {
 				strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "give pipe_bomb");
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostPipe].IntValue;
 			}
-			else if(strcmp(sItem, "vomitjar") == 0)
-			{
+			else if (strcmp(item, "vomitjar") == 0) {
 				strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "give vomitjar");
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostBile].IntValue;
 			}
 			vDisplayThrowableConfirmMenu(param1);
 		}
-		case MenuAction_Cancel:
-		{
-			if(param2 == MenuCancel_ExitBack)
+	
+		case MenuAction_Cancel: {
+			if (param2 == MenuCancel_ExitBack)
 				vBuildWeaponMenu(param1);
 		}
+
 		case MenuAction_End:
 			delete menu;
 	}
@@ -2558,71 +2239,59 @@ int iThrowableMenuHandler(Menu menu, MenuAction action, int param1, int param2)
 	return 0;
 }
 
-int iMiscMenuHandler(Menu menu, MenuAction action, int param1, int param2)
-{
-	switch(action)
-	{
-		case MenuAction_Select:
-		{
-			char sItem[32];
-			menu.GetItem(param2, sItem, sizeof sItem);
-			if(strcmp(sItem, "pistol") == 0)
-			{
+int iMiscMenuHandler(Menu menu, MenuAction action, int param1, int param2) {
+	switch (action) {
+		case MenuAction_Select: {
+			char item[32];
+			menu.GetItem(param2, item, sizeof item);
+			if (strcmp(item, "pistol") == 0) {
 				strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "give pistol");
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostP220].IntValue;
 			}
-			else if(strcmp(sItem, "pistol_magnum") == 0)
-			{
+			else if (strcmp(item, "pistol_magnum") == 0) {
 				strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "give pistol_magnum");
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostMagnum].IntValue;
 			}
-			else if(strcmp(sItem, "grenade_launcher") == 0)
-			{
+			else if (strcmp(item, "grenade_launcher") == 0) {
 				strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "give grenade_launcher");
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostGrenade].IntValue;
 			}
-			else if(strcmp(sItem, "chainsaw") == 0)
-			{
+			else if (strcmp(item, "chainsaw") == 0) {
 				strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "give chainsaw");
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostChainsaw].IntValue;
 			}
-			else if(strcmp(sItem, "gnome") == 0)
-			{
+			else if (strcmp(item, "gnome") == 0) {
 				strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "give gnome");
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostGnome].IntValue;
 			}
-			else if(strcmp(sItem, "cola_bottles") == 0)
-			{
+			else if (strcmp(item, "cola_bottles") == 0) {
 				strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "give cola_bottles");
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostCola].IntValue;
 			}
-			else if(strcmp(sItem, "gascan") == 0)
-			{
+			else if (strcmp(item, "gascan") == 0) {
 				strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "give gascan");
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostGasCan].IntValue;
 			}
-			else if(strcmp(sItem, "propanetank") == 0)
-			{
+			else if (strcmp(item, "propanetank") == 0) {
 				strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "give propanetank");
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostPropane].IntValue;
 			}
-			else if(strcmp(sItem, "fireworkcrate") == 0)
-			{
+			else if (strcmp(item, "fireworkcrate") == 0) {
 				strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "give fireworkcrate");
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostFireworks].IntValue;
 			}
-			else if(strcmp(sItem, "oxygentank") == 0)
-			{
+			else if (strcmp(item, "oxygentank") == 0) {
 				strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "give oxygentank");
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostOxygen].IntValue;
 			}
 			vDisplayMiscConfirmMenu(param1);
 		}
-		case MenuAction_Cancel:
-		{
-			if(param2 == MenuCancel_ExitBack)
+
+		case MenuAction_Cancel: {
+			if (param2 == MenuCancel_ExitBack)
 				vBuildWeaponMenu(param1);
 		}
+	
 		case MenuAction_End:
 			delete menu;
 	}
@@ -2630,46 +2299,39 @@ int iMiscMenuHandler(Menu menu, MenuAction action, int param1, int param2)
 	return 0;
 }
 
-int iHealthMenuHandler(Menu menu, MenuAction action, int param1, int param2)
-{
-	switch(action)
-	{
-		case MenuAction_Select:
-		{
-			char sItem[32];
-			menu.GetItem(param2, sItem, sizeof sItem);
-			if(strcmp(sItem, "first_aid_kit") == 0)
-			{
+int iHealthMenuHandler(Menu menu, MenuAction action, int param1, int param2) {
+	switch (action) {
+		case MenuAction_Select: {
+			char item[32];
+			menu.GetItem(param2, item, sizeof item);
+			if (strcmp(item, "first_aid_kit") == 0) {
 				strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "give first_aid_kit");
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostHealthKit].IntValue;
 			}
-			else if(strcmp(sItem, "defibrillator") == 0)
-			{
+			else if (strcmp(item, "defibrillator") == 0) {
 				strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "give defibrillator");
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostDefib].IntValue;
 			}
-			else if(strcmp(sItem, "pain_pills") == 0)
-			{
+			else if (strcmp(item, "pain_pills") == 0) {
 				strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "give pain_pills");
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostPills].IntValue;
 			}
-			else if(strcmp(sItem, "adrenaline") == 0)
-			{
+			else if (strcmp(item, "adrenaline") == 0) {
 				strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "give adrenaline");
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostAdren].IntValue;
 			}
-			else if(strcmp(sItem, "health") == 0)
-			{
+			else if (strcmp(item, "health") == 0) {
 				strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "give health");
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostHeal].IntValue;
 			}
 			vDisplayHealthConfirmMenu(param1);
 		}
-		case MenuAction_Cancel:
-		{
-			if(param2 == MenuCancel_ExitBack)
+
+		case MenuAction_Cancel: {
+			if (param2 == MenuCancel_ExitBack)
 				vBuildBuyMenu(param1);
 		}
+
 		case MenuAction_End:
 			delete menu;
 	}
@@ -2677,51 +2339,43 @@ int iHealthMenuHandler(Menu menu, MenuAction action, int param1, int param2)
 	return 0;
 }
 
-int iUpgradeMenuHandler(Menu menu, MenuAction action, int param1, int param2)
-{
-	switch(action)
-	{
-		case MenuAction_Select:
-		{
-			char sItem[32];
-			menu.GetItem(param2, sItem, sizeof sItem);
-			if(strcmp(sItem, "upgradepack_explosive") == 0)
-			{
+int iUpgradeMenuHandler(Menu menu, MenuAction action, int param1, int param2) {
+	switch (action) {
+		case MenuAction_Select: {
+			char item[32];
+			menu.GetItem(param2, item, sizeof item);
+			if (strcmp(item, "upgradepack_explosive") == 0) {
 				strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "give upgradepack_explosive");
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostExplosivePack].IntValue;
 			}
-			else if(strcmp(sItem, "upgradepack_incendiary") == 0)
-			{
+			else if (strcmp(item, "upgradepack_incendiary") == 0) {
 				strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "give upgradepack_incendiary");
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostIncendiaryPack].IntValue;
 			}
-			else if(strcmp(sItem, "explosive_ammo") == 0)
-			{
+			else if (strcmp(item, "explosive_ammo") == 0) {
 				strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "upgrade_add EXPLOSIVE_AMMO");
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostExplosiveAmmo].IntValue;
 			}
-			else if(strcmp(sItem, "incendiary_ammo") == 0)
-			{
+			else if (strcmp(item, "incendiary_ammo") == 0) {
 				strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "upgrade_add INCENDIARY_AMMO");
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostIncendiaryAmmo].IntValue;
 			}
-			else if(strcmp(sItem, "laser_sight") == 0)
-			{
+			else if (strcmp(item, "laser_sight") == 0) {
 				strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "upgrade_add LASER_SIGHT");
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostLaserSight].IntValue;
 			}
-			else if(strcmp(sItem, "ammo") == 0)
-			{
+			else if (strcmp(item, "ammo") == 0) {
 				strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, "give ammo");
 				g_esPlayer[param1].g_iItemCost = g_esGeneral.g_cItemCosts[cCostAmmo].IntValue;
 			}
 			vDisplayUpgradeConfirmMenu(param1);
 		}
-		case MenuAction_Cancel:
-		{
-			if(param2 == MenuCancel_ExitBack)
+
+		case MenuAction_Cancel: {
+			if (param2 == MenuCancel_ExitBack)
 				vBuildBuyMenu(param1);
 		}
+
 		case MenuAction_End:
 			delete menu;
 	}
@@ -2729,84 +2383,69 @@ int iUpgradeMenuHandler(Menu menu, MenuAction action, int param1, int param2)
 	return 0;
 }
 
-int iInfectedMenuHandler(Menu menu, MenuAction action, int client, int param2)
-{
-	switch(action)
-	{
-		case MenuAction_Select:
-		{
-			char sItem[32];
-			menu.GetItem(param2, sItem, sizeof sItem);
-			if(strcmp(sItem, "heal") == 0)
-			{
+int iInfectedMenuHandler(Menu menu, MenuAction action, int client, int param2) {
+	switch (action) {
+		case MenuAction_Select: {
+			char item[32];
+			menu.GetItem(param2, item, sizeof item);
+			if (strcmp(item, "heal") == 0) {
 				strcopy(g_esPlayer[client].g_sCommand, sizeof esPlayer::g_sCommand, "give health");
-				if(bIsTank(client))
+				if (bIsTank(client))
 					g_esPlayer[client].g_iItemCost = g_esGeneral.g_cItemCosts[cCostPZHeal].IntValue * g_esGeneral.g_cItemCosts[cCostTankHealMulti].IntValue;
 				else
 					g_esPlayer[client].g_iItemCost = g_esGeneral.g_cItemCosts[cCostPZHeal].IntValue;
 			}
-			else if(strcmp(sItem, "suicide") == 0)
-			{
+			else if (strcmp(item, "suicide") == 0) {
 				strcopy(g_esPlayer[client].g_sCommand, sizeof esPlayer::g_sCommand, "suicide");
 				g_esPlayer[client].g_iItemCost = g_esGeneral.g_cItemCosts[cCostSuicide].IntValue;
 			}
-			else if(strcmp(sItem, "smoker") == 0)
-			{
+			else if (strcmp(item, "smoker") == 0) {
 				strcopy(g_esPlayer[client].g_sCommand, sizeof esPlayer::g_sCommand, "z_spawn_old smoker");
 				g_esPlayer[client].g_iItemCost = g_esGeneral.g_cItemCosts[cCostSmoker].IntValue;
 			}
-			else if(strcmp(sItem, "boomer") == 0)
-			{
+			else if (strcmp(item, "boomer") == 0) {
 				strcopy(g_esPlayer[client].g_sCommand, sizeof esPlayer::g_sCommand, "z_spawn_old boomer");
 				g_esPlayer[client].g_iItemCost = g_esGeneral.g_cItemCosts[cCostBoomer].IntValue;
 			}
-			else if(strcmp(sItem, "hunter") == 0)
-			{
+			else if (strcmp(item, "hunter") == 0) {
 				strcopy(g_esPlayer[client].g_sCommand, sizeof esPlayer::g_sCommand, "z_spawn_old hunter");
 				g_esPlayer[client].g_iItemCost = g_esGeneral.g_cItemCosts[cCostHunter].IntValue;
 			}
-			else if(strcmp(sItem, "spitter") == 0)
-			{
+			else if (strcmp(item, "spitter") == 0) {
 				strcopy(g_esPlayer[client].g_sCommand, sizeof esPlayer::g_sCommand, "z_spawn_old spitter");
 				g_esPlayer[client].g_iItemCost = g_esGeneral.g_cItemCosts[cCostSpitter].IntValue;
 			}
-			else if(strcmp(sItem, "jockey") == 0)
-			{
+			else if (strcmp(item, "jockey") == 0) {
 				strcopy(g_esPlayer[client].g_sCommand, sizeof esPlayer::g_sCommand, "z_spawn_old jockey");
 				g_esPlayer[client].g_iItemCost = g_esGeneral.g_cItemCosts[cCostJockey].IntValue;
 			}
-			else if(strcmp(sItem, "charger") == 0)
-			{
+			else if (strcmp(item, "charger") == 0) {
 				strcopy(g_esPlayer[client].g_sCommand, sizeof esPlayer::g_sCommand, "z_spawn_old charger");
 				g_esPlayer[client].g_iItemCost = g_esGeneral.g_cItemCosts[cCostCharger].IntValue;
 			}
-			else if(strcmp(sItem, "witch") == 0)
-			{
+			else if (strcmp(item, "witch") == 0) {
 				strcopy(g_esPlayer[client].g_sCommand, sizeof esPlayer::g_sCommand, "z_spawn_old witch");
 				g_esPlayer[client].g_iItemCost = g_esGeneral.g_cItemCosts[cCostWitch].IntValue;
 			}
-			else if(strcmp(sItem, "witch_bride") == 0)
-			{
+			else if (strcmp(item, "witch_bride") == 0) {
 				strcopy(g_esPlayer[client].g_sCommand, sizeof esPlayer::g_sCommand, "z_spawn_old witch_bride");
 				g_esPlayer[client].g_iItemCost = g_esGeneral.g_cItemCosts[cCostWitch].IntValue;
 			}
-			else if(strcmp(sItem, "tank") == 0)
-			{
+			else if (strcmp(item, "tank") == 0) {
 				strcopy(g_esPlayer[client].g_sCommand, sizeof esPlayer::g_sCommand, "z_spawn_old tank");
 				g_esPlayer[client].g_iItemCost = g_esGeneral.g_cItemCosts[cCostTank].IntValue;
 			}
-			else if(strcmp(sItem, "horde") == 0)
-			{
+			else if (strcmp(item, "horde") == 0) {
 				strcopy(g_esPlayer[client].g_sCommand, sizeof esPlayer::g_sCommand, "director_force_panic_event");
 				g_esPlayer[client].g_iItemCost = g_esGeneral.g_cItemCosts[cCostHorde].IntValue;
 			}
-			else if(strcmp(sItem, "mob") == 0)
-			{
+			else if (strcmp(item, "mob") == 0) {
 				strcopy(g_esPlayer[client].g_sCommand, sizeof esPlayer::g_sCommand, "z_spawn_old mob");
 				g_esPlayer[client].g_iItemCost = g_esGeneral.g_cItemCosts[cCostMob].IntValue;
 			}
 			vDisplayInfectedConfirmMenu(client);
 		}
+
 		case MenuAction_End:
 			delete menu;
 	}
@@ -2814,177 +2453,160 @@ int iInfectedMenuHandler(Menu menu, MenuAction action, int client, int param2)
 	return 0;
 }
 
-void vDisplayMeleeConfirmMenu(int client)
-{
-	char sInfo[32];
+void vDisplayMeleeConfirmMenu(int client) {
+	char info[32];
 	Menu menu = new Menu(iMeleeConfirmMenuHandler);
-	FormatEx(sInfo, sizeof sInfo,"%T", "Cost", client, g_esPlayer[client].g_iItemCost);
-	menu.SetTitle(sInfo);
-	FormatEx(sInfo, sizeof sInfo,"%T", "Yes", client);
-	menu.AddItem("y", sInfo);
-	FormatEx(sInfo, sizeof sInfo,"%T", "No", client);
-	menu.AddItem("n", sInfo);
+	FormatEx(info, sizeof info,"%T", "Cost", client, g_esPlayer[client].g_iItemCost);
+	menu.SetTitle(info);
+	FormatEx(info, sizeof info,"%T", "Yes", client);
+	menu.AddItem("y", info);
+	FormatEx(info, sizeof info,"%T", "No", client);
+	menu.AddItem("n", info);
 	menu.ExitButton = true;
 	menu.ExitBackButton = true;
 	menu.Display(client, MENU_TIME_FOREVER);
 }
 
-void vDisplaySMGConfirmMenu(int client)
-{
-	char sInfo[32];
+void vDisplaySMGConfirmMenu(int client) {
+	char info[32];
 	Menu menu = new Menu(iSMGConfirmMenuHandler);
-	FormatEx(sInfo, sizeof sInfo,"%T", "Cost", client, g_esPlayer[client].g_iItemCost);
-	menu.SetTitle(sInfo);
-	FormatEx(sInfo, sizeof sInfo,"%T", "Yes", client);
-	menu.AddItem("y", sInfo);
-	FormatEx(sInfo, sizeof sInfo,"%T", "No", client);
-	menu.AddItem("n", sInfo);
+	FormatEx(info, sizeof info,"%T", "Cost", client, g_esPlayer[client].g_iItemCost);
+	menu.SetTitle(info);
+	FormatEx(info, sizeof info,"%T", "Yes", client);
+	menu.AddItem("y", info);
+	FormatEx(info, sizeof info,"%T", "No", client);
+	menu.AddItem("n", info);
 	menu.ExitButton = true;
 	menu.ExitBackButton = true;
 	menu.Display(client, MENU_TIME_FOREVER);
 }
 
-void vDisplayRifleConfirmMenu(int client)
-{
-	char sInfo[32];
+void vDisplayRifleConfirmMenu(int client) {
+	char info[32];
 	Menu menu = new Menu(iRifleConfirmMenuHandler);
-	FormatEx(sInfo, sizeof sInfo,"%T", "Cost", client, g_esPlayer[client].g_iItemCost);
-	menu.SetTitle(sInfo);
-	FormatEx(sInfo, sizeof sInfo,"%T", "Yes", client);
-	menu.AddItem("y", sInfo);
-	FormatEx(sInfo, sizeof sInfo,"%T", "No", client);
-	menu.AddItem("n", sInfo);
+	FormatEx(info, sizeof info,"%T", "Cost", client, g_esPlayer[client].g_iItemCost);
+	menu.SetTitle(info);
+	FormatEx(info, sizeof info,"%T", "Yes", client);
+	menu.AddItem("y", info);
+	FormatEx(info, sizeof info,"%T", "No", client);
+	menu.AddItem("n", info);
 	menu.ExitButton = true;
 	menu.ExitBackButton = true;
 	menu.Display(client, MENU_TIME_FOREVER);
 }
 
-void vDisplaySniperConfirmMenu(int client)
-{
-	char sInfo[32];
+void vDisplaySniperConfirmMenu(int client) {
+	char info[32];
 	Menu menu = new Menu(iSniperConfirmMenuHandler);
-	FormatEx(sInfo, sizeof sInfo,"%T", "Cost", client, g_esPlayer[client].g_iItemCost);
-	menu.SetTitle(sInfo);
-	FormatEx(sInfo, sizeof sInfo,"%T", "Yes", client);
-	menu.AddItem("y", sInfo);
-	FormatEx(sInfo, sizeof sInfo,"%T", "No", client);
-	menu.AddItem("n", sInfo);
+	FormatEx(info, sizeof info,"%T", "Cost", client, g_esPlayer[client].g_iItemCost);
+	menu.SetTitle(info);
+	FormatEx(info, sizeof info,"%T", "Yes", client);
+	menu.AddItem("y", info);
+	FormatEx(info, sizeof info,"%T", "No", client);
+	menu.AddItem("n", info);
 	menu.ExitButton = true;
 	menu.ExitBackButton = true;
 	menu.Display(client, MENU_TIME_FOREVER);
 }
 
-void vDisplayShotgunConfirmMenu(int client)
-{
-	char sInfo[32];
+void vDisplayShotgunConfirmMenu(int client) {
+	char info[32];
 	Menu menu = new Menu(iShotgunConfirmMenuHandler);
-	FormatEx(sInfo, sizeof sInfo,"%T", "Cost", client, g_esPlayer[client].g_iItemCost);
-	menu.SetTitle(sInfo);
-	FormatEx(sInfo, sizeof sInfo,"%T", "Yes", client);
-	menu.AddItem("y", sInfo);
-	FormatEx(sInfo, sizeof sInfo,"%T", "No", client);
-	menu.AddItem("n", sInfo);
+	FormatEx(info, sizeof info,"%T", "Cost", client, g_esPlayer[client].g_iItemCost);
+	menu.SetTitle(info);
+	FormatEx(info, sizeof info,"%T", "Yes", client);
+	menu.AddItem("y", info);
+	FormatEx(info, sizeof info,"%T", "No", client);
+	menu.AddItem("n", info);
 	menu.ExitButton = true;
 	menu.ExitBackButton = true;
 	menu.Display(client, MENU_TIME_FOREVER);
 }
 
-void vDisplayThrowableConfirmMenu(int client)
-{
-	char sInfo[32];
+void vDisplayThrowableConfirmMenu(int client) {
+	char info[32];
 	Menu menu = new Menu(iThrowableConfirmMenuHandler);
-	FormatEx(sInfo, sizeof sInfo,"%T", "Cost", client, g_esPlayer[client].g_iItemCost);
-	menu.SetTitle(sInfo);
-	FormatEx(sInfo, sizeof sInfo,"%T", "Yes", client);
-	menu.AddItem("y", sInfo);
-	FormatEx(sInfo, sizeof sInfo,"%T", "No", client);
-	menu.AddItem("n", sInfo);
+	FormatEx(info, sizeof info,"%T", "Cost", client, g_esPlayer[client].g_iItemCost);
+	menu.SetTitle(info);
+	FormatEx(info, sizeof info,"%T", "Yes", client);
+	menu.AddItem("y", info);
+	FormatEx(info, sizeof info,"%T", "No", client);
+	menu.AddItem("n", info);
 	menu.ExitButton = true;
 	menu.ExitBackButton = true;
 	menu.Display(client, MENU_TIME_FOREVER);
 }
 
-void vDisplayMiscConfirmMenu(int client)
-{
-	char sInfo[32];
+void vDisplayMiscConfirmMenu(int client) {
+	char info[32];
 	Menu menu = new Menu(iMiscConfirmMenuHandler);
-	FormatEx(sInfo, sizeof sInfo,"%T", "Cost", client, g_esPlayer[client].g_iItemCost);
-	menu.SetTitle(sInfo);
-	FormatEx(sInfo, sizeof sInfo,"%T", "Yes", client);
-	menu.AddItem("y", sInfo);
-	FormatEx(sInfo, sizeof sInfo,"%T", "No", client);
-	menu.AddItem("n", sInfo);
+	FormatEx(info, sizeof info,"%T", "Cost", client, g_esPlayer[client].g_iItemCost);
+	menu.SetTitle(info);
+	FormatEx(info, sizeof info,"%T", "Yes", client);
+	menu.AddItem("y", info);
+	FormatEx(info, sizeof info,"%T", "No", client);
+	menu.AddItem("n", info);
 	menu.ExitButton = true;
 	menu.ExitBackButton = true;
 	menu.Display(client, MENU_TIME_FOREVER);
 }
 
-void vDisplayHealthConfirmMenu(int client)
-{
-	char sInfo[32];
+void vDisplayHealthConfirmMenu(int client) {
+	char info[32];
 	Menu menu = new Menu(iHealthConfirmMenuHandler);
-	FormatEx(sInfo, sizeof sInfo,"%T", "Cost", client, g_esPlayer[client].g_iItemCost);
-	menu.SetTitle(sInfo);
-	FormatEx(sInfo, sizeof sInfo,"%T", "Yes", client);
-	menu.AddItem("y", sInfo);
-	FormatEx(sInfo, sizeof sInfo,"%T", "No", client);
-	menu.AddItem("n", sInfo);
+	FormatEx(info, sizeof info,"%T", "Cost", client, g_esPlayer[client].g_iItemCost);
+	menu.SetTitle(info);
+	FormatEx(info, sizeof info,"%T", "Yes", client);
+	menu.AddItem("y", info);
+	FormatEx(info, sizeof info,"%T", "No", client);
+	menu.AddItem("n", info);
 	menu.ExitButton = true;
 	menu.ExitBackButton = true;
 	menu.Display(client, MENU_TIME_FOREVER);
 }
 
-void vDisplayUpgradeConfirmMenu(int client)
-{
-	char sInfo[32];
+void vDisplayUpgradeConfirmMenu(int client) {
+	char info[32];
 	Menu menu = new Menu(iUpgradeConfirmMenuHandler);
-	FormatEx(sInfo, sizeof sInfo,"%T", "Cost", client, g_esPlayer[client].g_iItemCost);
-	menu.SetTitle(sInfo);
-	FormatEx(sInfo, sizeof sInfo,"%T", "Yes", client);
-	menu.AddItem("y", sInfo);
-	FormatEx(sInfo, sizeof sInfo,"%T", "No", client);
-	menu.AddItem("n", sInfo);
+	FormatEx(info, sizeof info,"%T", "Cost", client, g_esPlayer[client].g_iItemCost);
+	menu.SetTitle(info);
+	FormatEx(info, sizeof info,"%T", "Yes", client);
+	menu.AddItem("y", info);
+	FormatEx(info, sizeof info,"%T", "No", client);
+	menu.AddItem("n", info);
 	menu.ExitButton = true;
 	menu.ExitBackButton = true;
 	menu.Display(client, MENU_TIME_FOREVER);
 }
 
-void vDisplayInfectedConfirmMenu(int client)
-{
-	char sInfo[32];
+void vDisplayInfectedConfirmMenu(int client) {
+	char info[32];
 	Menu menu = new Menu(iInfectedConfirmMenuHandler);
-	FormatEx(sInfo, sizeof sInfo,"%T", "Cost", client, g_esPlayer[client].g_iItemCost);
-	menu.SetTitle(sInfo);
-	FormatEx(sInfo, sizeof sInfo,"%T", "Yes", client);
-	menu.AddItem("y", sInfo);
-	FormatEx(sInfo, sizeof sInfo,"%T", "No", client);
-	menu.AddItem("n", sInfo);
+	FormatEx(info, sizeof info,"%T", "Cost", client, g_esPlayer[client].g_iItemCost);
+	menu.SetTitle(info);
+	FormatEx(info, sizeof info,"%T", "Yes", client);
+	menu.AddItem("y", info);
+	FormatEx(info, sizeof info,"%T", "No", client);
+	menu.AddItem("n", info);
 	menu.ExitButton = true;
 	menu.ExitBackButton = true;
 	menu.Display(client, MENU_TIME_FOREVER);
 }
 
-int iMeleeConfirmMenuHandler(Menu menu, MenuAction action, int param1, int param2)
-{
-	switch(action)
-	{
-		case MenuAction_Select:
-		{
-			char sItem[2];
-			menu.GetItem(param2, sItem, sizeof sItem);
-			switch(sItem[0])
-			{
-				case 'n':
-				{
+int iMeleeConfirmMenuHandler(Menu menu, MenuAction action, int param1, int param2) {
+	switch (action) {
+		case MenuAction_Select: {
+			char item[2];
+			menu.GetItem(param2, item, sizeof item);
+			switch (item[0]) {
+				case 'n': {
 					vBuildMeleeMenu(param1);
 					strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, g_esPlayer[param1].g_sBought);
 					g_esPlayer[param1].g_iItemCost = g_esPlayer[param1].g_iBoughtCost;
 				}
 
-				case 'y':
-				{
-					if(bHasEnoughPoints(param1, g_esPlayer[param1].g_iItemCost))
-					{
+				case 'y': {
+					if (bHasEnoughPoints(param1, g_esPlayer[param1].g_iItemCost)) {
 						strcopy(g_esPlayer[param1].g_sBought, sizeof esPlayer::g_sBought, g_esPlayer[param1].g_sCommand);
 						g_esPlayer[param1].g_iBoughtCost = g_esPlayer[param1].g_iItemCost;
 						vRemovePoints(param1, g_esPlayer[param1].g_iItemCost);
@@ -2993,14 +2615,15 @@ int iMeleeConfirmMenuHandler(Menu menu, MenuAction action, int param1, int param
 				}
 			}
 		}
-		case MenuAction_Cancel:
-		{
-			if(param2 == MenuCancel_ExitBack)
+
+		case MenuAction_Cancel: {
+			if (param2 == MenuCancel_ExitBack)
 				vBuildMeleeMenu(param1);
 
 			strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, g_esPlayer[param1].g_sBought);
 			g_esPlayer[param1].g_iItemCost = g_esPlayer[param1].g_iBoughtCost;
 		}
+
 		case MenuAction_End:
 			delete menu;
 	}
@@ -3008,27 +2631,20 @@ int iMeleeConfirmMenuHandler(Menu menu, MenuAction action, int param1, int param
 	return 0;
 }
 
-int iRifleConfirmMenuHandler(Menu menu, MenuAction action, int param1, int param2)
-{
-	switch(action)
-	{
-		case MenuAction_Select:
-		{
-			char sItem[2];
-			menu.GetItem(param2, sItem, sizeof sItem);
-			switch(sItem[0])
-			{
-				case 'n':
-				{
+int iRifleConfirmMenuHandler(Menu menu, MenuAction action, int param1, int param2) {
+	switch (action) {
+		case MenuAction_Select: {
+			char item[2];
+			menu.GetItem(param2, item, sizeof item);
+			switch (item[0]) {
+				case 'n': {
 					vBuildRifleMenu(param1);
 					strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, g_esPlayer[param1].g_sBought);
 					g_esPlayer[param1].g_iItemCost = g_esPlayer[param1].g_iBoughtCost;
 				}
 
-				case 'y':
-				{
-					if(bHasEnoughPoints(param1, g_esPlayer[param1].g_iItemCost))
-					{
+				case 'y': {
+					if (bHasEnoughPoints(param1, g_esPlayer[param1].g_iItemCost)) {
 						strcopy(g_esPlayer[param1].g_sBought, sizeof esPlayer::g_sBought, g_esPlayer[param1].g_sCommand);
 						g_esPlayer[param1].g_iBoughtCost = g_esPlayer[param1].g_iItemCost;
 						vRemovePoints(param1, g_esPlayer[param1].g_iItemCost);
@@ -3037,14 +2653,15 @@ int iRifleConfirmMenuHandler(Menu menu, MenuAction action, int param1, int param
 				}
 			}
 		}
-		case MenuAction_Cancel:
-		{
-			if(param2 == MenuCancel_ExitBack)
+
+		case MenuAction_Cancel: {
+			if (param2 == MenuCancel_ExitBack)
 				vBuildRifleMenu(param1);
 
 			strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, g_esPlayer[param1].g_sBought);
 			g_esPlayer[param1].g_iItemCost = g_esPlayer[param1].g_iBoughtCost;
 		}
+
 		case MenuAction_End:
 			delete menu;
 	}
@@ -3052,27 +2669,20 @@ int iRifleConfirmMenuHandler(Menu menu, MenuAction action, int param1, int param
 	return 0;
 }
 
-int iSniperConfirmMenuHandler(Menu menu, MenuAction action, int param1, int param2)
-{
-	switch(action)
-	{
-		case MenuAction_Select:
-		{
-			char sItem[2];
-			menu.GetItem(param2, sItem, sizeof sItem);
-			switch(sItem[0])
-			{
-				case 'n':
-				{
+int iSniperConfirmMenuHandler(Menu menu, MenuAction action, int param1, int param2) {
+	switch (action) {
+		case MenuAction_Select: {
+			char item[2];
+			menu.GetItem(param2, item, sizeof item);
+			switch (item[0]) {
+				case 'n': {
 					vBuildSniperMenu(param1);
 					strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, g_esPlayer[param1].g_sBought);
 					g_esPlayer[param1].g_iItemCost = g_esPlayer[param1].g_iBoughtCost;
 				}
 
-				case 'y':
-				{
-					if(bHasEnoughPoints(param1, g_esPlayer[param1].g_iItemCost))
-					{
+				case 'y': {
+					if (bHasEnoughPoints(param1, g_esPlayer[param1].g_iItemCost)) {
 						strcopy(g_esPlayer[param1].g_sBought,sizeof esPlayer::g_sBought, g_esPlayer[param1].g_sCommand);
 						g_esPlayer[param1].g_iBoughtCost = g_esPlayer[param1].g_iItemCost;
 						vRemovePoints(param1, g_esPlayer[param1].g_iItemCost);
@@ -3081,14 +2691,15 @@ int iSniperConfirmMenuHandler(Menu menu, MenuAction action, int param1, int para
 				}
 			}
 		}
-		case MenuAction_Cancel:
-		{
-			if(param2 == MenuCancel_ExitBack)
+	
+		case MenuAction_Cancel: {
+			if (param2 == MenuCancel_ExitBack)
 				vBuildSniperMenu(param1);
 
 			strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, g_esPlayer[param1].g_sBought);
 			g_esPlayer[param1].g_iItemCost = g_esPlayer[param1].g_iBoughtCost;
 		}
+	
 		case MenuAction_End:
 			delete menu;
 	}
@@ -3096,27 +2707,20 @@ int iSniperConfirmMenuHandler(Menu menu, MenuAction action, int param1, int para
 	return 0;
 }
 
-int iSMGConfirmMenuHandler(Menu menu, MenuAction action, int param1, int param2)
-{
-	switch(action)
-	{
-		case MenuAction_Select:
-		{
-			char sItem[2];
-			menu.GetItem(param2, sItem, sizeof sItem);
-			switch(sItem[0])
-			{
-				case 'n':
-				{
+int iSMGConfirmMenuHandler(Menu menu, MenuAction action, int param1, int param2) {
+	switch (action) {
+		case MenuAction_Select: {
+			char item[2];
+			menu.GetItem(param2, item, sizeof item);
+			switch (item[0]) {
+				case 'n': {
 					vBuildSMGMenu(param1);
 					strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, g_esPlayer[param1].g_sBought);
 					g_esPlayer[param1].g_iItemCost = g_esPlayer[param1].g_iBoughtCost;
 				}
 
-				case 'y':
-				{
-					if(bHasEnoughPoints(param1, g_esPlayer[param1].g_iItemCost))
-					{
+				case 'y': {
+					if (bHasEnoughPoints(param1, g_esPlayer[param1].g_iItemCost)) {
 						strcopy(g_esPlayer[param1].g_sBought, sizeof esPlayer::g_sBought, g_esPlayer[param1].g_sCommand);
 						g_esPlayer[param1].g_iBoughtCost = g_esPlayer[param1].g_iItemCost;
 						vRemovePoints(param1, g_esPlayer[param1].g_iItemCost);
@@ -3125,14 +2729,15 @@ int iSMGConfirmMenuHandler(Menu menu, MenuAction action, int param1, int param2)
 				}
 			}
 		}
-		case MenuAction_Cancel:
-		{
-			if(param2 == MenuCancel_ExitBack)
+
+		case MenuAction_Cancel: {
+			if (param2 == MenuCancel_ExitBack)
 				vBuildSMGMenu(param1);
 
 			strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, g_esPlayer[param1].g_sBought);
 			g_esPlayer[param1].g_iItemCost = g_esPlayer[param1].g_iBoughtCost;
 		}
+
 		case MenuAction_End:
 			delete menu;
 	}
@@ -3140,27 +2745,20 @@ int iSMGConfirmMenuHandler(Menu menu, MenuAction action, int param1, int param2)
 	return 0;
 }
 
-int iShotgunConfirmMenuHandler(Menu menu, MenuAction action, int param1, int param2)
-{
-	switch(action)
-	{
-		case MenuAction_Select:
-		{
-			char sItem[2];
-			menu.GetItem(param2, sItem, sizeof sItem);
-			switch(sItem[0])
-			{
-				case 'n':
-				{
+int iShotgunConfirmMenuHandler(Menu menu, MenuAction action, int param1, int param2) {
+	switch (action) {
+		case MenuAction_Select: {
+			char item[2];
+			menu.GetItem(param2, item, sizeof item);
+			switch (item[0]) {
+				case 'n': {
 					vBuildShotgunMenu(param1);
 					strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, g_esPlayer[param1].g_sBought);
 					g_esPlayer[param1].g_iItemCost = g_esPlayer[param1].g_iBoughtCost;
 				}
 
-				case 'y':
-				{
-					if(bHasEnoughPoints(param1, g_esPlayer[param1].g_iItemCost))
-					{
+				case 'y': {
+					if (bHasEnoughPoints(param1, g_esPlayer[param1].g_iItemCost)) {
 						strcopy(g_esPlayer[param1].g_sBought, sizeof esPlayer::g_sBought, g_esPlayer[param1].g_sCommand);
 						g_esPlayer[param1].g_iBoughtCost = g_esPlayer[param1].g_iItemCost;
 						vRemovePoints(param1, g_esPlayer[param1].g_iItemCost);
@@ -3169,14 +2767,15 @@ int iShotgunConfirmMenuHandler(Menu menu, MenuAction action, int param1, int par
 				}
 			}
 		}
-		case MenuAction_Cancel:
-		{
-			if(param2 == MenuCancel_ExitBack)
+
+		case MenuAction_Cancel: {
+			if (param2 == MenuCancel_ExitBack)
 				vBuildShotgunMenu(param1);
 
 			strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, g_esPlayer[param1].g_sBought);
 			g_esPlayer[param1].g_iItemCost = g_esPlayer[param1].g_iBoughtCost;
 		}
+
 		case MenuAction_End:
 			delete menu;
 	}
@@ -3184,27 +2783,20 @@ int iShotgunConfirmMenuHandler(Menu menu, MenuAction action, int param1, int par
 	return 0;
 }
 
-int iThrowableConfirmMenuHandler(Menu menu, MenuAction action, int param1, int param2)
-{
-	switch(action)
-	{
-		case MenuAction_Select:
-		{
-			char sItem[2];
-			menu.GetItem(param2, sItem, sizeof sItem);
-			switch(sItem[0])
-			{
-				case 'n':
-				{
+int iThrowableConfirmMenuHandler(Menu menu, MenuAction action, int param1, int param2) {
+	switch (action) {
+		case MenuAction_Select: {
+			char item[2];
+			menu.GetItem(param2, item, sizeof item);
+			switch (item[0]) {
+				case 'n': {
 					vBuildThrowableMenu(param1);
 					strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, g_esPlayer[param1].g_sBought);
 					g_esPlayer[param1].g_iItemCost = g_esPlayer[param1].g_iBoughtCost;
 				}
 
-				case 'y':
-				{
-					if(bHasEnoughPoints(param1, g_esPlayer[param1].g_iItemCost))
-					{
+				case 'y': {
+					if (bHasEnoughPoints(param1, g_esPlayer[param1].g_iItemCost)) {
 						strcopy(g_esPlayer[param1].g_sBought, sizeof esPlayer::g_sBought, g_esPlayer[param1].g_sCommand);
 						g_esPlayer[param1].g_iBoughtCost = g_esPlayer[param1].g_iItemCost;
 						vRemovePoints(param1, g_esPlayer[param1].g_iItemCost);
@@ -3213,14 +2805,15 @@ int iThrowableConfirmMenuHandler(Menu menu, MenuAction action, int param1, int p
 				}
 			}
 		}
-		case MenuAction_Cancel:
-		{
-			if(param2 == MenuCancel_ExitBack)
+	
+		case MenuAction_Cancel: {
+			if (param2 == MenuCancel_ExitBack)
 				vBuildThrowableMenu(param1);
 
 			strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, g_esPlayer[param1].g_sBought);
 			g_esPlayer[param1].g_iItemCost = g_esPlayer[param1].g_iBoughtCost;
 		}
+
 		case MenuAction_End:
 			delete menu;
 	}
@@ -3228,27 +2821,20 @@ int iThrowableConfirmMenuHandler(Menu menu, MenuAction action, int param1, int p
 	return 0;
 }
 
-int iMiscConfirmMenuHandler(Menu menu, MenuAction action, int param1, int param2)
-{
-	switch(action)
-	{
-		case MenuAction_Select:
-		{
-			char sItem[2];
-			menu.GetItem(param2, sItem, sizeof sItem);
-			switch(sItem[0])
-			{
-				case 'n':
-				{
+int iMiscConfirmMenuHandler(Menu menu, MenuAction action, int param1, int param2) {
+	switch (action) {
+		case MenuAction_Select: {
+			char item[2];
+			menu.GetItem(param2, item, sizeof item);
+			switch (item[0]) {
+				case 'n': {
 					vBuildMiscMenu(param1);
 					strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, g_esPlayer[param1].g_sBought);
 					g_esPlayer[param1].g_iItemCost = g_esPlayer[param1].g_iBoughtCost;
 				}
 
-				case 'y':
-				{
-					if(bHasEnoughPoints(param1, g_esPlayer[param1].g_iItemCost))
-					{
+				case 'y': {
+					if (bHasEnoughPoints(param1, g_esPlayer[param1].g_iItemCost)) {
 						strcopy(g_esPlayer[param1].g_sBought, sizeof esPlayer::g_sBought, g_esPlayer[param1].g_sCommand);
 						g_esPlayer[param1].g_iBoughtCost = g_esPlayer[param1].g_iItemCost;
 						vRemovePoints(param1, g_esPlayer[param1].g_iItemCost);
@@ -3257,14 +2843,15 @@ int iMiscConfirmMenuHandler(Menu menu, MenuAction action, int param1, int param2
 				}
 			}
 		}
-		case MenuAction_Cancel:
-		{
-			if(param2 == MenuCancel_ExitBack)
+
+		case MenuAction_Cancel: {
+			if (param2 == MenuCancel_ExitBack)
 				vBuildMiscMenu(param1);
 
 			strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, g_esPlayer[param1].g_sBought);
 			g_esPlayer[param1].g_iItemCost = g_esPlayer[param1].g_iBoughtCost;
 		}
+
 		case MenuAction_End:
 			delete menu;
 	}
@@ -3272,39 +2859,29 @@ int iMiscConfirmMenuHandler(Menu menu, MenuAction action, int param1, int param2
 	return 0;
 }
 
-int iHealthConfirmMenuHandler(Menu menu, MenuAction action, int param1, int param2)
-{
-	switch(action)
-	{
-		case MenuAction_Select:
-		{
-			char sItem[2];
-			menu.GetItem(param2, sItem, sizeof sItem);
-			switch(sItem[0])
-			{
-				case 'n':
-				{
+int iHealthConfirmMenuHandler(Menu menu, MenuAction action, int param1, int param2) {
+	switch (action) {
+		case MenuAction_Select: {
+			char item[2];
+			menu.GetItem(param2, item, sizeof item);
+			switch (item[0]) {
+				case 'n': {
 					vBuildHealthMenu(param1);
 					strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, g_esPlayer[param1].g_sBought);
 					g_esPlayer[param1].g_iItemCost = g_esPlayer[param1].g_iBoughtCost;
 				}
 
-				case 'y':
-				{
-					if(bHasEnoughPoints(param1, g_esPlayer[param1].g_iItemCost))
-					{
-						if(strcmp(g_esPlayer[param1].g_sCommand, "give health") == 0)
-						{
-							if(IsPlayerAlive(param1))
-							{
+				case 'y': {
+					if (bHasEnoughPoints(param1, g_esPlayer[param1].g_iItemCost)) {
+						if (strcmp(g_esPlayer[param1].g_sCommand, "give health") == 0) {
+							if (IsPlayerAlive(param1)) {
 								strcopy(g_esPlayer[param1].g_sBought, sizeof esPlayer::g_sBought, g_esPlayer[param1].g_sCommand);
 								g_esPlayer[param1].g_iBoughtCost = g_esPlayer[param1].g_iItemCost;
 								vRemovePoints(param1, g_esPlayer[param1].g_iItemCost);
 								vCheatCommand(param1, g_esPlayer[param1].g_sCommand);
 							}
 						}
-						else
-						{
+						else {
 							strcopy(g_esPlayer[param1].g_sBought, sizeof esPlayer::g_sBought, g_esPlayer[param1].g_sCommand);
 							g_esPlayer[param1].g_iBoughtCost = g_esPlayer[param1].g_iItemCost;
 							vRemovePoints(param1, g_esPlayer[param1].g_iItemCost);
@@ -3314,14 +2891,15 @@ int iHealthConfirmMenuHandler(Menu menu, MenuAction action, int param1, int para
 				}	
 			}
 		}
-		case MenuAction_Cancel:
-		{
-			if(param2 == MenuCancel_ExitBack)
+
+		case MenuAction_Cancel: {
+			if (param2 == MenuCancel_ExitBack)
 				vBuildHealthMenu(param1);
 
 			strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, g_esPlayer[param1].g_sBought);
 			g_esPlayer[param1].g_iItemCost = g_esPlayer[param1].g_iBoughtCost;
 		}
+
 		case MenuAction_End:
 			delete menu;
 	}
@@ -3329,59 +2907,23 @@ int iHealthConfirmMenuHandler(Menu menu, MenuAction action, int param1, int para
 	return 0;
 }
 
-void vReloadAmmo(int client, int iCost, const char[] sItem)
-{
-	int iWeapon = GetPlayerWeaponSlot(client, 0);
-	if(iWeapon <= MaxClients || !IsValidEntity(iWeapon))
-	{
-		PrintToChat(client, "%s %T", MSGTAG, "Primary Warning", client);
-		return;
-	}
-
-	int m_iPrimaryAmmoType = GetEntProp(iWeapon, Prop_Send, "m_iPrimaryAmmoType");
-	if(m_iPrimaryAmmoType == -1)
-		return;
-
-	char sWeapon[32];
-	GetEntityClassname(iWeapon, sWeapon, sizeof sWeapon);
-	if(strcmp(sWeapon[7], "grenade_launcher") == 0)
-	{
-		static ConVar hAmmoGrenadelau;
-		if(hAmmoGrenadelau == null)
-			hAmmoGrenadelau = FindConVar("ammo_grenadelauncher_max");
-
-		SetEntProp(client, Prop_Send, "m_iAmmo", hAmmoGrenadelau.IntValue, _, m_iPrimaryAmmoType);
-	}
-
-	vCheatCommand(client, sItem);
-	vRemovePoints(client, iCost);
-}
-
-int iUpgradeConfirmMenuHandler(Menu menu, MenuAction action, int param1, int param2)
-{
-	switch(action)
-	{
-		case MenuAction_Select:
-		{
-			char sItem[2];
-			menu.GetItem(param2, sItem, sizeof sItem);
-			switch(sItem[0])
-			{
-				case 'n':
-				{
+int iUpgradeConfirmMenuHandler(Menu menu, MenuAction action, int param1, int param2) {
+	switch (action) {
+		case MenuAction_Select: {
+			char item[2];
+			menu.GetItem(param2, item, sizeof item);
+			switch (item[0]) {
+				case 'n': {
 					vBuildUpgradeMenu(param1);
 					strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, g_esPlayer[param1].g_sBought);
 					g_esPlayer[param1].g_iItemCost = g_esPlayer[param1].g_iBoughtCost;
 				}
 
-				case 'y':
-				{
-					if(bHasEnoughPoints(param1, g_esPlayer[param1].g_iItemCost))
-					{
-						if(strcmp(g_esPlayer[param1].g_sCommand, "give ammo") == 0)
+				case 'y': {
+					if (bHasEnoughPoints(param1, g_esPlayer[param1].g_iItemCost)) {
+						if (strcmp(g_esPlayer[param1].g_sCommand, "give ammo") == 0)
 							vReloadAmmo(param1, g_esPlayer[param1].g_iItemCost, g_esPlayer[param1].g_sCommand);
-						else
-						{
+						else {
 							strcopy(g_esPlayer[param1].g_sBought, sizeof esPlayer::g_sBought, g_esPlayer[param1].g_sCommand);
 							g_esPlayer[param1].g_iBoughtCost = g_esPlayer[param1].g_iItemCost;
 							vRemovePoints(param1, g_esPlayer[param1].g_iItemCost);
@@ -3391,14 +2933,15 @@ int iUpgradeConfirmMenuHandler(Menu menu, MenuAction action, int param1, int par
 				}
 			}
 		}
-		case MenuAction_Cancel:
-		{
-			if(param2 == MenuCancel_ExitBack)
+
+		case MenuAction_Cancel: {
+			if (param2 == MenuCancel_ExitBack)
 				vBuildUpgradeMenu(param1);
 
 			strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, g_esPlayer[param1].g_sBought);
 			g_esPlayer[param1].g_iItemCost = g_esPlayer[param1].g_iBoughtCost;
 		}
+	
 		case MenuAction_End:
 			delete menu;
 	}
@@ -3406,87 +2949,117 @@ int iUpgradeConfirmMenuHandler(Menu menu, MenuAction action, int param1, int par
 	return 0;
 }
 
-int iInfectedConfirmMenuHandler(Menu menu, MenuAction action, int param1, int param2)
-{
-	switch(action)
-	{
-		case MenuAction_Select:
-		{
-			char sItem[2];
-			menu.GetItem(param2, sItem, sizeof sItem);
-			switch(sItem[0])
-			{
-				case 'n':
-				{
+void vReloadAmmo(int client, int iCost, const char[] item) {
+	int iWeapon = GetPlayerWeaponSlot(client, 0);
+	if (iWeapon <= MaxClients || !IsValidEntity(iWeapon)) {
+		PrintToChat(client, "%s %T", MSGTAG, "Primary Warning", client);
+		return;
+	}
+
+	int m_iPrimaryAmmoType = GetEntProp(iWeapon, Prop_Send, "m_iPrimaryAmmoType");
+	if (m_iPrimaryAmmoType == -1)
+		return;
+
+	char sWeapon[32];
+	GetEntityClassname(iWeapon, sWeapon, sizeof sWeapon);
+	if (strcmp(sWeapon[7], "grenade_launcher") == 0) {
+		static ConVar cAmmoGrenadelau;
+		if (!cAmmoGrenadelau)
+			cAmmoGrenadelau = FindConVar("ammo_grenadelauncher_max");
+
+		SetEntProp(client, Prop_Send, "m_iAmmo", cAmmoGrenadelau.IntValue, _, m_iPrimaryAmmoType);
+	}
+
+	vCheatCommand(client, item);
+	vRemovePoints(client, iCost);
+}
+
+int iInfectedConfirmMenuHandler(Menu menu, MenuAction action, int param1, int param2) {
+	switch (action) {
+		case MenuAction_Select: {
+			char item[2];
+			menu.GetItem(param2, item, sizeof item);
+			switch (item[0]) {
+				case 'n': {
 					vBuildBuyMenu(param1);
 					strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, g_esPlayer[param1].g_sBought);
 					g_esPlayer[param1].g_iItemCost = g_esPlayer[param1].g_iBoughtCost;
 				}
 
-				case 'y':
-				{
-					if(!bHasEnoughPoints(param1, g_esPlayer[param1].g_iItemCost))
+				case 'y': {
+					if (!bHasEnoughPoints(param1, g_esPlayer[param1].g_iItemCost))
 						return 0;
 
 					int iPos;
 					char sCommand[32], sArguments[32];
-					if((iPos = SplitString(g_esPlayer[param1].g_sCommand, " ", sCommand, sizeof sCommand)) == -1)
+					if ((iPos = SplitString(g_esPlayer[param1].g_sCommand, " ", sCommand, sizeof sCommand)) == -1)
 						strcopy(sCommand, sizeof sCommand, g_esPlayer[param1].g_sCommand);
-					else
-					{
+					else {
 						strcopy(sArguments, sizeof sArguments, g_esPlayer[param1].g_sCommand[iPos]);
 						TrimString(sArguments);
 					}
 
-					if(sArguments[0] == '\0' && strcmp(sCommand, "suicide") == 0)
-					{
-						if(!bPerformSuicide(param1))
+					if (sArguments[0] == '\0' && strcmp(sCommand, "suicide") == 0) {
+						if (!bPerformSuicide(param1))
 							return 0;
 					}
-					else
-					{
-						if(strcmp(sArguments, "health") == 0)
-						{
-							if(!IsPlayerAlive(param1))
+					else {
+						if (strcmp(sArguments, "health") == 0) {
+							if (!IsPlayerAlive(param1))
 								return 0;
 						}
-						else if(strcmp(sCommand, "z_spawn_old") == 0)
-						{
-							if(strcmp(sArguments, "tank") == 0)
-							{
-								if(bReachedTankLimit(param1))
+						else if (strcmp(sCommand, "z_spawn_old") == 0) {
+							if (strcmp(sArguments, "tank") == 0) {
+								if (bReachedTankLimit(param1))
 									return 0;
 							}
-							else if(strncmp(sArguments, "witch", 5) == 0)
-							{
-								if(bReachedWitchLimit(param1))
+							else if (strncmp(sArguments, "witch", 5) == 0) {
+								if (bReachedWitchLimit(param1))
 									return 0;
 							}
 
-							if(sArguments[0] != 'm' && sArguments[0] != 'w')
-							{
-								if(!IsPlayerAlive(param1))
-								{
-									if(g_bRespawnPZ)
-									{
+							if (sArguments[0] != 'm' && sArguments[0] != 'w') {
+								if (!IsPlayerAlive(param1)) {
+									if (g_bRespawnPZ) {
 										static StringMap aZombieClass;
-										if(aZombieClass == null)
+										if (!aZombieClass)
 											aZombieClass = aInitZombieClass(aZombieClass);
 
 										int iZombieClass;
 										aZombieClass.GetValue(sArguments, iZombieClass);
-										if(iZombieClass)
+										if (iZombieClass)
 											CZ_RespawnPZ(param1, iZombieClass);
 									}
-									else
-									{
-										vSpawnablePZScanProtect(0, param1);
-										vCheatCommandEx(param1, sCommand, sArguments);
-										vSpawnablePZScanProtect(1, param1);
-									}
+									else {
+										int i = 1;
+										bool[] bGhost = new bool[MaxClients];
+										bool[] bLifeState = new bool[MaxClients];
+										for (; i <= MaxClients; i++) {
+											if (i == param1 || !IsClientInGame(i) || IsFakeClient(i) || GetClientTeam(i) != 3)
+												continue;
 
-									if(IsPlayerAlive(param1))
-									{
+											if (GetEntProp(i, Prop_Send, "m_isGhost")) {
+												bGhost[i] = true;
+												SetEntProp(i, Prop_Send, "m_isGhost", 0);
+											}
+											else if (!IsPlayerAlive(i)) {
+												bLifeState[i] = true;
+												SetEntProp(i, Prop_Send, "m_lifeState", 0);
+											}
+										}
+	
+										vCheatCommandEx(param1, sCommand, sArguments);
+
+										for (i = 1; i <= MaxClients; i++) {
+											if (bGhost[i])
+												SetEntProp(i, Prop_Send, "m_isGhost", 1);
+
+											if (bLifeState[i])
+												SetEntProp(i, Prop_Send, "m_lifeState", 1);
+										}
+									}
+				
+									if (IsPlayerAlive(param1)) {
 										strcopy(g_esPlayer[param1].g_sBought, sizeof esPlayer::g_sBought, g_esPlayer[param1].g_sCommand);
 										g_esPlayer[param1].g_iBoughtCost = g_esPlayer[param1].g_iItemCost;
 										vRemovePoints(param1, g_esPlayer[param1].g_iItemCost);
@@ -3506,11 +3079,12 @@ int iInfectedConfirmMenuHandler(Menu menu, MenuAction action, int param1, int pa
 				}
 			}
 		}
-		case MenuAction_Cancel:
-		{
+
+		case MenuAction_Cancel: {
 			strcopy(g_esPlayer[param1].g_sCommand, sizeof esPlayer::g_sCommand, g_esPlayer[param1].g_sBought);
 			g_esPlayer[param1].g_iItemCost = g_esPlayer[param1].g_iBoughtCost;
 		}
+
 		case MenuAction_End:
 			delete menu;
 	}
@@ -3518,10 +3092,8 @@ int iInfectedConfirmMenuHandler(Menu menu, MenuAction action, int param1, int pa
 	return 0;
 }
 
-bool bReachedTankLimit(int client)
-{
-	if(g_esGeneral.g_iCounter[iTankSpawned] >= g_esGeneral.g_cSettings[cSettingTankLimit].IntValue)
-	{
+bool bReachedTankLimit(int client) {
+	if (g_esGeneral.g_iCounter[iTankSpawned] >= g_esGeneral.g_cSettings[cSettingTankLimit].IntValue) {
 		PrintToChat(client,  "%T", "Tank Limit", client);
 		return true;
 	}
@@ -3529,10 +3101,8 @@ bool bReachedTankLimit(int client)
 	return false;
 }
 
-bool bReachedWitchLimit(int client)
-{
-	if(g_esGeneral.g_iCounter[iWitchSpawned] >= g_esGeneral.g_cSettings[cSettingWitchLimit].IntValue)
-	{
+bool bReachedWitchLimit(int client) {
+	if (g_esGeneral.g_iCounter[iWitchSpawned] >= g_esGeneral.g_cSettings[cSettingWitchLimit].IntValue) {
 		PrintToChat(client,  "%T", "Witch Limit", client);
 		return true;
 	}
@@ -3540,8 +3110,7 @@ bool bReachedWitchLimit(int client)
 	return false;
 }
 
-StringMap aInitZombieClass(StringMap aZombieClass)
-{
+StringMap aInitZombieClass(StringMap aZombieClass) {
 	aZombieClass = new StringMap();
 	aZombieClass.SetValue("smoker", 1);
 	aZombieClass.SetValue("boomer", 2);
@@ -3553,62 +3122,7 @@ StringMap aInitZombieClass(StringMap aZombieClass)
 	return aZombieClass;
 }
 
-void vSpawnablePZScanProtect(int iState, int client = -1)
-{
-	static int i;
-	static bool bResetGhost[MAXPLAYERS + 1];
-	static bool bResetLifeState[MAXPLAYERS + 1];
-
-	switch(iState)
-	{
-		case 0: 
-		{
-			if(g_bControlZombies && CZ_IsSpawnablePZSupported())
-				CZ_SetSpawnablePZ(client);
-			else
-			{
-				for(i = 1; i <= MaxClients; i++)
-				{
-					if(i == client || !IsClientInGame(i) || IsFakeClient(i) || GetClientTeam(i) != 3)
-						continue;
-
-					if(GetEntProp(i, Prop_Send, "m_isGhost") == 1)
-					{
-						bResetGhost[i] = true;
-						SetEntProp(i, Prop_Send, "m_isGhost", 0);
-					}
-					else if(!IsPlayerAlive(i))
-					{
-						bResetLifeState[i] = true;
-						SetEntProp(i, Prop_Send, "m_lifeState", 0);
-					}
-				}
-			}
-		}
-
-		case 1: 
-		{
-			if(g_bControlZombies && CZ_IsSpawnablePZSupported())
-				CZ_ResetSpawnablePZ();
-			else
-			{
-				for(i = 1; i <= MaxClients; i++)
-				{
-					if(bResetGhost[i])
-						SetEntProp(i, Prop_Send, "m_isGhost", 1);
-					if(bResetLifeState[i])
-						SetEntProp(i, Prop_Send, "m_lifeState", 1);
-			
-					bResetGhost[i] = false;
-					bResetLifeState[i] = false;
-				}
-			}
-		}
-	}
-}
-
-void vCheatCommandEx(int client, const char[] sCommand, const char[] sArguments = "")
-{
+void vCheatCommandEx(int client, const char[] sCommand, const char[] sArguments = "") {
 	static int iFlagBits, iCmdFlags;
 	iFlagBits = GetUserFlagBits(client);
 	iCmdFlags = GetCommandFlags(sCommand);
@@ -3619,10 +3133,9 @@ void vCheatCommandEx(int client, const char[] sCommand, const char[] sArguments 
 	SetCommandFlags(sCommand, iCmdFlags);
 }
 
-void vCheatCommand(int client, const char[] sCommand)
-{
+void vCheatCommand(int client, const char[] sCommand) {
 	char sCmd[32];
-	if(SplitString(sCommand, " ", sCmd, sizeof sCmd) == -1)
+	if (SplitString(sCommand, " ", sCmd, sizeof sCmd) == -1)
 		strcopy(sCmd, sizeof sCmd, sCommand);
 
 	static int iFlagBits, iCmdFlags;
@@ -3634,36 +3147,30 @@ void vCheatCommand(int client, const char[] sCommand)
 	SetUserFlagBits(client, iFlagBits);
 	SetCommandFlags(sCmd, iCmdFlags);
 	
-	if(strcmp(sCmd, "give") == 0)
-	{
-		if(strcmp(sCommand[5], "health") == 0)
+	if (strcmp(sCmd, "give") == 0) {
+		if (strcmp(sCommand[5], "health") == 0)
 			SetEntPropFloat(client, Prop_Send, "m_healthBuffer", 0.0); //防止有虚血时give health会超过100血
 	}
 }
 
-void vBuildSpecialMenu(int client)
-{
-	char sInfo[32];
+void vBuildSpecialMenu(int client) {
+	char info[32];
 	Menu menu = new Menu(iSpecialMenuHandler);
-	FormatEx(sInfo, sizeof sInfo,"%T", "Points Left", client, g_esPlayer[client].g_iPlayerPoints);
-	menu.SetTitle(sInfo);
+	FormatEx(info, sizeof info,"%T", "Points Left", client, g_esPlayer[client].g_iPlayerPoints);
+	menu.SetTitle(info);
 	menu.AddItem("h", "生命汲取");
-	if(g_bWeaponHandling)
+	if (g_bWeaponHandling)
 		menu.AddItem("r", "加速装填");
 	menu.ExitBackButton = true;
 	menu.Display(client, MENU_TIME_FOREVER);
 }
 
-int iSpecialMenuHandler(Menu menu, MenuAction action, int param1, int param2)
-{
-	switch(action)
-	{
-		case MenuAction_Select:
-		{
-			char sItem[2];
-			menu.GetItem(param2, sItem, sizeof sItem);
-			switch(sItem[0])
-			{
+int iSpecialMenuHandler(Menu menu, MenuAction action, int param1, int param2) {
+	switch (action) {
+		case MenuAction_Select: {
+			char item[2];
+			menu.GetItem(param2, item, sizeof item);
+			switch (item[0]) {
 				case 'h':
 					vHealthLeechMenu(param1);
 			
@@ -3671,11 +3178,12 @@ int iSpecialMenuHandler(Menu menu, MenuAction action, int param1, int param2)
 					vSpeedUpRealodMenu(param1);
 			}
 		}
-		case MenuAction_Cancel:
-		{
-			if(param2 == MenuCancel_ExitBack)
+
+		case MenuAction_Cancel: {
+			if (param2 == MenuCancel_ExitBack)
 				vBuildBuyMenu(param1);
 		}
+
 		case MenuAction_End:
 			delete menu;
 	}
@@ -3683,53 +3191,47 @@ int iSpecialMenuHandler(Menu menu, MenuAction action, int param1, int param2)
 	return 0;
 }
 
-void vHealthLeechMenu(int client)
-{
+void vHealthLeechMenu(int client) {
 	Menu menu = new Menu(iHealthLeechMenuHandler);
 	menu.SetTitle("定值[%d](效果持续到下张地图)", g_esPlayer[client].g_iLeechHealth);
-	if(g_esSpecial.g_cLeechHealth[0].IntValue > -1)
+	if (g_esSpecial.g_cLeechHealth[0].IntValue > -1)
 		menu.AddItem("1", "1");
-	if(g_esSpecial.g_cLeechHealth[1].IntValue > -1)
+	if (g_esSpecial.g_cLeechHealth[1].IntValue > -1)
 		menu.AddItem("2", "2");
-	if(g_esSpecial.g_cLeechHealth[2].IntValue > -1)
+	if (g_esSpecial.g_cLeechHealth[2].IntValue > -1)
 		menu.AddItem("3", "3");
-	if(g_esSpecial.g_cLeechHealth[3].IntValue > -1)
+	if (g_esSpecial.g_cLeechHealth[3].IntValue > -1)
 		menu.AddItem("4", "4");
-	if(g_esSpecial.g_cLeechHealth[4].IntValue > -1)
+	if (g_esSpecial.g_cLeechHealth[4].IntValue > -1)
 		menu.AddItem("5", "5");
 	menu.ExitBackButton = true;
 	menu.Display(client, MENU_TIME_FOREVER);
 }
 
-void vSpeedUpRealodMenu(int client)
-{
+void vSpeedUpRealodMenu(int client) {
 	Menu menu = new Menu(iSpeedUpRealodMenuHandler);
 	menu.SetTitle("倍率[%.1fx](效果持续到下张地图)", g_esPlayer[client].g_fRealodSpeedUp);
-	if(g_esSpecial.g_cRealodSpeedUp[0].IntValue > -1)
+	if (g_esSpecial.g_cRealodSpeedUp[0].IntValue > -1)
 		menu.AddItem("1.5", "1.5x");
-	if(g_esSpecial.g_cRealodSpeedUp[1].IntValue > -1)
+	if (g_esSpecial.g_cRealodSpeedUp[1].IntValue > -1)
 		menu.AddItem("2.0", "2.0x");
-	if(g_esSpecial.g_cRealodSpeedUp[2].IntValue > -1)
+	if (g_esSpecial.g_cRealodSpeedUp[2].IntValue > -1)
 		menu.AddItem("2.5", "2.5x");
-	if(g_esSpecial.g_cRealodSpeedUp[3].IntValue > -1)
+	if (g_esSpecial.g_cRealodSpeedUp[3].IntValue > -1)
 		menu.AddItem("3.0", "3.0x");
-	if(g_esSpecial.g_cRealodSpeedUp[4].IntValue > -1)
+	if (g_esSpecial.g_cRealodSpeedUp[4].IntValue > -1)
 		menu.AddItem("3.5", "3.5x");
 	menu.ExitBackButton = true;
 	menu.Display(client, MENU_TIME_FOREVER);
 }
 
-int iHealthLeechMenuHandler(Menu menu, MenuAction action, int client, int param2)
-{
-	switch(action)
-	{
-		case MenuAction_Select:
-		{
-			char sItem[16];
-			menu.GetItem(param2, sItem, sizeof sItem);
-			int iValue = StringToInt(sItem);
-			switch(iValue)
-			{
+int iHealthLeechMenuHandler(Menu menu, MenuAction action, int client, int param2) {
+	switch (action) {
+		case MenuAction_Select: {
+			char item[16];
+			menu.GetItem(param2, item, sizeof item);
+			int value = StringToInt(item);
+			switch (value) {
 				case 1:
 					g_esPlayer[client].g_iItemCost = g_esSpecial.g_cLeechHealth[0].IntValue;
 				
@@ -3745,13 +3247,14 @@ int iHealthLeechMenuHandler(Menu menu, MenuAction action, int client, int param2
 				case 5:
 					g_esPlayer[client].g_iItemCost = g_esSpecial.g_cLeechHealth[4].IntValue;
 			}
-			vDisplayHealthLeechConfirmMenu(client, sItem);
+			vDisplayHealthLeechConfirmMenu(client, item);
 		}
-		case MenuAction_Cancel:
-		{
-			if(param2 == MenuCancel_ExitBack)
+
+		case MenuAction_Cancel: {
+			if (param2 == MenuCancel_ExitBack)
 				vBuildSpecialMenu(client);
 		}
+
 		case MenuAction_End:
 			delete menu;
 	}
@@ -3759,17 +3262,13 @@ int iHealthLeechMenuHandler(Menu menu, MenuAction action, int client, int param2
 	return 0;
 }
 
-int iSpeedUpRealodMenuHandler(Menu menu, MenuAction action, int client, int param2)
-{
-	switch(action)
-	{
-		case MenuAction_Select:
-		{
-			char sItem[16];
-			menu.GetItem(param2, sItem, sizeof sItem);
-			float iValue = StringToFloat(sItem);
-			switch(iValue)
-			{
+int iSpeedUpRealodMenuHandler(Menu menu, MenuAction action, int client, int param2) {
+	switch (action) {
+		case MenuAction_Select: {
+			char item[16];
+			menu.GetItem(param2, item, sizeof item);
+			float value = StringToFloat(item);
+			switch (value) {
 				case 1.5:
 					g_esPlayer[client].g_iItemCost = g_esSpecial.g_cRealodSpeedUp[0].IntValue;
 				
@@ -3785,13 +3284,14 @@ int iSpeedUpRealodMenuHandler(Menu menu, MenuAction action, int client, int para
 				case 3.5:
 					g_esPlayer[client].g_iItemCost = g_esSpecial.g_cRealodSpeedUp[4].IntValue;
 			}
-			vDisplaySpeedUpRealodConfirmMenu(client, sItem);
+			vDisplaySpeedUpRealodConfirmMenu(client, item);
 		}
-		case MenuAction_Cancel:
-		{
-			if(param2 == MenuCancel_ExitBack)
+
+		case MenuAction_Cancel: {
+			if (param2 == MenuCancel_ExitBack)
 				vBuildSpecialMenu(client);
 		}
+
 		case MenuAction_End:
 			delete menu;
 	}
@@ -3799,82 +3299,75 @@ int iSpeedUpRealodMenuHandler(Menu menu, MenuAction action, int client, int para
 	return 0;
 }
 
-void vDisplayHealthLeechConfirmMenu(int client, const char[] sValue)
-{
-	char sInfo[32];
-	char sTrans[32];
-	char sTemp[2][16];
+void vDisplayHealthLeechConfirmMenu(int client, const char[] sValue) {
+	char info[32];
+	char trans[32];
+	char temp[2][16];
 	Menu menu = new Menu(iHealthLeechConfirmMenuHandler);
-	FormatEx(sInfo, sizeof sInfo,"%T", "Cost", client, g_esPlayer[client].g_iItemCost);
-	menu.SetTitle(sInfo);
-	strcopy(sTemp[1], sizeof sTemp[], sValue);
+	FormatEx(info, sizeof info,"%T", "Cost", client, g_esPlayer[client].g_iItemCost);
+	menu.SetTitle(info);
+	strcopy(temp[1], sizeof temp[], sValue);
 
-	strcopy(sTemp[0], sizeof sTemp[], "y");
-	ImplodeStrings(sTemp, 2, "|", sInfo, sizeof sInfo);
-	FormatEx(sTrans, sizeof sTrans,"%T", "Yes", client);
-	menu.AddItem(sInfo, sTrans);
-	strcopy(sTemp[0], sizeof sTemp[], "n");
-	ImplodeStrings(sTemp, 2, "|", sInfo, sizeof sInfo);
-	FormatEx(sTrans, sizeof sTrans,"%T", "No", client);
-	menu.AddItem(sInfo, sTrans);
+	strcopy(temp[0], sizeof temp[], "y");
+	ImplodeStrings(temp, 2, "|", info, sizeof info);
+	FormatEx(trans, sizeof trans,"%T", "Yes", client);
+	menu.AddItem(info, trans);
+	strcopy(temp[0], sizeof temp[], "n");
+	ImplodeStrings(temp, 2, "|", info, sizeof info);
+	FormatEx(trans, sizeof trans,"%T", "No", client);
+	menu.AddItem(info, trans);
 	menu.ExitButton = true;
 	menu.ExitBackButton = true;
 	menu.Display(client, MENU_TIME_FOREVER);
 }
 
-void vDisplaySpeedUpRealodConfirmMenu(int client, const char[] sValue)
-{
-	char sInfo[32];
-	char sTrans[32];
-	char sTemp[2][16];
+void vDisplaySpeedUpRealodConfirmMenu(int client, const char[] sValue) {
+	char info[32];
+	char trans[32];
+	char temp[2][16];
 	Menu menu = new Menu(iSpeedUpRealodConfirmMenuHandler);
-	FormatEx(sInfo, sizeof sInfo,"%T", "Cost", client, g_esPlayer[client].g_iItemCost);
-	menu.SetTitle(sInfo);
-	strcopy(sTemp[1], sizeof sTemp[], sValue);
+	FormatEx(info, sizeof info,"%T", "Cost", client, g_esPlayer[client].g_iItemCost);
+	menu.SetTitle(info);
+	strcopy(temp[1], sizeof temp[], sValue);
 
-	strcopy(sTemp[0], sizeof sTemp[], "y");
-	ImplodeStrings(sTemp, 2, "|", sInfo, sizeof sInfo);
-	FormatEx(sTrans, sizeof sTrans,"%T", "Yes", client);
-	menu.AddItem(sInfo, sTrans);
-	strcopy(sTemp[0], sizeof sTemp[], "n");
-	ImplodeStrings(sTemp, 2, "|", sInfo, sizeof sInfo);
-	FormatEx(sTrans, sizeof sTrans,"%T", "No", client);
-	menu.AddItem(sInfo, sTrans);
+	strcopy(temp[0], sizeof temp[], "y");
+	ImplodeStrings(temp, 2, "|", info, sizeof info);
+	FormatEx(trans, sizeof trans,"%T", "Yes", client);
+	menu.AddItem(info, trans);
+	strcopy(temp[0], sizeof temp[], "n");
+	ImplodeStrings(temp, 2, "|", info, sizeof info);
+	FormatEx(trans, sizeof trans,"%T", "No", client);
+	menu.AddItem(info, trans);
 	menu.ExitButton = true;
 	menu.ExitBackButton = true;
 	menu.Display(client, MENU_TIME_FOREVER);
 }
 
-int iHealthLeechConfirmMenuHandler(Menu menu, MenuAction action, int param1, int param2)
-{
-	switch(action)
-	{
-		case MenuAction_Select:
-		{
-			char sItem[32];
-			char sInfo[2][16];
-			menu.GetItem(param2, sItem, sizeof sItem);
-			ExplodeString(sItem, "|", sInfo, 2, 16);
-			switch(sInfo[0][0])
-			{
+int iHealthLeechConfirmMenuHandler(Menu menu, MenuAction action, int param1, int param2) {
+	switch (action) {
+		case MenuAction_Select: {
+			char item[32];
+			char info[2][16];
+			menu.GetItem(param2, item, sizeof item);
+			ExplodeString(item, "|", info, 2, sizeof info[]);
+			switch (info[0][0]) {
 				case 'n':
 					vHealthLeechMenu(param1);
 
-				case 'y':
-				{
-					if(bHasEnoughPoints(param1, g_esPlayer[param1].g_iItemCost))
-					{
+				case 'y': {
+					if (bHasEnoughPoints(param1, g_esPlayer[param1].g_iItemCost)) {
 						vRemovePoints(param1, g_esPlayer[param1].g_iItemCost);
-						g_esPlayer[param1].g_iLeechHealth = StringToInt(sInfo[1]);
+						g_esPlayer[param1].g_iLeechHealth = StringToInt(info[1]);
 					}
 				}
 			}
 		}
-		case MenuAction_Cancel:
-		{
-			if(param2 == MenuCancel_ExitBack)
+
+		case MenuAction_Cancel: {
+			if (param2 == MenuCancel_ExitBack)
 				vHealthLeechMenu(param1);
 		}
+
 		case MenuAction_End:
 			delete menu;
 	}
@@ -3882,36 +3375,31 @@ int iHealthLeechConfirmMenuHandler(Menu menu, MenuAction action, int param1, int
 	return 0;
 }
 
-int iSpeedUpRealodConfirmMenuHandler(Menu menu, MenuAction action, int param1, int param2)
-{
-	switch(action)
-	{
-		case MenuAction_Select:
-		{
-			char sItem[32];
-			char sInfo[2][16];
-			menu.GetItem(param2, sItem, sizeof sItem);
-			ExplodeString(sItem, "|", sInfo, 2, 16);
-			switch(sInfo[0][0])
-			{
+int iSpeedUpRealodConfirmMenuHandler(Menu menu, MenuAction action, int param1, int param2) {
+	switch (action) {
+		case MenuAction_Select: {
+			char item[32];
+			char info[2][16];
+			menu.GetItem(param2, item, sizeof item);
+			ExplodeString(item, "|", info, 2, sizeof info[]);
+			switch (info[0][0]) {
 				case 'n':
 					vHealthLeechMenu(param1);
 
-				case 'y':
-				{
-					if(bHasEnoughPoints(param1, g_esPlayer[param1].g_iItemCost))
-					{
+				case 'y': {
+					if (bHasEnoughPoints(param1, g_esPlayer[param1].g_iItemCost)) {
 						vRemovePoints(param1, g_esPlayer[param1].g_iItemCost);
-						g_esPlayer[param1].g_fRealodSpeedUp = StringToFloat(sInfo[1]);
+						g_esPlayer[param1].g_fRealodSpeedUp = StringToFloat(info[1]);
 					}
 				}
 			}
 		}
-		case MenuAction_Cancel:
-		{
-			if(param2 == MenuCancel_ExitBack)
+
+		case MenuAction_Cancel: {
+			if (param2 == MenuCancel_ExitBack)
 				vSpeedUpRealodMenu(param1);
 		}
+
 		case MenuAction_End:
 			delete menu;
 	}
@@ -3919,17 +3407,14 @@ int iSpeedUpRealodConfirmMenuHandler(Menu menu, MenuAction action, int param1, i
 	return 0;
 }
 
-void vInitSpecialValue()
-{
-	for(int i = 1; i <= MaxClients; i++)
-	{
+void vInitSpecialValue() {
+	for (int i = 1; i <= MaxClients; i++) {
 		g_esPlayer[i].g_iLeechHealth = 0;
 		g_esPlayer[i].g_fRealodSpeedUp = 1.0;
 	}
 }
 
-enum L4D2WeaponType 
-{
+enum L4D2WeaponType {
 	L4D2WeaponType_Unknown = 0,
 	L4D2WeaponType_Pistol,
 	L4D2WeaponType_Magnum,
@@ -3974,14 +3459,12 @@ enum L4D2WeaponType
 	L4D2WeaponType_Gnome
 }
 
-public void WH_OnReloadModifier(int client, int weapon, L4D2WeaponType weapontype, float &speedmodifier)
-{
+public void WH_OnReloadModifier(int client, int weapon, L4D2WeaponType weapontype, float &speedmodifier) {
 	speedmodifier = fSpeedModifier(client, speedmodifier);
 }
 
-float fSpeedModifier(int client, float speedmodifier)
-{
-	if(g_esPlayer[client].g_fRealodSpeedUp > 1.0)
+float fSpeedModifier(int client, float speedmodifier) {
+	if (g_esPlayer[client].g_fRealodSpeedUp > 1.0)
 		speedmodifier = speedmodifier * g_esPlayer[client].g_fRealodSpeedUp;
 
 	return speedmodifier;
