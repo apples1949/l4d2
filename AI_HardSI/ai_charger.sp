@@ -232,7 +232,6 @@ bool bWontFall(int client, const float vVel[3]) {
 			GetEdictClassname(iEnt, cls, sizeof cls);
 			if (strcmp(cls, "trigger_hurt") == 0) {
 				delete hTrace;
-				PrintToChatAll("trigger_hurt");
 				return false;
 			}
 		}
