@@ -133,13 +133,14 @@ bool
 	g_bLateLoad,
 	g_bInSpawnTime,
 	g_bScaleWeights,
-	g_bLeftSafeArea;
+	g_bLeftSafeArea,
+	g_bFinaleStarted;
 
 public Plugin myinfo = {
 	name = "Special Spawner",
 	author = "Tordecybombo, breezy",
 	description = "Provides customisable special infected spawing beyond vanilla coop limits",
-	version = "1.3.5",
+	version = "1.3.6",
 };
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max) {
@@ -159,10 +160,10 @@ public void OnPluginStart() {
 	g_cvSpawnLimits[SI_JOCKEY] = 	CreateConVar("ss_jockey_limit",			"4", 						"同时存在的最大jockey数量", _, true, 0.0, true, 32.0);
 	g_cvSpawnLimits[SI_CHARGER] = 	CreateConVar("ss_charger_limit", 		"4", 						"同时存在的最大charger数量", _, true, 0.0, true, 32.0);
 
-	g_cvSpawnWeights[SI_SMOKER] = 	CreateConVar("ss_smoker_weight", 		"80", 						"smoker产生比重", _, true, 0.0);
-	g_cvSpawnWeights[SI_BOOMER] = 	CreateConVar("ss_boomer_weight", 		"125", 						"boomer产生比重", _, true, 0.0);
+	g_cvSpawnWeights[SI_SMOKER] = 	CreateConVar("ss_smoker_weight", 		"100", 						"smoker产生比重", _, true, 0.0);
+	g_cvSpawnWeights[SI_BOOMER] = 	CreateConVar("ss_boomer_weight", 		"200", 						"boomer产生比重", _, true, 0.0);
 	g_cvSpawnWeights[SI_HUNTER] = 	CreateConVar("ss_hunter_weight", 		"100", 						"hunter产生比重", _, true, 0.0);
-	g_cvSpawnWeights[SI_SPITTER] = 	CreateConVar("ss_spitter_weight", 		"125",						"spitter产生比重", _, true, 0.0);
+	g_cvSpawnWeights[SI_SPITTER] = 	CreateConVar("ss_spitter_weight", 		"200",						"spitter产生比重", _, true, 0.0);
 	g_cvSpawnWeights[SI_JOCKEY] = 	CreateConVar("ss_jockey_weight", 		"100", 						"jockey产生比重", _, true, 0.0);
 	g_cvSpawnWeights[SI_CHARGER] = 	CreateConVar("ss_charger_weight", 		"100", 						"charger产生比重", _, true, 0.0);
 	g_cvScaleWeights = 				CreateConVar("ss_scale_weights", 		"1",						"缩放相应特感的产生比重 [0 = 关闭 | 1 = 开启](开启后,总比重越大的越容易先刷出来, 动态控制特感刷出顺序)", _, true, 0.0, true, 1.0);
@@ -175,8 +176,8 @@ public void OnPluginStart() {
 	g_cvBaseSize = 					CreateConVar("ss_base_size", 			"4", 						"生还者团队不超过4人时一次产生多少只特感", _, true, 0.0, true, 32.0);
 	g_cvExtraSize = 				CreateConVar("ss_extra_size", 			"2", 						"生还者团队每增加多少玩家人一次多产生一只特感", _, true, 1.0, true, 32.0);
 	g_cvTankStatusAction = 			CreateConVar("ss_tankstatus_action", 	"1", 						"坦克产生后是否对当前刷特参数进行修改, 坦克死完后恢复?[0 = 忽略(保持原有的刷特状态) | 1 = 自定义]", _, true, 0.0, true, 1.0);
-	g_cvTankStatusLimits = 			CreateConVar("ss_tankstatus_limits", 	"4;1;4;1;4;4", 				"坦克产生后每种特感数量的自定义参数");
-	g_cvTankStatusWeights = 		CreateConVar("ss_tankstatus_weights",	"80;300;100;80;100;100",	"坦克产生后每种特感比重的自定义参数");
+	g_cvTankStatusLimits = 			CreateConVar("ss_tankstatus_limits", 	"2;1;4;1;4;4", 				"坦克产生后每种特感数量的自定义参数");
+	g_cvTankStatusWeights = 		CreateConVar("ss_tankstatus_weights",	"100;400;100;200;100;100",	"坦克产生后每种特感比重的自定义参数");
 	g_cvSuicideTime = 				CreateConVar("ss_suicide_time", 		"25.0", 					"特感自动处死时间", _, true, 1.0);
 	g_cvRushDistance = 				CreateConVar("ss_rush_distance", 		"1200.0", 					"路程超过多少算跑图(最前面的玩家路程减去最后面的玩家路程, 忽略倒地玩家)", _, true, 0.0);
 
@@ -226,6 +227,8 @@ public void OnPluginStart() {
 	RegAdminCmd("sm_forcetimer", 	cmdForceTimer, 	ADMFLAG_RCON, "开始生成计时");
 	RegAdminCmd("sm_type", 			cmdType, 		ADMFLAG_ROOT, "随机轮换模式");
 
+	HookEntityOutput("trigger_finale", "FinaleStart", OnFinaleStart);
+
 	if (g_bLateLoad && L4D_HasAnySurvivorLeftSafeArea())
 		L4D_OnFirstSurvivorLeftSafeArea_Post(0);
 }
@@ -244,6 +247,10 @@ public void OnPluginEnd() {
 
 	FindConVar("z_finale_spawn_safety_range").RestoreDefault();
 	FindConVar("z_finale_spawn_tank_safety_range").RestoreDefault();
+}
+
+void OnFinaleStart(const char[] output, int caller, int activator, float delay) {
+	g_bFinaleStarted = true;
 }
 
 public Action L4D_OnGetScriptValueInt(const char[] key, int &retVal) {
@@ -721,6 +728,7 @@ public void OnClientDisconnect(int client) {
 
 public void OnMapEnd() {
 	g_bLeftSafeArea = false;
+	g_bFinaleStarted = false;
 
 	vEndSpawnTimer();
 	delete g_hSuicideTimer;
@@ -1021,7 +1029,7 @@ void vExecuteSpawnQueue(int iTotalSI, bool bRetry) {
 	delete aList;
 	g_bInSpawnTime = true;
 	g_cvSpawnRange.IntValue = bRetry ? 1000 : 1500;
-	g_iPreferredDirection = !bFind ? SPAWN_LARGE_VOLUME : SPAWN_SPECIALS_IN_FRONT_OF_SURVIVORS;
+	g_iPreferredDirection = g_bFinaleStarted ? SPAWN_NEAR_IT_VICTIM : (!bFind ? SPAWN_SPECIALS_ANYWHERE/*SPAWN_LARGE_VOLUME*/ : SPAWN_SPECIALS_IN_FRONT_OF_SURVIVORS);
 
 	count = 0;
 	bFind = false;
