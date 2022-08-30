@@ -4,7 +4,7 @@
 #include <sourcemod>
 #include <dhooks>
 
-#define PLUGIN_VERSION "1.10.7"
+#define PLUGIN_VERSION "1.10.8"
 #define GAMEDATA 		"bots"
 #define CVAR_FLAGS 		FCVAR_NOTIFY
 #define MAX_SLOTS		5
@@ -890,7 +890,7 @@ Action tmrJoinSurvivorTeam(Handle timer, int client) {
 	if (!(g_iJoinSurvivor & JOIN_AUTOMATIC) || !(client = GetClientOfUserId(client)) || !IsClientInGame(client) || IsFakeClient(client) || GetClientTeam(client) > TEAM_SPECTATOR || iGetBotOfIdlePlayer(client)) 
 		return Plugin_Stop;
 
-	if (!g_iRoundStart || GetClientTeam(client) <= TEAM_NOTEAM/* || SDKCall(g_hSDK_CDirector_IsInTransition, g_pDirector)*/)
+	if (!g_iRoundStart || GetClientTeam(client) <= TEAM_NOTEAM || SDKCall(g_hSDK_CDirector_IsInTransition, g_pDirector))
 		return Plugin_Continue;
 
 	aJoinSurvivor(client);
