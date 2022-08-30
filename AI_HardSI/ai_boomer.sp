@@ -111,7 +111,6 @@ Action aBunnyHop(int client, int &buttons, const float vAng[3]) {
 	float vRig[3];
 	float vDir[3];
 	float vVel[3];
-	bool bAD;
 	bool bPressed;
 	if (buttons & IN_FORWARD || buttons & IN_BACK) {
 		GetAngleVectors(vAng, vFwd, NULL_VECTOR, NULL_VECTOR);
@@ -124,7 +123,6 @@ Action aBunnyHop(int client, int &buttons, const float vAng[3]) {
 		GetAngleVectors(vAng, NULL_VECTOR, vRig, NULL_VECTOR);
 		NormalizeVector(vRig, vRig);
 		ScaleVector(vRig, buttons & IN_MOVERIGHT ? 90.0 : -90.0);
-		bAD = true;
 		bPressed = true;
 	}
 
@@ -132,7 +130,7 @@ Action aBunnyHop(int client, int &buttons, const float vAng[3]) {
 		AddVectors(vFwd, vRig, vDir);
 		GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", vVel);
 		AddVectors(vVel, vDir, vVel);
-		if (!bWontFall(client, vVel, bAD))
+		if (!bWontFall(client, vVel))
 			return Plugin_Continue;
 
 		buttons |= IN_DUCK;
@@ -144,7 +142,7 @@ Action aBunnyHop(int client, int &buttons, const float vAng[3]) {
 	return Plugin_Continue;
 }
 
-bool bWontFall(int client, const float vVel[3], bool bAD) {
+bool bWontFall(int client, const float vVel[3]) {
 	static float vPos[3];
 	static float vEnd[3];
 	GetClientAbsOrigin(client, vPos);
@@ -170,8 +168,7 @@ bool bWontFall(int client, const float vVel[3], bool bAD) {
 		TR_GetEndPosition(vVec, hTrace);
 		NormalizeVector(vVel, vNor);
 		TR_GetPlaneNormal(hTrace, vPlane);
-		float fDeg = RadToDeg(ArcCosine(GetVectorDotProduct(vNor, vPlane)));
-		if (fDeg > 150.0 || (bAD && fDeg < 100.0)) {
+		if (RadToDeg(ArcCosine(GetVectorDotProduct(vNor, vPlane))) > 150.0) {
 			delete hTrace;
 			return false;
 		}
