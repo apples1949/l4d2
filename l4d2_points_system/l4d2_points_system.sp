@@ -571,6 +571,7 @@ void vCreateConVars() {
 	vInitItemCosts();
 	vInitPointRewards();
 	vInitSpecialCosts();
+	AutoExecConfig(true);
 }
 
 void vRegisterCommands() {
@@ -3019,44 +3020,45 @@ int iInfectedConfirmMenuHandler(Menu menu, MenuAction action, int param1, int pa
 							}
 
 							if (sArguments[0] != 'm' && sArguments[0] != 'w') {
-								if (!IsPlayerAlive(param1)) {
-									if (g_bRespawnPZ) {
-										static StringMap aZombieClass;
-										if (!aZombieClass)
-											aZombieClass = aInitZombieClass(aZombieClass);
+								if (IsPlayerAlive(param1))
+									return 0;
+					
+								if (g_bRespawnPZ) {
+									static StringMap aZombieClass;
+									if (!aZombieClass)
+										aZombieClass = aInitZombieClass(aZombieClass);
 
-										int iZombieClass;
-										aZombieClass.GetValue(sArguments, iZombieClass);
-										if (iZombieClass)
-											CZ_RespawnPZ(param1, iZombieClass);
+									int iZombieClass;
+									aZombieClass.GetValue(sArguments, iZombieClass);
+									if (iZombieClass)
+										CZ_RespawnPZ(param1, iZombieClass);
+								}
+								else {
+									int i = 1;
+									bool[] bGhost = new bool[MaxClients];
+									bool[] bLifeState = new bool[MaxClients];
+									for (; i <= MaxClients; i++) {
+										if (i == param1 || !IsClientInGame(i) || IsFakeClient(i) || GetClientTeam(i) != 3)
+											continue;
+
+										if (GetEntProp(i, Prop_Send, "m_isGhost")) {
+											bGhost[i] = true;
+											SetEntProp(i, Prop_Send, "m_isGhost", 0);
+										}
+										else if (!IsPlayerAlive(i)) {
+											bLifeState[i] = true;
+											SetEntProp(i, Prop_Send, "m_lifeState", 0);
+										}
 									}
-									else {
-										int i = 1;
-										bool[] bGhost = new bool[MaxClients];
-										bool[] bLifeState = new bool[MaxClients];
-										for (; i <= MaxClients; i++) {
-											if (i == param1 || !IsClientInGame(i) || IsFakeClient(i) || GetClientTeam(i) != 3)
-												continue;
-
-											if (GetEntProp(i, Prop_Send, "m_isGhost")) {
-												bGhost[i] = true;
-												SetEntProp(i, Prop_Send, "m_isGhost", 0);
-											}
-											else if (!IsPlayerAlive(i)) {
-												bLifeState[i] = true;
-												SetEntProp(i, Prop_Send, "m_lifeState", 0);
-											}
-										}
 	
-										vCheatCommandEx(param1, sCommand, sArguments);
+									vCheatCommandEx(param1, sCommand, sArguments);
 
-										for (i = 1; i <= MaxClients; i++) {
-											if (bGhost[i])
-												SetEntProp(i, Prop_Send, "m_isGhost", 1);
+									for (i = 1; i <= MaxClients; i++) {
+										if (bGhost[i])
+											SetEntProp(i, Prop_Send, "m_isGhost", 1);
 
-											if (bLifeState[i])
-												SetEntProp(i, Prop_Send, "m_lifeState", 1);
-										}
+										if (bLifeState[i])
+											SetEntProp(i, Prop_Send, "m_lifeState", 1);
 									}
 				
 									if (IsPlayerAlive(param1)) {
