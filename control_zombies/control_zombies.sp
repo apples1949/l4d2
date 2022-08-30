@@ -11,7 +11,7 @@
 	#include <profiler>
 	Profiler g_profiler;
 #endif
-#define PLUGIN_VERSION "3.4.6"
+#define PLUGIN_VERSION "3.4.7"
 
 /*****************************************************************************************************/
 // ====================================================================================================
@@ -183,6 +183,7 @@ Handle
 	g_hSDK_CTerrorPlayer_RoundRespawn,
 	g_hSDK_SurvivorBot_SetHumanSpectator,
 	g_hSDK_CTerrorPlayer_TakeOverBot,
+	g_hSDK_CTerrorGameRules_IsMissionFinalMap,
 	g_hSDK_CTerrorGameRules_HasPlayerControlledZombies;
 
 Address
@@ -197,11 +198,12 @@ DynamicDetour
 ConVar
 	g_cvGameMode,
 	g_cvMaxTankPlayer,
-	g_cvSurvuivorLimit,
-	g_cvSurvuivorChance,
-	g_hSbAllBotGame,
-	g_hAllowAllBotSur,
-	g_hSurvivorMaxInc,
+	g_cvMapFilterTank,
+	g_cvSurvivorLimit,
+	g_cvSurvivorChance,
+	g_cvSbAllBotGame,
+	g_cvAllowAllBotSur,
+	g_cvSurvivorMaxInc,
 	g_cvExchangeTeam,
 	g_cvPZSuicideTime,
 	g_cvPZRespawnTime,
@@ -258,8 +260,9 @@ int
 	g_iOff_m_preHangingHealth,
 	g_iOff_m_preHangingHealthBuffer,
 	g_iSurvivorMaxInc,
-	g_iSurvuivorLimit,
 	g_iMaxTankPlayer,
+	g_iMapFilterTank,
+	g_iSurvivorLimit,
 	g_iPZRespawnTime,
 	g_iPZSuicideTime,
 	g_iPZPunishTime,
@@ -276,7 +279,7 @@ int
 
 float
 	g_fPZPunishHealth,
-	g_fSurvuivorChance,
+	g_fSurvivorChance,
 	g_fCmdCooldownTime;
 
 enum struct esPlayer {
@@ -308,7 +311,6 @@ esPlayer
 public Plugin myinfo = {
 	name = "Control Zombies In Co-op",
 	author = "sorallll",
-	description = "",
 	version = PLUGIN_VERSION,
 	url = "https://steamcommunity.com/id/sorallll"
 }
@@ -369,10 +371,12 @@ any aNative_IsSpawnablePZSupported(Handle plugin, int numParams) {
 public void OnPluginStart() {
 	vInitData();
 	LoadTranslations("common.phrases");
+	CreateConVar("control_zombies_version", PLUGIN_VERSION, "Control Zombies In Co-op plugin version.", FCVAR_NOTIFY|FCVAR_DONTRECORD);
 
 	g_cvMaxTankPlayer = 			CreateConVar("cz_max_tank_player", 					"1", 					"坦克玩家达到多少后插件将不再控制玩家接管(0=不接管坦克)", CVAR_FLAGS, true, 0.0);
-	g_cvSurvuivorLimit = 			CreateConVar("cz_allow_survivor_limit", 			"1", 					"至少有多少名正常生还者(未被控,未倒地,未死亡)时,才允许玩家接管坦克", CVAR_FLAGS, true, 0.0);
-	g_cvSurvuivorChance = 			CreateConVar("cz_survivor_allow_chance", 			"0.0", 					"准备叛变的玩家数量为0时,自动抽取生还者和感染者玩家的几率(排除闲置旁观玩家)(0.0=不自动抽取)", CVAR_FLAGS);
+	g_cvMapFilterTank = 			CreateConVar("cz_map_filter_tank", 					"3", 					"在哪些地图上才允许叛变和接管坦克(0=禁用叛变和接管坦克,1=非结局地图,2=结局地图,3=所有地图)", CVAR_FLAGS, true, 0.0);
+	g_cvSurvivorLimit = 			CreateConVar("cz_allow_survivor_limit", 			"1", 					"至少有多少名正常生还者(未被控,未倒地,未死亡)时,才允许玩家接管坦克", CVAR_FLAGS, true, 0.0);
+	g_cvSurvivorChance = 			CreateConVar("cz_survivor_allow_chance", 			"0.0", 					"准备叛变的玩家数量为0时,自动抽取生还者和感染者玩家的几率(排除闲置旁观玩家)(0.0=不自动抽取)", CVAR_FLAGS);
 	g_cvExchangeTeam = 				CreateConVar("cz_exchange_team", 					"0", 					"特感玩家杀死生还者玩家后是否互换队伍?(0=否,1=是)", CVAR_FLAGS);
 	g_cvPZSuicideTime = 			CreateConVar("cz_pz_suicide_time", 					"120", 					"特感玩家复活后自动处死的时间(0=不会处死复活后的特感玩家)", CVAR_FLAGS, true, 0.0);
 	g_cvPZRespawnTime = 			CreateConVar("cz_pz_respawn_time", 					"10", 					"特感玩家自动复活时间(0=插件不会接管特感玩家的复活)", CVAR_FLAGS, true, 0.0);
@@ -406,23 +410,24 @@ public void OnPluginStart() {
 	g_cvSpawnWeights[SI_SPITTER] = 	CreateConVar("cz_spitter_weight", 					"50", 					"spitter产生比重", CVAR_FLAGS, true, 0.0);
 	g_cvSpawnWeights[SI_JOCKEY] = 	CreateConVar("cz_jockey_weight", 					"100", 					"jockey产生比重", CVAR_FLAGS, true, 0.0);
 	g_cvSpawnWeights[SI_CHARGER] = 	CreateConVar("cz_charger_weight", 					"50", 					"charger产生比重", CVAR_FLAGS, true, 0.0);
-	g_cvScaleWeights = 				CreateConVar("cz_scale_weights", 					"1",					"[0 = 关闭 | 1 = 开启] 缩放相应特感的产生比重", _, true, 0.0, true, 1.0);
+	g_cvScaleWeights = 				CreateConVar("cz_scale_weights", 					"1",					"[0 = 关闭 | 1 = 开启] 缩放相应特感的产生比重", CVAR_FLAGS);
 
 	AutoExecConfig(true, "controll_zombies");
 	// 想要生成cfg的,把上面那一行的注释去掉保存后重新编译就行
 
 	g_cvGameMode = FindConVar("mp_gamemode");
 	g_cvGameMode.AddChangeHook(vCvarChanged_Mode);
-	g_hSbAllBotGame = FindConVar("sb_all_bot_game");
-	g_hSbAllBotGame.AddChangeHook(vCvarChanged_General);
-	g_hAllowAllBotSur = FindConVar("allow_all_bot_survivor_team");
-	g_hAllowAllBotSur.AddChangeHook(vCvarChanged_General);
-	g_hSurvivorMaxInc = FindConVar("survivor_max_incapacitated_count");
-	g_hSurvivorMaxInc.AddChangeHook(vCvarChanged_Color);
+	g_cvSbAllBotGame = FindConVar("sb_all_bot_game");
+	g_cvSbAllBotGame.AddChangeHook(vCvarChanged_General);
+	g_cvAllowAllBotSur = FindConVar("allow_all_bot_survivor_team");
+	g_cvAllowAllBotSur.AddChangeHook(vCvarChanged_General);
+	g_cvSurvivorMaxInc = FindConVar("survivor_max_incapacitated_count");
+	g_cvSurvivorMaxInc.AddChangeHook(vCvarChanged_Color);
 
 	g_cvMaxTankPlayer.AddChangeHook(vCvarChanged_General);
-	g_cvSurvuivorLimit.AddChangeHook(vCvarChanged_General);
-	g_cvSurvuivorChance.AddChangeHook(vCvarChanged_General);
+	g_cvMapFilterTank.AddChangeHook(vCvarChanged_General);
+	g_cvSurvivorLimit.AddChangeHook(vCvarChanged_General);
+	g_cvSurvivorChance.AddChangeHook(vCvarChanged_General);
 	g_cvExchangeTeam.AddChangeHook(vCvarChanged_General);
 	g_cvPZSuicideTime.AddChangeHook(vCvarChanged_General);
 	g_cvPZRespawnTime.AddChangeHook(vCvarChanged_General);
@@ -579,10 +584,11 @@ void vCvarChanged_General(ConVar convar, const char[] oldValue, const char[] new
 
 void vGetCvars_General() {
 	g_iMaxTankPlayer = g_cvMaxTankPlayer.IntValue;
-	g_iSurvuivorLimit = g_cvSurvuivorLimit.IntValue;
-	g_fSurvuivorChance = g_cvSurvuivorChance.FloatValue;
-	g_bSbAllBotGame = g_hSbAllBotGame.BoolValue;
-	g_bAllowAllBotSur = g_hAllowAllBotSur.BoolValue;
+	g_iMapFilterTank = g_cvMapFilterTank.IntValue;
+	g_iSurvivorLimit = g_cvSurvivorLimit.IntValue;
+	g_fSurvivorChance = g_cvSurvivorChance.FloatValue;
+	g_bSbAllBotGame = g_cvSbAllBotGame.BoolValue;
+	g_bAllowAllBotSur = g_cvAllowAllBotSur.BoolValue;
 	g_bExchangeTeam = g_cvExchangeTeam.BoolValue;
 	g_iPZRespawnTime = g_cvPZRespawnTime.IntValue;
 	g_iPZSuicideTime = g_cvPZSuicideTime.IntValue;
@@ -603,7 +609,7 @@ void vCvarChanged_Color(ConVar convar, const char[] oldValue, const char[] newVa
 void vGetCvars_Color() {
 	bool bLast = g_bGlowColorEnable;
 	g_bGlowColorEnable = g_cvGlowColorEnable.BoolValue;
-	g_iSurvivorMaxInc = g_hSurvivorMaxInc.IntValue;
+	g_iSurvivorMaxInc = g_cvSurvivorMaxInc.IntValue;
 
 	int i;
 	for (; i < 4; i++)
@@ -805,6 +811,11 @@ Action cmdPanBian(int client, int args) {
 		return Plugin_Handled;
 	}
 
+	if (!bMapFilterTank()) {
+		ReplyToCommand(client, "当前地图已禁用该指令");
+		return Plugin_Handled;
+	}
+
 	if (!g_esPlayer[client].bIsPlayerPB) {
 		g_esPlayer[client].bIsPlayerPB = true;
 		CPrintToChat(client, "已加入叛变列表");
@@ -825,6 +836,12 @@ Action cmdPanBian(int client, int args) {
 	return Plugin_Handled;
 }
 
+bool bMapFilterTank() {
+	if (!SDKCall(g_hSDK_CTerrorGameRules_IsMissionFinalMap))
+		return g_iMapFilterTank & (1 << 0);
+
+	return g_iMapFilterTank & (1 << 1);
+}
 
 Action cmdTakeOverTank(int client, int args) {
 	if (g_iControlled == 1) {
@@ -848,6 +865,11 @@ Action cmdTakeOverTank(int client, int args) {
 			PrintToChat(client, "\x01请等待 \x05%.1f秒 \x01再使用该指令", g_esPlayer[client].fCmdLastUsedTime - fTime);
 			return Plugin_Handled;
 		}*/
+	}
+
+	if (!bMapFilterTank()) {
+		ReplyToCommand(client, "当前地图已禁用该指令");
+		return Plugin_Handled;
 	}
 
 	int iTank;
@@ -936,8 +958,8 @@ bool bTakeOverLimit(int tank, int target, int reply) {
 		return false;
 	}
 
-	if (iGetStandingSurvivors() < g_iSurvuivorLimit) {
-		PrintToChat(reply, "\x01完全正常的生还者数量小于预设值 ->\x05%d", g_iSurvuivorLimit);
+	if (iGetStandingSurvivors() < g_iSurvivorLimit) {
+		PrintToChat(reply, "\x01完全正常的生还者数量小于预设值 ->\x05%d", g_iSurvivorLimit);
 		return false;
 	}
 
@@ -957,6 +979,11 @@ Action cmdTransferTank(int client, int args) {
 
 	if (!client || !IsClientInGame(client) || IsFakeClient(client))
 		return Plugin_Handled;
+
+	if (!bMapFilterTank()) {
+		ReplyToCommand(client, "当前地图已禁用该指令");
+		return Plugin_Handled;
+	}
 
 	bool bAccess = bCheckClientAccess(client, 4);
 	bool bIsAliveTank = GetClientTeam(client) == 3 && IsPlayerAlive(client) && GetEntProp(client, Prop_Send, "m_zombieClass") == 8;
@@ -1002,9 +1029,9 @@ void vOfferTankMenu(int tank, int target, int reply, bool bAccess = false) {
 		Menu menu = new Menu(iOfferTank_MenuHandler);
 		menu.SetTitle("是否接受 %N 的坦克控制权转移?", tank);
 
-		char sUID[12];
-		FormatEx(sUID, sizeof sUID, "%d", GetClientUserId(tank));
-		menu.AddItem(sUID, "是");
+		char uid[12];
+		FormatEx(uid, sizeof uid, "%d", GetClientUserId(tank));
+		menu.AddItem(uid, "是");
 		menu.AddItem("no", "否");
 		menu.ExitButton = false;
 		menu.ExitBackButton = false;
@@ -1018,12 +1045,12 @@ int iOfferTank_MenuHandler(Menu menu, MenuAction action, int client, int param2)
 			if (GetClientTeam(client) == 3 && IsPlayerAlive(client) && GetEntProp(client, Prop_Send, "m_zombieClass") == 8)
 				ReplyToCommand(client, "你当前已经是坦克");
 			else {
-				char sItem[12];
-				menu.GetItem(param2, sItem, sizeof sItem);
-				if (sItem[0] == 'n')
+				char item[12];
+				menu.GetItem(param2, item, sizeof item);
+				if (item[0] == 'n')
 					return 0;
 
-				int tank = GetClientOfUserId(StringToInt(sItem));
+				int tank = GetClientOfUserId(StringToInt(item));
 				if (tank && IsClientInGame(tank) && GetClientTeam(tank) == 3 && IsPlayerAlive(tank) && GetEntProp(tank, Prop_Send, "m_zombieClass") == 8)
 					vTransferTank(tank, client, client);
 				else
@@ -1039,7 +1066,7 @@ int iOfferTank_MenuHandler(Menu menu, MenuAction action, int client, int param2)
 }
 
 void vShowTankListMenu(int client) {
-	char sUID[12];
+	char uid[12];
 	char sName[MAX_NAME_LENGTH + 24];
 	Menu menu = new Menu(iShowTankList_MenuHandler);
 	menu.SetTitle("选择要转交的坦克");
@@ -1047,9 +1074,9 @@ void vShowTankListMenu(int client) {
 		if (!IsClientInGame(i) || GetClientTeam(i) != 3 || !IsPlayerAlive(i) || GetEntProp(i, Prop_Send, "m_zombieClass") != 8)
 			continue;
 		
-		FormatEx(sUID, sizeof sUID, "%d", GetClientUserId(i));
+		FormatEx(uid, sizeof uid, "%d", GetClientUserId(i));
 		FormatEx(sName, sizeof sName, "%d HP - %N", GetEntProp(i, Prop_Data, "m_iHealth"), i);
-		menu.AddItem(sUID, sName);
+		menu.AddItem(uid, sName);
 	}
 
 	menu.ExitBackButton = false;
@@ -1059,9 +1086,9 @@ void vShowTankListMenu(int client) {
 int iShowTankList_MenuHandler(Menu menu, MenuAction action, int client, int param2) {
 	switch (action) {
 		case MenuAction_Select: {
-			char sItem[12];
-			menu.GetItem(param2, sItem, sizeof sItem);
-			int target = GetClientOfUserId(StringToInt(sItem));
+			char item[12];
+			menu.GetItem(param2, item, sizeof item);
+			int target = GetClientOfUserId(StringToInt(item));
 			if (target && IsClientInGame(target) && GetClientTeam(target) == 3 && IsPlayerAlive(target) && GetEntProp(target, Prop_Send, "m_zombieClass") == 8)
 				vShowPlayerListMenu(client, target);
 			else {
@@ -1078,17 +1105,17 @@ int iShowTankList_MenuHandler(Menu menu, MenuAction action, int client, int para
 }
 
 void vShowPlayerListMenu(int client, int target) {
-	char sInfo[32];
-	char sUID[2][12];
+	char info[32];
+	char uid[2][12];
 	char sName[MAX_NAME_LENGTH + 12];
 	Menu menu = new Menu(iShowPlayerList_MenuHandler);
 	menu.SetTitle("选择要给予控制权的玩家");
-	FormatEx(sUID[0], sizeof sUID[], "%d", GetClientUserId(target));
+	FormatEx(uid[0], sizeof uid[], "%d", GetClientUserId(target));
 	for (int i = 1; i <= MaxClients; i++) {
 		if (i == target || !IsClientInGame(i) || IsFakeClient(i))
 			continue;
 
-		FormatEx(sUID[1], sizeof sUID[], "%d", GetClientUserId(i));
+		FormatEx(uid[1], sizeof uid[], "%d", GetClientUserId(i));
 		switch (GetClientTeam(i)) {
 			case 1:
 				FormatEx(sName, sizeof sName, "%s - %N", iGetBotOfIdlePlayer(i) ? "闲置" : "观众", i);
@@ -1100,8 +1127,8 @@ void vShowPlayerListMenu(int client, int target) {
 				FormatEx(sName, sizeof sName, "感染 - %N", i);
 		}
 
-		ImplodeStrings(sUID, 2, "|", sInfo, sizeof sInfo);
-		menu.AddItem(sInfo, sName);
+		ImplodeStrings(uid, 2, "|", info, sizeof info);
+		menu.AddItem(info, sName);
 	}
 
 	menu.ExitBackButton = false;
@@ -1111,17 +1138,17 @@ void vShowPlayerListMenu(int client, int target) {
 int iShowPlayerList_MenuHandler(Menu menu, MenuAction action, int client, int param2) {
 	switch (action) {
 		case MenuAction_Select: {
-			char sItem[32];
-			char sInfo[2][16];
-			menu.GetItem(param2, sItem, sizeof sItem);
-			ExplodeString(sItem, "|", sInfo, 2, sizeof sInfo[]);
-			int tank = GetClientOfUserId(StringToInt(sInfo[0]));
+			char item[32];
+			char info[2][16];
+			menu.GetItem(param2, item, sizeof item);
+			ExplodeString(item, "|", info, 2, sizeof info[]);
+			int tank = GetClientOfUserId(StringToInt(info[0]));
 			if (!tank || !IsClientInGame(tank) || GetClientTeam(tank) != 3 || !IsPlayerAlive(tank) || GetEntProp(tank, Prop_Send, "m_zombieClass") != 8) {
 				ReplyToCommand(client, "目标坦克已失效");
 				return 0;
 			}
 
-			int target = GetClientOfUserId(StringToInt(sInfo[1]));
+			int target = GetClientOfUserId(StringToInt(info[1]));
 			if (!target || !IsClientInGame(target)) {
 				ReplyToCommand(client, "目标玩家已失效, 请重新选择");
 				vShowPlayerListMenu(client, tank);
@@ -1288,9 +1315,9 @@ int iSelectClass_MenuHandler(Menu menu, MenuAction action, int param1, int param
 		case MenuAction_Select: {
 			int zombieClass;
 			if (GetClientTeam(param1) == 3 && !IsFakeClient(param1) && IsPlayerAlive(param1) && (zombieClass = GetEntProp(param1, Prop_Send, "m_zombieClass")) != 8 && GetEntProp(param1, Prop_Send, "m_isGhost")) {
-				char sItem[2];
-				menu.GetItem(param2, sItem, sizeof sItem);
-				int iClass = StringToInt(sItem);
+				char item[2];
+				menu.GetItem(param2, item, sizeof item);
+				int iClass = StringToInt(item);
 				if (++iClass != zombieClass)
 					vSetClassAndPunish(param1, iClass);
 			}
@@ -2052,7 +2079,7 @@ int iTakeOverTank(int tank) {
 			aClients.Sort(Sort_Descending, Sort_Integer);
 			client = aClients.Get(GetRandomInt(aClients.FindValue(0), aClients.Length - 1), 1);
 		}
-		else if (GetRandomFloat(0.0, 1.0) < g_fSurvuivorChance)
+		else if (GetRandomFloat(0.0, 1.0) < g_fSurvivorChance)
 			client = aClients.Get(GetRandomInt(0, aClients.Length - 1), 1);
 		else
 			client = 0;
@@ -2060,7 +2087,7 @@ int iTakeOverTank(int tank) {
 
 	delete aClients;
 
-	if (client && iGetStandingSurvivors() >= g_iSurvuivorLimit) {
+	if (client && iGetStandingSurvivors() >= g_iSurvivorLimit) {
 		int iTeam = GetClientTeam(client);
 		switch (iTeam) {
 			case 2: {
@@ -2780,6 +2807,14 @@ void vInitData() {
 	g_hSDK_CTerrorPlayer_TakeOverBot = EndPrepSDKCall();
 	if (!g_hSDK_CTerrorPlayer_TakeOverBot)
 		SetFailState("Failed to create SDKCall: \"CTerrorPlayer::TakeOverBot\"");
+
+	StartPrepSDKCall(SDKCall_GameRules);
+	if (!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorGameRules::IsMissionFinalMap"))
+		SetFailState("Failed to find signature: \"CTerrorGameRules::IsMissionFinalMap\"");
+	PrepSDKCall_SetReturnInfo(SDKType_Bool, SDKPass_Plain);
+	g_hSDK_CTerrorGameRules_IsMissionFinalMap = EndPrepSDKCall();
+	if (!g_hSDK_CTerrorGameRules_IsMissionFinalMap)
+		SetFailState("Failed to create SDKCall: \"CTerrorGameRules::IsMissionFinalMap\"");
 
 	StartPrepSDKCall(SDKCall_Static);
 	if (!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorGameRules::HasPlayerControlledZombies"))
