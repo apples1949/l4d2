@@ -88,7 +88,10 @@ public Action OnPlayerRunCmd(int client, int &buttons) {
 	if (SquareRoot(Pow(vVel[0], 2.0) + Pow(vVel[1], 2.0)) < GetEntPropFloat(client, Prop_Send, "m_flMaxspeed") - 10.0)
 		return Plugin_Continue;
 
-	if (fCurTargetDistance(client) > 0.50 * g_fVomitRange && -1.0 < fNearestSurDistance(client) < 1000.0) {
+	static float fCurTargetDist;
+	static float fNearestSurDist;
+	vGetSurDistance(client, fCurTargetDist, fNearestSurDist);
+	if (fCurTargetDist > 0.50 * g_fVomitRange && -1.0 < fNearestSurDist < 1000.0) {
 		static float vAng[3];
 		GetClientEyeAngles(client, vAng);
 		return aBunnyHop(client, buttons, vAng);
@@ -108,6 +111,7 @@ Action aBunnyHop(int client, int &buttons, const float vAng[3]) {
 	float vRig[3];
 	float vDir[3];
 	float vVel[3];
+	bool bAD;
 	bool bPressed;
 	if (buttons & IN_FORWARD || buttons & IN_BACK) {
 		GetAngleVectors(vAng, vFwd, NULL_VECTOR, NULL_VECTOR);
@@ -120,6 +124,7 @@ Action aBunnyHop(int client, int &buttons, const float vAng[3]) {
 		GetAngleVectors(vAng, NULL_VECTOR, vRig, NULL_VECTOR);
 		NormalizeVector(vRig, vRig);
 		ScaleVector(vRig, buttons & IN_MOVERIGHT ? 90.0 : -90.0);
+		bAD = true;
 		bPressed = true;
 	}
 
@@ -127,7 +132,7 @@ Action aBunnyHop(int client, int &buttons, const float vAng[3]) {
 		AddVectors(vFwd, vRig, vDir);
 		GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", vVel);
 		AddVectors(vVel, vDir, vVel);
-		if (!bWontFall(client, vVel))
+		if (!bWontFall(client, vVel, bAD))
 			return Plugin_Continue;
 
 		buttons |= IN_DUCK;
@@ -139,7 +144,7 @@ Action aBunnyHop(int client, int &buttons, const float vAng[3]) {
 	return Plugin_Continue;
 }
 
-bool bWontFall(int client, const float vVel[3]) {
+bool bWontFall(int client, const float vVel[3], bool bAD) {
 	static float vPos[3];
 	static float vEnd[3];
 	GetClientAbsOrigin(client, vPos);
@@ -153,6 +158,7 @@ bool bWontFall(int client, const float vVel[3]) {
 	static bool bDidHit;
 	static Handle hTrace;
 	static float vVec[3];
+	static float vNor[3];
 	static float vPlane[3];
 
 	bDidHit = false;
@@ -162,12 +168,12 @@ bool bWontFall(int client, const float vVel[3]) {
 	if (TR_DidHit(hTrace)) {
 		bDidHit = true;
 		TR_GetEndPosition(vVec, hTrace);
-		if (GetVectorDistance(vPos, vVec) < GetVectorLength(vVel)) {
-			TR_GetPlaneNormal(hTrace, vPlane);
-			if (RadToDeg(ArcCosine(GetVectorDotProduct(vVel, vPlane))) > 135.0) {
-				delete hTrace;
-				return false;
-			}
+		NormalizeVector(vVel, vNor);
+		TR_GetPlaneNormal(hTrace, vPlane);
+		float fDeg = RadToDeg(ArcCosine(GetVectorDotProduct(vNor, vPlane)));
+		if (fDeg > 150.0 || (bAD && fDeg < 100.0)) {
+			delete hTrace;
+			return false;
 		}
 	}
 
@@ -217,30 +223,63 @@ bool bTraceEntityFilter(int entity, int contentsMask) {
 	return true;
 }
 
+void vGetSurDistance(int client, float &CurTargetDist, float &NearestSurDist) {
+	static float vPos[3];
+	static float vTar[3];
+
+	GetClientAbsOrigin(client, vPos);
+	if (!bIsAliveSur(g_iCurTarget[client]))
+		CurTargetDist = -1.0;
+	else {
+		GetClientAbsOrigin(g_iCurTarget[client], vTar);
+		CurTargetDist = GetVectorDistance(vPos, vTar);
+	}
+
+	static int i;
+	static int iCount;
+	static float fDists[MAXPLAYERS + 1];
+
+	iCount = 0;
+	GetClientAbsOrigin(client, vPos);
+	for (i = 1; i <= MaxClients; i++) {
+		if (i != client && IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i)) {
+			GetClientAbsOrigin(i, vTar);
+			fDists[iCount++] = GetVectorDistance(vPos, vTar);
+		}
+	}
+
+	if (!iCount)
+		NearestSurDist = -1.0;
+	else {
+		SortFloats(fDists, iCount, Sort_Ascending);
+		NearestSurDist = fDists[0];
+	}
+}
+/*
 float fCurTargetDistance(int client) {
 	if (!bIsAliveSur(g_iCurTarget[client]))
 		return -1.0;
 
 	static float vPos[3];
-	static float vTarg[3];
+	static float vTar[3];
 	GetClientAbsOrigin(client, vPos);
-	GetClientAbsOrigin(g_iCurTarget[client], vTarg);
-	return GetVectorDistance(vPos, vTarg);
+	GetClientAbsOrigin(g_iCurTarget[client], vTar);
+	return GetVectorDistance(vPos, vTar);
 }
 
 float fNearestSurDistance(int client) {
 	static int i;
 	static int iCount;
 	static float vPos[3];
-	static float vTarg[3];
+	static float vTar[3];
 	static float fDists[MAXPLAYERS + 1];
 	
 	iCount = 0;
 	GetClientAbsOrigin(client, vPos);
 	for (i = 1; i <= MaxClients; i++) {
 		if (i != client && IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i)) {
-			GetClientAbsOrigin(i, vTarg);
-			fDists[iCount++] = GetVectorDistance(vPos, vTarg);
+			GetClientAbsOrigin(i, vTar);
+			fDists[iCount++] = GetVectorDistance(vPos, vTar);
 		}
 	}
 
@@ -249,7 +288,7 @@ float fNearestSurDistance(int client) {
 
 	SortFloats(fDists, iCount, Sort_Ascending);
 	return fDists[0];
-}
+}*/
 
 #define PLAYER_HEIGHT 72.0
 void vBoomer_OnVomit(int client) {
@@ -262,20 +301,20 @@ void vBoomer_OnVomit(int client) {
 		return;
 
 	static float vPos[3];
-	static float vTarg[3];
+	static float vTar[3];
 	static float vVelocity[3];
 	GetClientAbsOrigin(client, vPos);
-	GetClientEyePosition(iTarget, vTarg);
-	MakeVectorFromPoints(vPos, vTarg, vVelocity);
+	GetClientEyePosition(iTarget, vTar);
+	MakeVectorFromPoints(vPos, vTar, vVelocity);
 
 	static float vLength;
 	vLength = GetVectorLength(vVelocity);
 	if (vLength < g_fVomitRange)
 		vLength = 0.5 * g_fVomitRange;
 	else {
-		float fHeight = vTarg[2] - vPos[2];
+		float fHeight = vTar[2] - vPos[2];
 		if (fHeight > PLAYER_HEIGHT)
-			vLength += GetVectorDistance(vPos, vTarg) / vLength * PLAYER_HEIGHT;
+			vLength += GetVectorDistance(vPos, vTar) / vLength * PLAYER_HEIGHT;
 	}
 
 	static float vAngles[3];
@@ -294,7 +333,7 @@ int iGetClosestSur(int client, int iExclude = -1, float fDistance) {
 	static int iCount;
 	static float fDist;
 	static float vPos[3];
-	static float vTarg[3];
+	static float vTar[3];
 	static int iTargets[MAXPLAYERS + 1];
 	
 	iCount = 0;
@@ -310,8 +349,8 @@ int iGetClosestSur(int client, int iExclude = -1, float fDistance) {
 	for (i = 0; i < iCount; i++) {
 		iTarget = iTargets[i];
 		if (iTarget && iTarget != iExclude && GetClientTeam(iTarget) == 2 && IsPlayerAlive(iTarget) && !GetEntProp(iTarget, Prop_Send, "m_isIncapacitated")) {
-			GetClientAbsOrigin(iTarget, vTarg);
-			fDist = GetVectorDistance(vPos, vTarg);
+			GetClientAbsOrigin(iTarget, vTar);
+			fDist = GetVectorDistance(vPos, vTar);
 			if (fDist < fDistance)
 				aTargets.Set(aTargets.Push(fDist), iTarget, 1);
 		}

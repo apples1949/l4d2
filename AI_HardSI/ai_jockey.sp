@@ -207,15 +207,15 @@ float fNearestSurDistance(int client) {
 	static int i;
 	static int iCount;
 	static float vPos[3];
-	static float vTarg[3];
+	static float vTar[3];
 	static float fDists[MAXPLAYERS + 1];
 	
 	iCount = 0;
 	GetClientAbsOrigin(client, vPos);
 	for (i = 1; i <= MaxClients; i++) {
 		if (i != client && IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i)) {
-			GetClientAbsOrigin(i, vTarg);
-			fDists[iCount++] = GetVectorDistance(vPos, vTarg);
+			GetClientAbsOrigin(i, vTar);
+			fDists[iCount++] = GetVectorDistance(vPos, vTar);
 		}
 	}
 
@@ -233,12 +233,52 @@ bool bWithinViewAngle(int client, float fOffsetThreshold) {
 		return true;
 	
 	static float vSrc[3];
-	static float vTarg[3];
+	static float vTar[3];
 	static float vAng[3];
 	GetClientEyePosition(iTarget, vSrc);
-	GetClientEyePosition(client, vTarg);
-	GetClientEyeAngles(iTarget, vAng);
-	return PointWithinViewAngle(vSrc, vTarg, vAng, GetFOVDotProduct(fOffsetThreshold));
+	GetClientEyePosition(client, vTar);
+	if (bIsVisibleTo(vSrc, vTar)) {
+		GetClientEyeAngles(iTarget, vAng);
+		return PointWithinViewAngle(vSrc, vTar, vAng, GetFOVDotProduct(fOffsetThreshold));
+	}
+
+	return false;
+}
+
+// credits = "AtomicStryker"
+bool bIsVisibleTo(const float vPos[3], const float vTarget[3]) {
+	static float vAngles[3], vLookAt[3];
+	MakeVectorFromPoints(vPos, vTarget, vLookAt); // compute vector from start to target
+	GetVectorAngles(vLookAt, vAngles); // get angles from vector for trace
+
+	// execute Trace
+	static Handle hTrace;
+	static bool bIsVisible;
+
+	bIsVisible = false;
+	hTrace = TR_TraceRayFilterEx(vPos, vAngles, MASK_ALL, RayType_Infinite, bTraceEntityFilter);
+	if (TR_DidHit(hTrace)) {
+		static float vStart[3];
+		TR_GetEndPosition(vStart, hTrace); // retrieve our trace endpoint
+
+		if ((GetVectorDistance(vPos, vStart, false) + 25.0) >= GetVectorDistance(vPos, vTarget))
+			bIsVisible = true; // if trace ray length plus tolerance equal or bigger absolute distance, you hit the target
+	}
+
+	delete hTrace;
+	return bIsVisible;
+}
+
+bool bTraceEntityFilter(int entity, int contentsMask) {
+	if (entity <= MaxClients)
+		return false;
+
+	static char cls[9];
+	GetEntityClassname(entity, cls, sizeof cls);
+	if ((cls[0] == 'i' && strcmp(cls[1], "nfected") == 0) || (cls[0] == 'w' && strcmp(cls[1], "itch") == 0))
+		return false;
+
+	return true;
 }
 
 // https://github.com/nosoop/stocksoup

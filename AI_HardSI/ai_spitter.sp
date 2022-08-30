@@ -117,6 +117,7 @@ bool bWontFall(int client, const float vVel[3]) {
 	static bool bDidHit;
 	static Handle hTrace;
 	static float vVec[3];
+	static float vNor[3];
 	static float vPlane[3];
 
 	bDidHit = false;
@@ -126,12 +127,11 @@ bool bWontFall(int client, const float vVel[3]) {
 	if (TR_DidHit(hTrace)) {
 		bDidHit = true;
 		TR_GetEndPosition(vVec, hTrace);
-		if (GetVectorDistance(vPos, vVec) < GetVectorLength(vVel)) {
-			TR_GetPlaneNormal(hTrace, vPlane);
-			if (RadToDeg(ArcCosine(GetVectorDotProduct(vVel, vPlane))) > 135.0) {
-				delete hTrace;
-				return false;
-			}
+		NormalizeVector(vVel, vNor);
+		TR_GetPlaneNormal(hTrace, vPlane);
+		if (RadToDeg(ArcCosine(GetVectorDotProduct(vNor, vPlane))) > 150.0) {
+			delete hTrace;
+			return false;
 		}
 	}
 
@@ -217,15 +217,15 @@ float fNearestSurDistance(int client) {
 	static int i;
 	static int iCount;
 	static float vPos[3];
-	static float vTarg[3];
+	static float vTar[3];
 	static float fDists[MAXPLAYERS + 1];
 	
 	iCount = 0;
 	GetClientAbsOrigin(client, vPos);
 	for (i = 1; i <= MaxClients; i++) {
 		if (i != client && IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i)) {
-			GetClientAbsOrigin(i, vTarg);
-			fDists[iCount++] = GetVectorDistance(vPos, vTarg);
+			GetClientAbsOrigin(i, vTar);
+			fDists[iCount++] = GetVectorDistance(vPos, vTar);
 		}
 	}
 

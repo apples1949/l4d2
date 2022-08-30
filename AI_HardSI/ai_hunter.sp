@@ -151,14 +151,14 @@ public Action OnPlayerRunCmd(int client, int &buttons) {
 float fNearestSurDistance(int client, const float vPos[3]) {
 	static int i;
 	static int iCount;
-	static float vTarg[3];
+	static float vTar[3];
 	static float fDistance[MAXPLAYERS + 1];
 
 	iCount = 0;
 	for (i = 1; i <= MaxClients; i++) {
 		if (i != client && IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i)) {
-			GetClientAbsOrigin(i, vTarg);
-			fDistance[iCount++] = GetVectorDistance(vPos, vTarg);
+			GetClientAbsOrigin(i, vTar);
+			fDistance[iCount++] = GetVectorDistance(vPos, vTar);
 		}
 	}
 

@@ -8,17 +8,17 @@ ConVar
 	g_hChargeProximity,
 	g_hChargeMaxSpeed,
 	g_hChargeStartSpeed,
-	g_hHealthThresholdCharger,
-	g_hAimOffsetSensitivityCharger;
+	g_hHealthThreshold,
+	g_hAimOffsetSensitivity;
 
 float
 	g_fChargeProximity,
 	g_fChargeMaxSpeed,
 	g_fChargeStartSpeed,
-	g_fAimOffsetSensitivityCharger;
+	g_fAimOffsetSensitivity;
 
 int
-	g_iHealthThresholdCharger;
+	g_iHealthThreshold;
 
 bool
 	g_bChargerBhop,
@@ -34,9 +34,9 @@ public Plugin myinfo = {
 
 public void OnPluginStart() {
 	g_hChargerBhop = CreateConVar("ai_charger_bhop", "1", "Flag to enable bhop facsimile on AI chargers");
-	g_hChargeProximity = CreateConVar("ai_charge_proximity", "300.0", "How close a client will approach before charging");
-	g_hHealthThresholdCharger = CreateConVar("ai_health_threshold_charger", "300", "Charger will charge if its health drops to this level");
-	g_hAimOffsetSensitivityCharger = CreateConVar("ai_aim_offset_sensitivity_charger", "30.0", "If the charger has a target, it will not straight charge if the target's aim on the horizontal axis is within this radius", _, true, 0.0, true, 180.0);
+	g_hChargeProximity = CreateConVar("ai_charge_proximity", "200.0", "How close a client will approach before charging");
+	g_hHealthThreshold = CreateConVar("ai_health_threshold_charger", "300", "Charger will charge if its health drops to this level");
+	g_hAimOffsetSensitivity = CreateConVar("ai_aim_offset_sensitivity_charger", "22.5", "If the charger has a target, it will not straight charge if the target's aim on the horizontal axis is within this radius", _, true, 0.0, true, 180.0);
 	g_hChargeMaxSpeed = FindConVar("z_charge_max_speed");
 	g_hChargeStartSpeed = FindConVar("z_charge_start_speed");
 
@@ -44,8 +44,8 @@ public void OnPluginStart() {
 	g_hChargeProximity.AddChangeHook(vCvarChanged);
 	g_hChargeMaxSpeed.AddChangeHook(vCvarChanged);
 	g_hChargeStartSpeed.AddChangeHook(vCvarChanged);
-	g_hHealthThresholdCharger.AddChangeHook(vCvarChanged);
-	g_hAimOffsetSensitivityCharger.AddChangeHook(vCvarChanged);
+	g_hHealthThreshold.AddChangeHook(vCvarChanged);
+	g_hAimOffsetSensitivity.AddChangeHook(vCvarChanged);
 
 	HookEvent("player_spawn", Event_PlayerSpawn);
 	HookEvent("charger_charge_start", Event_ChargerChargeStart);
@@ -64,8 +64,8 @@ void vGetCvars() {
 	g_fChargeMaxSpeed = g_hChargeMaxSpeed.FloatValue;
 	g_fChargeStartSpeed = g_hChargeStartSpeed.FloatValue;
 	g_fChargeProximity = g_hChargeProximity.FloatValue;
-	g_iHealthThresholdCharger = g_hHealthThresholdCharger.IntValue;
-	g_fAimOffsetSensitivityCharger = g_hAimOffsetSensitivityCharger.FloatValue;
+	g_iHealthThreshold = g_hHealthThreshold.IntValue;
+	g_fAimOffsetSensitivity = g_hAimOffsetSensitivity.FloatValue;
 }
 
 void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast) {
@@ -93,36 +93,32 @@ public Action OnPlayerRunCmd(int client, int &buttons) {
 	if (!IsClientInGame(client) || !IsFakeClient(client) || GetClientTeam(client) != 3 || !IsPlayerAlive(client) || GetEntProp(client, Prop_Send, "m_zombieClass") != 6 || GetEntProp(client, Prop_Send, "m_isGhost") )
 		return Plugin_Continue;
 
-	static float fNearest;
-	fNearest = fNearestSurDistance(client);
-	if (fNearest > g_fChargeProximity && GetEntProp(client, Prop_Data, "m_iHealth") > g_iHealthThresholdCharger) {
+	static float fNearestSurDist;
+	fNearestSurDist = fNearestSurDistance(client);
+	if (fNearestSurDist > g_fChargeProximity && GetEntProp(client, Prop_Data, "m_iHealth") > g_iHealthThreshold) {
 		if (!g_bShouldCharge[client])
 			vResetAbilityTime(client, 0.1);
 	}
 	else
 		g_bShouldCharge[client] = true;
 		
-	if (g_bShouldCharge[client]) {
-		if (bCanCharge(client) && bIsAliveSur(g_iCurTarget[client]) && !bIsIncapacitated(g_iCurTarget[client])) {
+	if (g_bShouldCharge[client] && bCanCharge(client)) {
+		static int iTarget;
+		iTarget = GetClientAimTarget(client, true);
+		if (bIsAliveSur(iTarget) && !bIncapacitated(iTarget)) {
 			static float vPos[3];
-			static float vTarg[3];
+			static float vTar[3];
 			GetClientAbsOrigin(client, vPos);
-			GetClientAbsOrigin(g_iCurTarget[client], vTarg);
-			if (!bHitWall(client, g_iCurTarget[client])) {
-				if (GetVectorDistance(vPos, vTarg) < 150.0) {
-					buttons |= IN_ATTACK;
-					buttons |= IN_ATTACK2;
-					return Plugin_Changed;
-				}
+			GetClientAbsOrigin(iTarget, vTar);
+			if (GetVectorDistance(vPos, vTar) < 150.0 && !bHitWall(client, iTarget)) {
+				buttons |= IN_ATTACK;
+				buttons |= IN_ATTACK2;
+				return Plugin_Changed;
 			}
-			else if (buttons & IN_ATTACK)
-				buttons &= ~IN_ATTACK;
 		}
-		else if (buttons & IN_ATTACK)
-			buttons &= ~IN_ATTACK;
 	}
 
-	if (!g_bChargerBhop || fCurTargetDistance(client) < 150.0 || fNearest > 1000.0 || !bIsGrounded(client) || GetEntityMoveType(client) == MOVETYPE_LADDER || GetEntProp(client, Prop_Data, "m_nWaterLevel") > 1 || !GetEntProp(client, Prop_Send, "m_hasVisibleThreats"))
+	if (!g_bChargerBhop || fCurTargetDistance(client) < 150.0 || fNearestSurDist > 1000.0 || !bIsGrounded(client) || GetEntityMoveType(client) == MOVETYPE_LADDER || GetEntProp(client, Prop_Data, "m_nWaterLevel") > 1 || !GetEntProp(client, Prop_Send, "m_hasVisibleThreats"))
 		return Plugin_Continue;
 
 	static float vVel[3];
@@ -191,6 +187,7 @@ bool bWontFall(int client, const float vVel[3]) {
 	static bool bDidHit;
 	static Handle hTrace;
 	static float vVec[3];
+	static float vNor[3];
 	static float vPlane[3];
 
 	bDidHit = false;
@@ -200,12 +197,11 @@ bool bWontFall(int client, const float vVel[3]) {
 	if (TR_DidHit(hTrace)) {
 		bDidHit = true;
 		TR_GetEndPosition(vVec, hTrace);
-		if (GetVectorDistance(vPos, vVec) < GetVectorLength(vVel)) {
-			TR_GetPlaneNormal(hTrace, vPlane);
-			if (RadToDeg(ArcCosine(GetVectorDotProduct(vVel, vPlane))) > 135.0) {
-				delete hTrace;
-				return false;
-			}
+		NormalizeVector(vVel, vNor);
+		TR_GetPlaneNormal(hTrace, vPlane);
+		if (RadToDeg(ArcCosine(GetVectorDotProduct(vNor, vPlane))) > 150.0) {
+			delete hTrace;
+			return false;
 		}
 	}
 
@@ -260,25 +256,25 @@ float fCurTargetDistance(int client) {
 		return -1.0;
 
 	static float vPos[3];
-	static float vTarg[3];
+	static float vTar[3];
 	GetClientAbsOrigin(client, vPos);
-	GetClientAbsOrigin(g_iCurTarget[client], vTarg);
-	return GetVectorDistance(vPos, vTarg);
+	GetClientAbsOrigin(g_iCurTarget[client], vTar);
+	return GetVectorDistance(vPos, vTar);
 }
 
 float fNearestSurDistance(int client) {
 	static int i;
 	static int iCount;
 	static float vPos[3];
-	static float vTarg[3];
+	static float vTar[3];
 	static float fDists[MAXPLAYERS + 1];
 	
 	iCount = 0;
 	GetClientAbsOrigin(client, vPos);
 	for (i = 1; i <= MaxClients; i++) {
 		if (i != client && IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i)) {
-			GetClientAbsOrigin(i, vTarg);
-			fDists[iCount++] = GetVectorDistance(vPos, vTarg);
+			GetClientAbsOrigin(i, vTar);
+			fDists[iCount++] = GetVectorDistance(vPos, vTar);
 		}
 	}
 
@@ -291,18 +287,18 @@ float fNearestSurDistance(int client) {
 
 bool bHitWall(int client, int iTarget) {
 	static float vPos[3];
-	static float vTarg[3];
+	static float vTar[3];
 	GetClientAbsOrigin(client, vPos);
-	GetClientAbsOrigin(iTarget, vTarg);
+	GetClientAbsOrigin(iTarget, vTar);
 	vPos[2] += 10.0;
-	vTarg[2] += 10.0;
+	vTar[2] += 10.0;
 
-	MakeVectorFromPoints(vPos, vTarg, vTarg);
+	MakeVectorFromPoints(vPos, vTar, vTar);
 	static float fDist;
-	fDist = GetVectorLength(vTarg) - 33.0;
-	NormalizeVector(vTarg, vTarg);
-	ScaleVector(vTarg, fDist <= 0.0 ? 0.0 : fDist);
-	AddVectors(vPos, vTarg, vTarg);
+	fDist = GetVectorLength(vTar) - 49.0;
+	NormalizeVector(vTar, vTar);
+	ScaleVector(vTar, fDist <= 0.0 ? 0.0 : fDist);
+	AddVectors(vPos, vTar, vTar);
 
 	static float vMins[3];
 	static float vMaxs[3];
@@ -313,7 +309,7 @@ bool bHitWall(int client, int iTarget) {
 
 	static bool bDidHit;
 	static Handle hTrace;
-	hTrace = TR_TraceHullFilterEx(vPos, vTarg, vMins, vMaxs, MASK_PLAYERSOLID_BRUSHONLY, bTraceEntityFilter);
+	hTrace = TR_TraceHullFilterEx(vPos, vTar, vMins, vMaxs, MASK_PLAYERSOLID_BRUSHONLY, bTraceEntityFilter);
 	bDidHit = TR_DidHit(hTrace);
 	delete hTrace;
 	return bDidHit;
@@ -340,7 +336,7 @@ void vResetAbilityTime(int client, float fTime)
 void vCharger_OnCharge(int client) {
 	static int iTarget;
 	iTarget = g_iCurTarget[client];//GetClientAimTarget(client, true);
-	if (!bIsAliveSur(iTarget) || bIsIncapacitated(iTarget) || bIsPinned(iTarget) || bHitWall(client, iTarget) || bWithinViewAngle(client, iTarget, g_fAimOffsetSensitivityCharger))
+	if (!bIsAliveSur(iTarget) || bIncapacitated(iTarget) || bIsPinned(iTarget) || bHitWall(client, iTarget) || bWithinViewAngle(client, iTarget, g_fAimOffsetSensitivity))
 		iTarget = iGetClosestSur(client, iTarget, g_fChargeMaxSpeed);
 
 	if (iTarget == -1)
@@ -354,18 +350,18 @@ void vCharger_OnCharge(int client) {
 	vLength = vLength < g_fChargeStartSpeed ? g_fChargeStartSpeed : vLength;
 
 	static float vPos[3];
-	static float vTarg[3];
+	static float vTar[3];
 	GetClientAbsOrigin(client, vPos);
-	GetClientEyePosition(iTarget, vTarg);
-	float fDelta = vTarg[2] - vPos[2];
+	GetClientEyePosition(iTarget, vTar);
+	float fDelta = vTar[2] - vPos[2];
 	if (fDelta > PLAYER_HEIGHT)
 		vLength += fDelta;
 
 	if (GetEntPropEnt(client, Prop_Send, "m_hGroundEntity") == -1)
 		vLength += g_fChargeMaxSpeed;
 
-	vTarg[2] += GetVectorDistance(vPos, vTarg) / vLength * PLAYER_HEIGHT;
-	MakeVectorFromPoints(vPos, vTarg, vVelocity);
+	vTar[2] += GetVectorDistance(vPos, vTar) / vLength * PLAYER_HEIGHT;
+	MakeVectorFromPoints(vPos, vTar, vVelocity);
 
 	static float vAngles[3];
 	GetVectorAngles(vVelocity, vAngles);
@@ -378,7 +374,7 @@ bool bIsAliveSur(int client) {
 	return 0 < client <= MaxClients && IsClientInGame(client) && GetClientTeam(client) == 2 && IsPlayerAlive(client);
 }
 
-bool bIsIncapacitated(int client) {
+bool bIncapacitated(int client) {
 	return !!GetEntProp(client, Prop_Send, "m_isIncapacitated");
 }
 
@@ -403,7 +399,7 @@ int iGetClosestSur(int client, int iExclude = -1, float fDistance) {
 	static float fDist;
 	static float vAng[3];
 	static float vSrc[3];
-	static float vTarg[3];
+	static float vTar[3];
 	static int iTargets[MAXPLAYERS + 1];
 	
 	iCount = 0;
@@ -415,17 +411,17 @@ int iGetClosestSur(int client, int iExclude = -1, float fDistance) {
 
 	static ArrayList aClients;
 	aClients = new ArrayList(3);
-	float fFOV = GetFOVDotProduct(g_fAimOffsetSensitivityCharger);
+	float fFOV = GetFOVDotProduct(g_fAimOffsetSensitivity);
 	for (i = 0; i < iCount; i++) {
-		if (iTargets[i] && iTargets[i] != iExclude && GetClientTeam(iTargets[i]) == 2 && IsPlayerAlive(iTargets[i]) && !bIsIncapacitated(iTargets[i]) && !bIsPinned(iTargets[i]) && !bHitWall(client, iTargets[i])) {
-			GetClientEyePosition(iTargets[i], vTarg);
-			fDist = GetVectorDistance(vSrc, vTarg);
+		if (iTargets[i] && iTargets[i] != iExclude && GetClientTeam(iTargets[i]) == 2 && IsPlayerAlive(iTargets[i]) && !bIncapacitated(iTargets[i]) && !bIsPinned(iTargets[i]) && !bHitWall(client, iTargets[i])) {
+			GetClientEyePosition(iTargets[i], vTar);
+			fDist = GetVectorDistance(vSrc, vTar);
 			if (fDist < fDistance) {
 				iIndex = aClients.Push(fDist);
 				aClients.Set(iIndex, iTargets[i], 1);
 
 				GetClientEyeAngles(iTargets[i], vAng);
-				aClients.Set(iIndex, !PointWithinViewAngle(vTarg, vSrc, vAng, fFOV) ? 0 : 1, 2);
+				aClients.Set(iIndex, !PointWithinViewAngle(vTar, vSrc, vAng, fFOV) ? 0 : 1, 2);
 			}
 		}
 	}
@@ -444,12 +440,40 @@ int iGetClosestSur(int client, int iExclude = -1, float fDistance) {
 
 bool bWithinViewAngle(int client, int iViewer, float fOffsetThreshold) {
 	static float vSrc[3];
-	static float vTarg[3];
+	static float vTar[3];
 	static float vAng[3];
 	GetClientEyePosition(iViewer, vSrc);
-	GetClientEyePosition(client, vTarg);
-	GetClientEyeAngles(iViewer, vAng);
-	return PointWithinViewAngle(vSrc, vTarg, vAng, GetFOVDotProduct(fOffsetThreshold));
+	GetClientEyePosition(client, vTar);
+	if (bIsVisibleTo(vSrc, vTar)) {
+		GetClientEyeAngles(iViewer, vAng);
+		return PointWithinViewAngle(vSrc, vTar, vAng, GetFOVDotProduct(fOffsetThreshold));
+	}
+
+	return false;
+}
+
+// credits = "AtomicStryker"
+bool bIsVisibleTo(const float vPos[3], const float vTarget[3]) {
+	static float vAngles[3], vLookAt[3];
+	MakeVectorFromPoints(vPos, vTarget, vLookAt); // compute vector from start to target
+	GetVectorAngles(vLookAt, vAngles); // get angles from vector for trace
+
+	// execute Trace
+	static Handle hTrace;
+	static bool bIsVisible;
+
+	bIsVisible = false;
+	hTrace = TR_TraceRayFilterEx(vPos, vAngles, MASK_ALL, RayType_Infinite, bTraceEntityFilter);
+	if (TR_DidHit(hTrace)) {
+		static float vStart[3];
+		TR_GetEndPosition(vStart, hTrace); // retrieve our trace endpoint
+
+		if ((GetVectorDistance(vPos, vStart, false) + 25.0) >= GetVectorDistance(vPos, vTarget))
+			bIsVisible = true; // if trace ray length plus tolerance equal or bigger absolute distance, you hit the target
+	}
+
+	delete hTrace;
+	return bIsVisible;
 }
 
 // https://github.com/nosoop/stocksoup

@@ -10,7 +10,7 @@ ConVar
 	g_hTankBhop,
 	g_hTankAttackRange,
 	g_hTankThrowForce,
-	g_hAimOffsetSensitivityTank;
+	g_hAimOffsetSensitivity;
 
 bool
 	g_bTankBhop;
@@ -18,7 +18,7 @@ bool
 float
 	g_fTankAttackRange,
 	g_fTankThrowForce,
-	g_fAimOffsetSensitivityTank;
+	g_fAimOffsetSensitivity;
 
 public Plugin myinfo = {
 	name = "AI TANK",
@@ -30,14 +30,14 @@ public Plugin myinfo = {
 
 public void OnPluginStart() {
 	g_hTankBhop = CreateConVar("ai_tank_bhop", "1", "Flag to enable bhop facsimile on AI tanks");
-	g_hAimOffsetSensitivityTank = CreateConVar("ai_aim_offset_sensitivity_tank", "22.5", "If the tank has a target, it will not straight throw if the target's aim on the horizontal axis is within this radius", _, true, 0.0, true, 180.0);
+	g_hAimOffsetSensitivity = CreateConVar("ai_aim_offset_sensitivity_tank", "22.5", "If the tank has a target, it will not straight throw if the target's aim on the horizontal axis is within this radius", _, true, 0.0, true, 180.0);
 	g_hTankAttackRange = FindConVar("tank_attack_range");
 	g_hTankThrowForce = FindConVar("z_tank_throw_force");
 
 	g_hTankBhop.AddChangeHook(vCvarChanged);
 	g_hTankAttackRange.AddChangeHook(vCvarChanged);
 	g_hTankThrowForce.AddChangeHook(vCvarChanged);
-	g_hAimOffsetSensitivityTank.AddChangeHook(vCvarChanged);
+	g_hAimOffsetSensitivity.AddChangeHook(vCvarChanged);
 }
 
 public void OnConfigsExecuted() {
@@ -52,7 +52,7 @@ void vGetCvars() {
 	g_bTankBhop = g_hTankBhop.BoolValue;
 	g_fTankAttackRange = g_hTankAttackRange.FloatValue;
 	g_fTankThrowForce = g_hTankThrowForce.FloatValue;
-	g_fAimOffsetSensitivityTank = g_hAimOffsetSensitivityTank.FloatValue;
+	g_fAimOffsetSensitivity = g_hAimOffsetSensitivity.FloatValue;
 }
 
 int g_iCurTarget[MAXPLAYERS + 1];
@@ -89,7 +89,10 @@ public Action OnPlayerRunCmd(int client, int &buttons) {
 	if (bIsGrounded(client)) {
 		g_bModify[client] = false;
 
-		if (fCurTargetDistance(client) > 0.5 * g_fTankAttackRange && -1.0 < fNearestSurDistance(client) < 1000.0) {
+		static float fCurTargetDist;
+		static float fNearestSurDist;
+		vGetSurDistance(client, fCurTargetDist, fNearestSurDist);
+		if (fCurTargetDist > 0.5 * g_fTankAttackRange && -1.0 < fNearestSurDist < 1000.0) {
 			GetClientEyeAngles(client, vAng);
 			return aBunnyHop(client, buttons, vAng);
 		}
@@ -107,10 +110,10 @@ public Action OnPlayerRunCmd(int client, int &buttons) {
 			return Plugin_Continue;
 
 		static float vPos[3];
-		static float vTarg[3];
+		static float vTar[3];
 		GetClientAbsOrigin(client, vPos);
-		GetClientAbsOrigin(iTarget, vTarg);
-		fSpeed = GetVectorDistance(vPos, vTarg);
+		GetClientAbsOrigin(iTarget, vTar);
+		fSpeed = GetVectorDistance(vPos, vTar);
 		if (fSpeed < g_fTankAttackRange || fSpeed > 500.0)
 			return Plugin_Continue;
 
@@ -122,9 +125,9 @@ public Action OnPlayerRunCmd(int client, int &buttons) {
 
 		static float vDir[2][3];
 		vDir[0] = vPos;
-		vDir[1] = vTarg;
-		vPos[2] = vTarg[2] = 0.0;
-		MakeVectorFromPoints(vPos, vTarg, vPos);
+		vDir[1] = vTar;
+		vPos[2] = vTar[2] = 0.0;
+		MakeVectorFromPoints(vPos, vTar, vPos);
 		NormalizeVector(vPos, vPos);
 		if (RadToDeg(ArcCosine(GetVectorDotProduct(vAng, vPos))) < 90.0)
 			return Plugin_Continue;
@@ -198,6 +201,7 @@ bool bWontFall(int client, const float vVel[3]) {
 	static bool bDidHit;
 	static Handle hTrace;
 	static float vVec[3];
+	static float vNor[3];
 	static float vPlane[3];
 
 	bDidHit = false;
@@ -207,12 +211,11 @@ bool bWontFall(int client, const float vVel[3]) {
 	if (TR_DidHit(hTrace)) {
 		bDidHit = true;
 		TR_GetEndPosition(vVec, hTrace);
-		if (GetVectorDistance(vPos, vVec) < GetVectorLength(vVel)) {
-			TR_GetPlaneNormal(hTrace, vPlane);
-			if (RadToDeg(ArcCosine(GetVectorDotProduct(vVel, vPlane))) > 135.0) {
-				delete hTrace;
-				return false;
-			}
+		NormalizeVector(vVel, vNor);
+		TR_GetPlaneNormal(hTrace, vPlane);
+		if (RadToDeg(ArcCosine(GetVectorDotProduct(vNor, vPlane))) > 150.0) {
+			delete hTrace;
+			return false;
 		}
 	}
 
@@ -262,30 +265,63 @@ bool bTraceEntityFilter(int entity, int contentsMask) {
 	return true;
 }
 
+void vGetSurDistance(int client, float &CurTargetDist, float &NearestSurDist) {
+	static float vPos[3];
+	static float vTar[3];
+
+	GetClientAbsOrigin(client, vPos);
+	if (!bIsAliveSur(g_iCurTarget[client]))
+		CurTargetDist = -1.0;
+	else {
+		GetClientAbsOrigin(g_iCurTarget[client], vTar);
+		CurTargetDist = GetVectorDistance(vPos, vTar);
+	}
+
+	static int i;
+	static int iCount;
+	static float fDists[MAXPLAYERS + 1];
+
+	iCount = 0;
+	GetClientAbsOrigin(client, vPos);
+	for (i = 1; i <= MaxClients; i++) {
+		if (i != client && IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i)) {
+			GetClientAbsOrigin(i, vTar);
+			fDists[iCount++] = GetVectorDistance(vPos, vTar);
+		}
+	}
+
+	if (!iCount)
+		NearestSurDist = -1.0;
+	else {
+		SortFloats(fDists, iCount, Sort_Ascending);
+		NearestSurDist = fDists[0];
+	}
+}
+/*
 float fCurTargetDistance(int client) {
 	if (!bIsAliveSur(g_iCurTarget[client]))
 		return -1.0;
 
 	static float vPos[3];
-	static float vTarg[3];
+	static float vTar[3];
 	GetClientAbsOrigin(client, vPos);
-	GetClientAbsOrigin(g_iCurTarget[client], vTarg);
-	return GetVectorDistance(vPos, vTarg);
+	GetClientAbsOrigin(g_iCurTarget[client], vTar);
+	return GetVectorDistance(vPos, vTar);
 }
 
 float fNearestSurDistance(int client) {
 	static int i;
 	static int iCount;
 	static float vPos[3];
-	static float vTarg[3];
+	static float vTar[3];
 	static float fDists[MAXPLAYERS + 1];
 	
 	iCount = 0;
 	GetClientAbsOrigin(client, vPos);
 	for (i = 1; i <= MaxClients; i++) {
 		if (i != client && IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i)) {
-			GetClientAbsOrigin(i, vTarg);
-			fDists[iCount++] = GetVectorDistance(vPos, vTarg);
+			GetClientAbsOrigin(i, vTar);
+			fDists[iCount++] = GetVectorDistance(vPos, vTar);
 		}
 	}
 
@@ -294,7 +330,7 @@ float fNearestSurDistance(int client) {
 
 	SortFloats(fDists, iCount, Sort_Ascending);
 	return fDists[0];
-}
+}*/
 
 public Action L4D2_OnSelectTankAttack(int client, int &sequence) {
 	if (sequence != 50 || !IsFakeClient(client))
@@ -317,7 +353,7 @@ public Action L4D_TankRock_OnRelease(int tank, int rock, float vecPos[3], float 
 
 	static int iTarget;
 	iTarget = g_iCurTarget[tank];//GetClientAimTarget(tank, true);
-	if (bIsAliveSur(iTarget) && !bIsIncapacitated(iTarget) && !bIsPinned(iTarget) && !bHitWall(tank, rock, iTarget) && !bWithinViewAngle(tank, iTarget, g_fAimOffsetSensitivityTank))
+	if (bIsAliveSur(iTarget) && !bIncapacitated(iTarget) && !bIsPinned(iTarget) && !bHitWall(tank, rock, iTarget) && !bWithinViewAngle(tank, iTarget, g_fAimOffsetSensitivity))
 		return Plugin_Continue;
 	
 	iTarget = iGetClosestSur(tank, iTarget, rock, 2.0 * g_fTankThrowForce);
@@ -325,29 +361,29 @@ public Action L4D_TankRock_OnRelease(int tank, int rock, float vecPos[3], float 
 		return Plugin_Continue;
 
 	static float vRock[3];
-	static float vTarg[3];
+	static float vTar[3];
 	static float vVectors[3];
-	GetClientAbsOrigin(iTarget, vTarg);
+	GetClientAbsOrigin(iTarget, vTar);
 	GetClientAbsOrigin(tank, vRock);
-	float fDelta = GetVectorDistance(vRock, vTarg) / g_fTankThrowForce * PLAYER_HEIGHT;
+	float fDelta = GetVectorDistance(vRock, vTar) / g_fTankThrowForce * PLAYER_HEIGHT;
 
-	vTarg[2] += fDelta;
+	vTar[2] += fDelta;
 	while (fDelta < PLAYER_HEIGHT) {
-		if (!bHitWall(tank, rock, -1, vTarg))
+		if (!bHitWall(tank, rock, -1, vTar))
 			break;
 
 		fDelta += 10.0;
-		vTarg[2] += 10.0;
+		vTar[2] += 10.0;
 	}
 
-	fDelta = vTarg[2] - vRock[2];
+	fDelta = vTar[2] - vRock[2];
 	if (fDelta > PLAYER_HEIGHT)
-		vTarg[2] += fDelta / PLAYER_HEIGHT * 10.0;
+		vTar[2] += fDelta / PLAYER_HEIGHT * 10.0;
 
 	GetClientEyePosition(tank, vRock);
-	MakeVectorFromPoints(vRock, vTarg, vVectors);
-	GetVectorAngles(vVectors, vTarg);
-	vecAng = vTarg;
+	MakeVectorFromPoints(vRock, vTar, vVectors);
+	GetVectorAngles(vVectors, vTar);
+	vecAng = vTar;
 
 	static float vLength;
 	vLength = GetVectorLength(vVectors);
@@ -362,7 +398,7 @@ bool bIsAliveSur(int client) {
 	return 0 < client <= MaxClients && IsClientInGame(client) && GetClientTeam(client) == 2 && IsPlayerAlive(client);
 }
 
-bool bIsIncapacitated(int client) {
+bool bIncapacitated(int client) {
 	return !!GetEntProp(client, Prop_Send, "m_isIncapacitated");
 }
 
@@ -382,13 +418,13 @@ bool bIsPinned(int client) {
 
 bool bHitWall(int iTank, int iEnt, int iTarget = -1, const float vEnd[3] = NULL_VECTOR) {
 	static float vSrc[3];
-	static float vTarg[3];
+	static float vTar[3];
 	GetClientEyePosition(iTank, vSrc);
 
 	if (iTarget == -1)
-		vTarg = vEnd;
+		vTar = vEnd;
 	else
-		GetClientEyePosition(iTarget, vTarg);
+		GetClientEyePosition(iTarget, vTar);
 
 	static float vMins[3];
 	static float vMaxs[3];
@@ -397,7 +433,7 @@ bool bHitWall(int iTank, int iEnt, int iTarget = -1, const float vEnd[3] = NULL_
 
 	static bool bDidHit;
 	static Handle hTrace;
-	hTrace = TR_TraceHullFilterEx(vSrc, vTarg, vMins, vMaxs, MASK_SOLID, bTraceEntityFilter, iEnt);
+	hTrace = TR_TraceHullFilterEx(vSrc, vTar, vMins, vMaxs, MASK_SOLID, bTraceEntityFilter, iEnt);
 	bDidHit = TR_DidHit(hTrace);
 	delete hTrace;
 	return bDidHit;
@@ -410,7 +446,7 @@ int iGetClosestSur(int client, int iExclude = -1, int iEnt, float fDistance) {
 	static float fDist;
 	static float vAng[3];
 	static float vSrc[3];
-	static float vTarg[3];
+	static float vTar[3];
 	static int iTargets[MAXPLAYERS + 1];
 	
 	iCount = 0;
@@ -422,17 +458,17 @@ int iGetClosestSur(int client, int iExclude = -1, int iEnt, float fDistance) {
 
 	static ArrayList aClients;
 	aClients = new ArrayList(3);
-	float fFOV = GetFOVDotProduct(g_fAimOffsetSensitivityTank);
+	float fFOV = GetFOVDotProduct(g_fAimOffsetSensitivity);
 	for (i = 0; i < iCount; i++) {
-		if (iTargets[i] && iTargets[i] != iExclude && GetClientTeam(iTargets[i]) == 2 && IsPlayerAlive(iTargets[i]) && !bIsIncapacitated(iTargets[i]) && !bIsPinned(iTargets[i]) && !bHitWall(client, iEnt, iTargets[i])) {
-			GetClientEyePosition(iTargets[i], vTarg);
-			fDist = GetVectorDistance(vSrc, vTarg);
+		if (iTargets[i] && iTargets[i] != iExclude && GetClientTeam(iTargets[i]) == 2 && IsPlayerAlive(iTargets[i]) && !bIncapacitated(iTargets[i]) && !bIsPinned(iTargets[i]) && !bHitWall(client, iEnt, iTargets[i])) {
+			GetClientEyePosition(iTargets[i], vTar);
+			fDist = GetVectorDistance(vSrc, vTar);
 			if (fDist < fDistance) {
 				iIndex = aClients.Push(fDist);
 				aClients.Set(iIndex, iTargets[i], 1);
 
 				GetClientEyeAngles(iTargets[i], vAng);
-				aClients.Set(iIndex, !PointWithinViewAngle(vTarg, vSrc, vAng, fFOV) ? 0 : 1, 2);
+				aClients.Set(iIndex, !PointWithinViewAngle(vTar, vSrc, vAng, fFOV) ? 0 : 1, 2);
 			}
 		}
 	}
@@ -451,12 +487,40 @@ int iGetClosestSur(int client, int iExclude = -1, int iEnt, float fDistance) {
 
 bool bWithinViewAngle(int client, int iViewer, float fOffsetThreshold) {
 	static float vSrc[3];
-	static float vTarg[3];
+	static float vTar[3];
 	static float vAng[3];
 	GetClientEyePosition(iViewer, vSrc);
-	GetClientEyePosition(client, vTarg);
-	GetClientEyeAngles(iViewer, vAng);
-	return PointWithinViewAngle(vSrc, vTarg, vAng, GetFOVDotProduct(fOffsetThreshold));
+	GetClientEyePosition(client, vTar);
+	if (bIsVisibleTo(vSrc, vTar)) {
+		GetClientEyeAngles(iViewer, vAng);
+		return PointWithinViewAngle(vSrc, vTar, vAng, GetFOVDotProduct(fOffsetThreshold));
+	}
+
+	return false;
+}
+
+// credits = "AtomicStryker"
+bool bIsVisibleTo(const float vPos[3], const float vTarget[3]) {
+	static float vAngles[3], vLookAt[3];
+	MakeVectorFromPoints(vPos, vTarget, vLookAt); // compute vector from start to target
+	GetVectorAngles(vLookAt, vAngles); // get angles from vector for trace
+
+	// execute Trace
+	static Handle hTrace;
+	static bool bIsVisible;
+
+	bIsVisible = false;
+	hTrace = TR_TraceRayFilterEx(vPos, vAngles, MASK_ALL, RayType_Infinite, bTraceEntityFilter);
+	if (TR_DidHit(hTrace)) {
+		static float vStart[3];
+		TR_GetEndPosition(vStart, hTrace); // retrieve our trace endpoint
+
+		if ((GetVectorDistance(vPos, vStart, false) + 25.0) >= GetVectorDistance(vPos, vTarget))
+			bIsVisible = true; // if trace ray length plus tolerance equal or bigger absolute distance, you hit the target
+	}
+
+	delete hTrace;
+	return bIsVisible;
 }
 
 // https://github.com/nosoop/stocksoup
