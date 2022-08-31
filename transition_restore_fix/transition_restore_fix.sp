@@ -263,10 +263,10 @@ MRESReturn DD_PlayerSaveData_Restore_Pre(Address pThis, DHookParam hParams) {
 	Address pData;
 	char teamNumber[4];
 	char ModelName[PLATFORM_MAX_PATH];
-	if (IsFakeClient(player)) {
-		GetClientModel(player, ModelName, sizeof ModelName);
-		pData = pFindBotDataByModelName(ModelName);
-		if (pData) {
+	GetClientModel(player, ModelName, sizeof ModelName);
+	pData = pFindBotDataByModelName(ModelName);
+	if (pData) {
+		if (IsFakeClient(player) || !pFindPlayerDataByUserId(GetClientUserId(player))) {
 			SDKCall(g_hSDK_KeyValues_GetString, pData, teamNumber, sizeof teamNumber, "teamNumber", "0");
 			if (StringToInt(teamNumber) == 2) {
 				g_pThis = pThis;
@@ -289,7 +289,6 @@ MRESReturn DD_PlayerSaveData_Restore_Pre(Address pThis, DHookParam hParams) {
 	strcopy(g_esSavedData.ModelName, sizeof PlayerSaveData::ModelName, ModelName);
 	strcopy(g_esSavedData.character, sizeof PlayerSaveData::character, character);
 
-	GetClientModel(player, ModelName, sizeof ModelName);
 	SDKCall(g_hSDK_KeyValues_SetString, pData, "ModelName", ModelName);
 
 	IntToString(GetEntProp(player, Prop_Send, "m_survivorCharacter"), character, sizeof character);
