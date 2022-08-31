@@ -68,7 +68,6 @@ public void OnPluginStart() {
 	g_cvKeepIdentity.AddChangeHook(vConVarChanged);
 
 	AutoExecConfig(true, "transition_restore_fix");
-
 }
 
 public void OnPluginEnd() {
