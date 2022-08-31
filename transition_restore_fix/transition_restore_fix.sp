@@ -83,10 +83,10 @@ void vCvarChanged(ConVar convar, const char[] oldValue, const char[] newValue) {
 	vToggleDetour(g_cvKeepIdentity.BoolValue);
 }
 
-void vToggleDetour(bool bToggle) {
-	static bool bToggled;
-	if (!bToggled && bToggle) {
-		bToggled = true;
+void vToggleDetour(bool bEnable) {
+	static bool bEnabled;
+	if (!bEnabled && bEnable) {
+		bEnabled = true;
 
 		if (!g_ddCDirector_Restart.Enable(Hook_Pre, DD_CDirector_Restart_Pre))
 			SetFailState("Failed to detour pre: \"DD::CDirector::Restart\"");
@@ -94,8 +94,8 @@ void vToggleDetour(bool bToggle) {
 		if (!g_ddCDirector_Restart.Enable(Hook_Post, DD_CDirector_Restart_Post))
 			SetFailState("Failed to detour post: \"DD::CDirector::Restart\"");
 	}
-	else if (bToggled && !bToggle) {
-		bToggled = false;
+	else if (bEnabled && !bEnable) {
+		bEnabled = false;
 
 		if (!g_ddCDirector_Restart.Disable(Hook_Pre, DD_CDirector_Restart_Pre))
 			SetFailState("Failed to disable detour pre: \"DD::CDirector::Restart\"");
@@ -261,23 +261,21 @@ MRESReturn DD_PlayerSaveData_Restore_Pre(Address pThis, DHookParam hParams) {
 		return MRES_Ignored;
 
 	Address pData;
-	char teamNumber[4];
 	char ModelName[PLATFORM_MAX_PATH];
 	GetClientModel(player, ModelName, sizeof ModelName);
 	pData = pFindBotDataByModelName(ModelName);
 	if (pData) {
 		if (IsFakeClient(player) || !pFindPlayerDataByUserId(GetClientUserId(player))) {
-			SDKCall(g_hSDK_KeyValues_GetString, pData, teamNumber, sizeof teamNumber, "teamNumber", "0");
-			if (StringToInt(teamNumber) == 2) {
-				g_pThis = pThis;
-				g_pData = LoadFromAddress(pThis, NumberType_Int32);
-				StoreToAddress(pThis, pData, NumberType_Int32);
-			}
+			g_pThis = pThis;
+			g_pData = LoadFromAddress(pThis, NumberType_Int32);
+			StoreToAddress(pThis, pData, NumberType_Int32);
 		}
 	}
 
 	if (!pData) {
 		pData = LoadFromAddress(pThis, NumberType_Int32);
+
+		char teamNumber[4];
 		SDKCall(g_hSDK_KeyValues_GetString, pData, teamNumber, sizeof teamNumber, "teamNumber", "0");
 		if (StringToInt(teamNumber) != 2)
 			return MRES_Ignored;
@@ -289,6 +287,7 @@ MRESReturn DD_PlayerSaveData_Restore_Pre(Address pThis, DHookParam hParams) {
 	strcopy(g_esSavedData.ModelName, sizeof PlayerSaveData::ModelName, ModelName);
 	strcopy(g_esSavedData.character, sizeof PlayerSaveData::character, character);
 
+	GetClientModel(player, ModelName, sizeof ModelName);
 	SDKCall(g_hSDK_KeyValues_SetString, pData, "ModelName", ModelName);
 
 	IntToString(GetEntProp(player, Prop_Send, "m_survivorCharacter"), character, sizeof character);
@@ -382,11 +381,16 @@ Address pFindBotDataByModelName(const char[] sModel) {
 		return Address_Null;
 
 	Address pThis;
+	char teamNumber[4];
 	char ModelName[PLATFORM_MAX_PATH];
 	ArrayList aKeyValues = new ArrayList(2);
 	for (int i; i < iSavedLevelRestartSurvivorBotsCount; i++) {
 		pThis = view_as<Address>(LoadFromAddress(pSavedLevelRestartSurvivorBots + view_as<Address>(4 * i), NumberType_Int32));
 		if (!pThis)
+			continue;
+
+		SDKCall(g_hSDK_KeyValues_GetString, pThis, teamNumber, sizeof teamNumber, "teamNumber", "0");
+		if (StringToInt(teamNumber) != 2)
 			continue;
 
 		SDKCall(g_hSDK_KeyValues_GetString, pThis, ModelName, sizeof ModelName, "ModelName", "");
