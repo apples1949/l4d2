@@ -4,9 +4,13 @@
 #include <dhooks>
 #include <sourcescramble>
 
-#define PLUGIN_VERSION		"1.2.1"
+#define PLUGIN_NAME				"Transition Restore Fix"
+#define PLUGIN_AUTHOR			"sorallll"
+#define PLUGIN_DESCRIPTION		"Restoring transition data by player's UserId instead of character"
+#define PLUGIN_VERSION			"1.2.2"
+#define PLUGIN_URL				"https://forums.alliedmods.net/showthread.php?t=336287"
 
-#define GAMEDATA	"transition_restore_fix"
+#define GAMEDATA				"transition_restore_fix"
 
 Handle
 	g_hSDK_KeyValues_GetString,
@@ -14,8 +18,8 @@ Handle
 	g_hSDK_CDirector_IsInTransition;
 
 ConVar
-	g_hKeepIdentity,
-	g_hPrecacheAllSur;
+	g_cvKeepIdentity,
+	g_cvPrecacheAllSur;
 
 ArrayList
 	g_aUsedBotData;
@@ -37,8 +41,7 @@ DynamicDetour
 bool
 	g_bCDirector_Restart;
 
-enum struct PlayerSaveData
-{
+enum struct PlayerSaveData {
 	char ModelName[PLATFORM_MAX_PATH];
 	char character[4];
 }
@@ -46,48 +49,42 @@ enum struct PlayerSaveData
 PlayerSaveData
 	g_esSavedData;
 
-public Plugin myinfo =
-{
-	name = "Transition Restore Fix",
-	author = "sorallll",
-	description = "Restoring transition data by player's UserId instead of character",
+public Plugin myinfo = {
+	name = PLUGIN_NAME,
+	author = PLUGIN_AUTHOR,
+	description = PLUGIN_DESCRIPTION,
 	version = PLUGIN_VERSION,
-	url = "https://forums.alliedmods.net/showthread.php?t=336287"
+	url = PLUGIN_URL
 };
 
-public void OnPluginStart()
-{
+public void OnPluginStart() {
 	vInitGameData();
 	g_aUsedBotData = new ArrayList();
 
 	CreateConVar("transition_restore_fix_version", PLUGIN_VERSION, "Transition Restore Fix plugin version.", FCVAR_NOTIFY|FCVAR_DONTRECORD);
-	g_hKeepIdentity = CreateConVar("restart_keep_identity", "1", "Whether to keep the current character and model after the mission lost and restarts? (0=restore to pre-transition identity, 1=game default)", FCVAR_NOTIFY);
-	g_hPrecacheAllSur = FindConVar("precache_all_survivors");
+	g_cvKeepIdentity = CreateConVar("restart_keep_identity", "1", "Whether to keep the current character and model after the mission lost and restarts? (0=restore to pre-transition identity, 1=game default)", FCVAR_NOTIFY);
+	g_cvPrecacheAllSur = FindConVar("precache_all_survivors");
 
-	g_hKeepIdentity.AddChangeHook(vConVarChanged);
+	g_cvKeepIdentity.AddChangeHook(vConVarChanged);
 
 	AutoExecConfig(true, "transition_restore_fix");
 
 }
 
-public void OnPluginEnd()
-{
+public void OnPluginEnd() {
 	if (g_pThis)
 		StoreToAddress(g_pThis, g_pData, NumberType_Int32);
 }
 
-public void OnConfigsExecuted()
-{
-	vToggleDetours(g_hKeepIdentity.BoolValue);
+public void OnConfigsExecuted() {
+	vToggleDetours(g_cvKeepIdentity.BoolValue);
 }
 
-void vConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
-{
-	vToggleDetours(g_hKeepIdentity.BoolValue);
+void vConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue) {
+	vToggleDetours(g_cvKeepIdentity.BoolValue);
 }
 
-void vToggleDetours(bool bToggle)
-{
+void vToggleDetours(bool bToggle) {
 	static bool bToggled;
 	if (!bToggled && bToggle) {
 		bToggled = true;
@@ -109,13 +106,11 @@ void vToggleDetours(bool bToggle)
 	}
 }
 
-public void OnMapStart()
-{
-	g_hPrecacheAllSur.SetInt(1);
+public void OnMapStart() {
+	g_cvPrecacheAllSur.SetInt(1);
 }
 
-void vInitGameData()
-{
+void vInitGameData() {
 	char sPath[PLATFORM_MAX_PATH];
 	BuildPath(Path_SM, sPath, sizeof sPath, "gamedata/%s.txt", GAMEDATA);
 	if (!FileExists(sPath))
@@ -138,7 +133,7 @@ void vInitGameData()
 		SetFailState("Failed to find address: \"SavedSurvivorBotsCount\"");
 
 	g_pSavedLevelRestartSurvivorBotsCount = hGameData.GetAddress("SavedLevelRestartSurvivorBotsCount");
-	if (!g_pSavedSurvivorBotsCount)
+	if (!g_pSavedLevelRestartSurvivorBotsCount)
 		SetFailState("Failed to find address: \"SavedLevelRestartSurvivorBotsCount\"");
 
 	StartPrepSDKCall(SDKCall_Raw);
@@ -171,8 +166,7 @@ void vInitGameData()
 	delete hGameData;
 }
 
-void vInitPatchs(GameData hGameData = null)
-{
+void vInitPatchs(GameData hGameData = null) {
 	g_mpRestoreByUserId = MemoryPatch.CreateFromConf(hGameData, "CTerrorPlayer::TransitionRestore::RestoreByUserId");
 	if (!g_mpRestoreByUserId.Validate())
 		SetFailState("Failed to verify patch: \"CTerrorPlayer::TransitionRestore::RestoreByUserId\"");
@@ -186,8 +180,7 @@ void vInitPatchs(GameData hGameData = null)
 	}
 }
 
-void vSetupDetours(GameData hGameData = null)
-{
+void vSetupDetours(GameData hGameData = null) {
 	g_ddCDirector_Restart = DynamicDetour.FromConf(hGameData, "DD::CDirector::Restart");
 	if (!g_ddCDirector_Restart)
 		SetFailState("Failed to create DynamicDetour: \"DD::CDirector::Restart\"");
@@ -227,21 +220,18 @@ void vSetupDetours(GameData hGameData = null)
 		SetFailState("Failed to detour pre: \"DD::CDirectorSessionManager::FillRemainingSurvivorTeamSlotsWithBots\"");
 }
 
-MRESReturn DD_CDirector_Restart_Pre(Address pThis, DHookReturn hReturn)
-{
+MRESReturn DD_CDirector_Restart_Pre(Address pThis, DHookReturn hReturn) {
 	g_aUsedBotData.Clear();
 	g_bCDirector_Restart = true;
 	return MRES_Ignored;
 }
 
-MRESReturn DD_CDirector_Restart_Post(Address pThis, DHookReturn hReturn)
-{
+MRESReturn DD_CDirector_Restart_Post(Address pThis, DHookReturn hReturn) {
 	g_bCDirector_Restart = false;
 	return MRES_Ignored;
 }
 
-MRESReturn DD_CTerrorPlayer_TransitionRestore_Pre(int pThis, DHookReturn hReturn)
-{
+MRESReturn DD_CTerrorPlayer_TransitionRestore_Pre(int pThis, DHookReturn hReturn) {
 	if (IsFakeClient(pThis) || GetClientTeam(pThis) > 2)
 		return MRES_Ignored;
 
@@ -258,14 +248,12 @@ MRESReturn DD_CTerrorPlayer_TransitionRestore_Pre(int pThis, DHookReturn hReturn
 	return MRES_Ignored;
 }
 
-MRESReturn DD_CTerrorPlayer_TransitionRestore_Post(int pThis, DHookReturn hReturn)
-{
+MRESReturn DD_CTerrorPlayer_TransitionRestore_Post(int pThis, DHookReturn hReturn) {
 	g_mpRestoreByUserId.Disable();
 	return MRES_Ignored;
 }
 
-MRESReturn DD_PlayerSaveData_Restore_Pre(Address pThis, DHookParam hParams)
-{
+MRESReturn DD_PlayerSaveData_Restore_Pre(Address pThis, DHookParam hParams) {
 	if (!g_bCDirector_Restart)
 		return MRES_Ignored;
 
@@ -311,8 +299,7 @@ MRESReturn DD_PlayerSaveData_Restore_Pre(Address pThis, DHookParam hParams)
 	return MRES_Ignored;
 }
 
-MRESReturn DD_PlayerSaveData_Restore_Post(Address pThis, DHookParam hParams)
-{
+MRESReturn DD_PlayerSaveData_Restore_Post(Address pThis, DHookParam hParams) {
 	if (!g_bCDirector_Restart)
 		return MRES_Ignored;
 
@@ -338,8 +325,7 @@ MRESReturn DD_PlayerSaveData_Restore_Post(Address pThis, DHookParam hParams)
 /**
 * Prevents players joining the game during transition from taking over the Survivor Bot of transitioning players
 **/
-MRESReturn DD_CDirector_IsHumanSpectatorValid_Pre(Address pThis, DHookReturn hReturn, DHookParam hParams)
-{
+MRESReturn DD_CDirector_IsHumanSpectatorValid_Pre(Address pThis, DHookReturn hReturn, DHookParam hParams) {
 	if (!GetClientOfUserId(GetEntProp(hParams.Get(1), Prop_Send, "m_humanSpectatorUserID")))
 		return MRES_Ignored;
 
@@ -350,8 +336,7 @@ MRESReturn DD_CDirector_IsHumanSpectatorValid_Pre(Address pThis, DHookReturn hRe
 /**
 * Prevent CDirectorSessionManager::FillRemainingSurvivorTeamSlotsWithBots from triggering before RestoreTransitionedSurvivorBots(void) during transition
 **/
-MRESReturn DD_CDSManager_FillRemainingSurvivorTeamSlotsWithBots_Pre(Address pThis, DHookReturn hReturn)
-{
+MRESReturn DD_CDSManager_FillRemainingSurvivorTeamSlotsWithBots_Pre(Address pThis, DHookReturn hReturn) {
 	if (!SDKCall(g_hSDK_CDirector_IsInTransition, g_pDirector))
 		return MRES_Ignored;
 
@@ -363,8 +348,7 @@ MRESReturn DD_CDSManager_FillRemainingSurvivorTeamSlotsWithBots_Pre(Address pThi
 }
 
 // 读取玩家过关时保存的userID
-Address pFindPlayerDataByUserId(int userid)
-{
+Address pFindPlayerDataByUserId(int userid) {
 	int iSavedPlayersCount = LoadFromAddress(g_pSavedPlayersCount, NumberType_Int32);
 	if (!iSavedPlayersCount)
 		return Address_Null;
@@ -390,8 +374,7 @@ Address pFindPlayerDataByUserId(int userid)
 
 //数据选用优先级
 //没有用过且模型相同的数据 >= 没有用过且模型不相同的数据 >= 用过且模型相同的数据 >= 用过且模型不相同的数据
-Address pFindBotDataByModelName(const char[] sModel)
-{
+Address pFindBotDataByModelName(const char[] sModel) {
 	int iSavedLevelRestartSurvivorBotsCount = LoadFromAddress(g_pSavedLevelRestartSurvivorBotsCount, NumberType_Int32);
 	if (!iSavedLevelRestartSurvivorBotsCount)
 		return Address_Null;
