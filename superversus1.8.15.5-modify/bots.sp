@@ -335,7 +335,7 @@ public void OnPluginStart() {
 	RegConsoleCmd("sm_join", 	cmdJoinTeam2, 	"加入生还者");
 	RegConsoleCmd("sm_tkbot", 	cmdTakeOverBot, "接管指定BOT");
 
-	RegAdminCmd("sm_afk", 		cmdGoAFK,	ADMFLAG_RCON,	"闲置");
+	RegAdminCmd("sm_afk", 		cmdGoIdle,	ADMFLAG_RCON,	"闲置");
 	RegAdminCmd("sm_botset",	cmdBotSet,	ADMFLAG_RCON,	"设置开局Bot的数量");
 
 	HookEvent("round_end", 				Event_RoundEnd, 	EventHookMode_PostNoCopy);
@@ -495,19 +495,19 @@ Action cmdTakeOverBot(int client, int args) {
 }
 
 int iClientTeamTakeOver(int client) {
-	int iTeam = GetClientTeam(client);
-	switch (iTeam) {
+	int team = GetClientTeam(client);
+	switch (team) {
 		case TEAM_SPECTATOR: {
 			if (iGetBotOfIdlePlayer(client))
-				iTeam = 0;
+				team = 0;
 		}
 
 		case TEAM_SURVIVOR: {
 			if (IsPlayerAlive(client))
-				iTeam = 0;
+				team = 0;
 		}
 	}
-	return iTeam;
+	return team;
 }
 
 void vTakeOverBotMenu(int client) {
@@ -579,11 +579,11 @@ int iTakeOverBot_MenuHandler(Menu menu, MenuAction action, int param1, int param
 				if (!iBot || !bIsValidSurBot(iBot))
 					PrintToChat(param1, "选定的目标BOT已失效.");
 				else {
-					int iTeam = iClientTeamTakeOver(param1);
-					if (!iTeam)
+					int team = iClientTeamTakeOver(param1);
+					if (!team)
 						PrintToChat(param1, "不符合接管条件.");
 					else {
-						if (iTeam != 1)
+						if (team != 1)
 							ChangeClientTeam(param1, TEAM_SPECTATOR);
 
 						vTakeOverBot(param1, iBot);
@@ -599,7 +599,7 @@ int iTakeOverBot_MenuHandler(Menu menu, MenuAction action, int param1, int param
 	return 0;
 }
 
-Action cmdGoAFK(int client, int args) {
+Action cmdGoIdle(int client, int args) {
 	if (!client || !IsClientInGame(client) || IsFakeClient(client))
 		return Plugin_Handled;
 
@@ -1030,10 +1030,10 @@ int iGetIdlePlayerOfBot(int client) {
 	return GetClientOfUserId(GetEntProp(client, Prop_Send, "m_humanSpectatorUserID"));
 }
 
-int iGetTeamCount(int iTeam, bool bIncludeBots) {
+int iGetTeamCount(int team, bool bIncludeBots) {
 	int iCount;
 	for (int i = 1; i <= MaxClients; i++) {
-		if (!IsClientInGame(i) || GetClientTeam(i) != iTeam)
+		if (!IsClientInGame(i) || GetClientTeam(i) != team)
 			continue;
 
 		if (!bIncludeBots && IsFakeClient(i) && !iGetIdlePlayerOfBot(i))
