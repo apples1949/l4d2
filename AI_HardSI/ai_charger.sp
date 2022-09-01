@@ -155,10 +155,23 @@ public Action OnPlayerRunCmd(int client, int &buttons) {
 
 		static float vPos[3];
 		static float vTar[3];
+		static float vEye1[3];
+		static float vEye2[3];
 		GetClientAbsOrigin(client, vPos);
 		GetClientAbsOrigin(iTarget, vTar);
 		fSpeed = GetVectorDistance(vPos, vTar);
 		if (fSpeed < 0.5 * g_fChargeProximity || fSpeed > 440.0)
+			return Plugin_Continue;
+
+		GetClientEyePosition(client, vEye1);
+		if (vEye1[2] < vTar[2])
+			return Plugin_Continue;
+
+		GetClientEyePosition(iTarget, vEye2);
+		if (vPos[2] > vEye2[2])
+			return Plugin_Continue;
+
+		if (!bIsVisibleTo(vEye2, vEye1))
 			return Plugin_Continue;
 
 		GetVectorAngles(vVel, vAng);
@@ -171,9 +184,9 @@ public Action OnPlayerRunCmd(int client, int &buttons) {
 		vDir[0] = vPos;
 		vDir[1] = vTar;
 		vPos[2] = vTar[2] = 0.0;
-		MakeVectorFromPoints(vPos, vTar, vPos);
+		MakeVectorFromPoints(vPos, vEye2, vPos);
 		NormalizeVector(vPos, vPos);
-		if (RadToDeg(ArcCosine(GetVectorDotProduct(vAng, vPos))) < 60.0)
+		if (RadToDeg(ArcCosine(GetVectorDotProduct(vAng, vPos))) < 90.0)
 			return Plugin_Continue;
 
 		MakeVectorFromPoints(vDir[0], vDir[1], vDir[0]);
