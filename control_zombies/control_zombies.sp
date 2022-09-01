@@ -461,7 +461,7 @@ public void OnPluginStart() {
 	if (g_bLateLoad) {
 		g_iRoundStart = 1;
 		g_iPlayerSpawn = 1;
-		g_bLeftSafeArea = bHasAnySurvivorLeftSafeArea();
+		g_bLeftSafeArea = bHasAnySurLeftSafeArea();
 	}
 
 	vPluginStateChange();
@@ -471,7 +471,7 @@ public void OnPluginEnd() {
 	vStatsConditionPatch(false);
 
 	for (int i = 1; i <= MaxClients; i++)
-		vRemoveSurvivorGlow(i);
+		vRemoveSurGlow(i);
 }
 
 public void OnConfigsExecuted() {
@@ -497,14 +497,14 @@ void vPluginStateChange() {
 			delete g_hTimer;
 			for (int i = 1; i <= MaxClients; i++) {
 				vResetClientData(i);
-				vRemoveSurvivorGlow(i);
+				vRemoveSurGlow(i);
 			}
 		}
 	}
 	else {
 		vToggle(true);
 		if (iLast != g_iControlled) {
-			if (bHasPlayerZombie()) {
+			if (bHasPZ()) {
 				float fTime = g_bLeftSafeArea ? GetEngineTime() : 0.0;
 				for (int i = 1; i <= MaxClients; i++) {
 					if (!IsClientInGame(i))
@@ -512,7 +512,7 @@ void vPluginStateChange() {
 
 					switch (GetClientTeam(i)) {
 						case 2:
-							vCreateSurvivorGlow(i);
+							vCreateSurGlow(i);
 
 						case 3: {
 							if (!IsFakeClient(i) && !IsPlayerAlive(i)) {
@@ -611,14 +611,14 @@ void vGetCvars_Color() {
 
 	if (bLast != g_bGlowColorEnable) {
 		if (g_bGlowColorEnable) {
-			if (bHasPlayerZombie()) {
+			if (bHasPZ()) {
 				for (i = 1; i <= MaxClients; i++)
-					vCreateSurvivorGlow(i);
+					vCreateSurGlow(i);
 			}
 		}
 		else {
 			for (i = 1; i <= MaxClients; i++)
-				vRemoveSurvivorGlow(i);
+				vRemoveSurGlow(i);
 		}
 	}
 }
@@ -746,7 +746,7 @@ Action cmdTeam2(int client, int args) {
 
 	if (g_iCmdEnterCooling & (1 << 0))
 		g_esPlayer[client].fCmdLastUsedTime = GetEngineTime() + g_fCmdCooldownTime;
-	vChangeTeamToSurvivor(client);
+	vChangeTeamToSur(client);
 	return Plugin_Handled;
 }
 
@@ -768,8 +768,8 @@ Action cmdTeam3(int client, int args) {
 			return Plugin_Handled;
 		}
 
-		int iTeam3 = iGetTeamPlayers(3);
-		int iTeam2 = iGetTeamPlayers(2);
+		int iTeam3 = iGetTeamCount(3);
+		int iTeam2 = iGetTeamCount(2);
 		if ((g_iPZTeamLimit >= 0 && iTeam3 >= g_iPZTeamLimit) || (g_iPZTeamLimit == -1 && iTeam3 >= iTeam2)) {
 			PrintToChat(client, "已到达感染玩家数量限制");
 			return Plugin_Handled;
@@ -898,8 +898,8 @@ Action cmdTakeOverTank(int client, int args) {
 	if (!bTakeOverLimit(iTank, client, client))
 		return Plugin_Handled;
 
-	int iTeam = GetClientTeam(client);
-	switch (iTeam) {
+	int team = GetClientTeam(client);
+	switch (team) {
 		case 2: {
 				g_esData[client].Clean();
 				g_esData[client].Save(client, false);
@@ -918,7 +918,7 @@ Action cmdTakeOverTank(int client, int args) {
 	}
 
 	if (GetClientTeam(client) == 3)
-		g_esPlayer[client].iLastTeamID = iTeam != 3 ? 2 : 3;
+		g_esPlayer[client].iLastTeamID = team != 3 ? 2 : 3;
 
 	if (iTakeOverZombieBot(client, iTank) == 8 && IsPlayerAlive(client)) {
 		if (g_iCmdEnterCooling & (1 << 0))
@@ -952,7 +952,7 @@ bool bTakeOverLimit(int tank, int target, int reply) {
 		return false;
 	}
 
-	if (iGetStandingSurvivors() < g_iSurvivorLimit) {
+	if (iGetNormalSur() < g_iSurvivorLimit) {
 		PrintToChat(reply, "\x01完全正常的生还者数量小于预设值 ->\x05%d", g_iSurvivorLimit);
 		return false;
 	}
@@ -1162,8 +1162,8 @@ void vTransferTank(int tank, int target, int reply) {
 	if (!bTakeOverLimit(tank, target, reply))
 		return;
 
-	int iTeam = GetClientTeam(target);
-	switch (iTeam) {
+	int team = GetClientTeam(target);
+	switch (team) {
 		case 2: {
 				g_esData[target].Clean();
 				g_esData[target].Save(target, false);
@@ -1182,7 +1182,7 @@ void vTransferTank(int tank, int target, int reply) {
 	}
 
 	if (GetClientTeam(target) == 3)
-		g_esPlayer[target].iLastTeamID = iTeam != 3 ? 2 : 3;
+		g_esPlayer[target].iLastTeamID = team != 3 ? 2 : 3;
 
 	int ghost = GetEntProp(tank, Prop_Send, "m_isGhost");
 	if (ghost)
@@ -1428,7 +1428,7 @@ public void OnClientPutInServer(int client) {
 }
 
 public void OnClientDisconnect(int client) {
-	vRemoveSurvivorGlow(client);
+	vRemoveSurGlow(client);
 	if (IsFakeClient(client))
 		return;
 
@@ -1465,7 +1465,7 @@ bool bIsRoundStarted() {
 }
 
 Action tmrPlayerLeftStartArea(Handle timer) {
-	if (g_bLeftSafeArea || !bIsRoundStarted() || !bHasAnySurvivorLeftSafeArea())
+	if (g_bLeftSafeArea || !bIsRoundStarted() || !bHasAnySurLeftSafeArea())
 		return Plugin_Stop;
 
 	g_bLeftSafeArea = true;
@@ -1488,7 +1488,7 @@ Action tmrPlayerLeftStartArea(Handle timer) {
 	return Plugin_Continue;
 }
 
-bool bHasAnySurvivorLeftSafeArea() {
+bool bHasAnySurLeftSafeArea() {
 	int iEnt = GetPlayerResourceEntity();
 	if (iEnt == -1)
 		return false;
@@ -1549,7 +1549,7 @@ void vForceChangeTeamTo(int client) {
 				ChangeClientTeam(client, 1);
 					
 			case 2:
-				vChangeTeamToSurvivor(client);
+				vChangeTeamToSur(client);
 		}
 	}
 }
@@ -1560,7 +1560,7 @@ void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast) {
 	if (!client || !IsClientInGame(client))
 		return;
 
-	vRemoveSurvivorGlow(client);
+	vRemoveSurGlow(client);
 	g_esPlayer[client].iMaterialized = 0;
 
 	if (IsFakeClient(client))
@@ -1602,9 +1602,9 @@ Action tmrLadderAndGlow(Handle timer, int client) {
 	if (g_iControlled == 0 && (client = GetClientOfUserId(client)) && IsClientInGame(client) && !IsFakeClient(client)) {
 		if (GetClientTeam(client) == 3) {
 			// g_cvGameMode.ReplicateToClient(client, "versus");
-			if (iGetTeamPlayers(3) == 1) {
+			if (iGetTeamCount(3) == 1) {
 				for (int i = 1; i <= MaxClients; i++)
-					vCreateSurvivorGlow(i);
+					vCreateSurGlow(i);
 
 				delete g_hTimer;
 				g_hTimer = CreateTimer(0.1, tmrPlayerStatus, _, TIMER_REPEAT);
@@ -1615,13 +1615,13 @@ Action tmrLadderAndGlow(Handle timer, int client) {
 
 			int i = 1;
 			for (; i <= MaxClients; i++)
-				vRemoveSurvivorGlow(i);
+				vRemoveSurGlow(i);
 
-			if (!bHasPlayerZombie())
+			if (!bHasPZ())
 				delete g_hTimer;
 			else {
 				for (i = 1; i <= MaxClients; i++)
-					vCreateSurvivorGlow(i);
+					vCreateSurGlow(i);
 			}
 		}
 	}
@@ -1659,8 +1659,8 @@ void OnNextFrame_PlayerSpawn(int client) {
 
 	switch (GetClientTeam(client)) {
 		case 2: {
-			if (bHasPlayerZombie())
-				vCreateSurvivorGlow(client);
+			if (bHasPZ())
+				vCreateSurGlow(client);
 		}
 		
 		case 3: {
@@ -1668,7 +1668,7 @@ void OnNextFrame_PlayerSpawn(int client) {
 				int iPlayer;
 				if (g_esPlayer[client].iTankBot != 2 && iGetTankCount(1) < g_iMaxTankPlayer) {
 					if ((iPlayer = iTakeOverTank(client))) {
-						vSetInfectedGhost(iPlayer, true);
+						vEnterGhostMode(iPlayer, true);
 						if (g_esPlayer[iPlayer].iLastTeamID == 2)
 							CreateTimer(1.0, tmrReturnToSurvivor, GetClientUserId(iPlayer), TIMER_REPEAT);
 
@@ -1694,7 +1694,7 @@ void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast) {
 
 	switch (GetClientTeam(client)) {
 		case 2:	{
-			vRemoveSurvivorGlow(client);
+			vRemoveSurGlow(client);
 			if (g_bExchangeTeam && !IsFakeClient(client)) {
 				int attacker = GetClientOfUserId(event.GetInt("attacker"));
 				if (0 < attacker <= MaxClients && IsClientInGame(attacker) && !IsFakeClient(attacker) && GetClientTeam(attacker) == 3 && GetEntProp(attacker, Prop_Send, "m_zombieClass") != 8) {
@@ -1894,7 +1894,7 @@ Action tmrReturnToSurvivor(Handle timer, int client) {
 		else if (i == 0) {
 			if (g_iCmdEnterCooling & (1 << 3))
 				g_esPlayer[client].fCmdLastUsedTime = GetEngineTime() + g_fCmdCooldownTime;
-			vChangeTeamToSurvivor(client);
+			vChangeTeamToSur(client);
 			i = iTimes[client] = 20;
 			return Plugin_Stop;
 		}
@@ -1906,7 +1906,7 @@ Action tmrReturnToSurvivor(Handle timer, int client) {
 	return Plugin_Stop;
 }
 
-bool bHasPlayerZombie() {
+bool bHasPZ() {
 	static int i;
 	for (i = 1; i <= MaxClients; i++) {
 		if (IsClientInGame(i) && !IsFakeClient(i) && GetClientTeam(i) == 3)
@@ -1915,17 +1915,13 @@ bool bHasPlayerZombie() {
 	return false;
 }
 
-int iGetTeamPlayers(int iTeam = -1) {
-	int iPlayers, iTeamPlayers;
+int iGetTeamCount(int team = -1) {
+	int iCount;
 	for (int i = 1; i <= MaxClients; i++) {
-		if (IsClientInGame(i) && !IsFakeClient(i)) {
-			if (iTeam == -1)
-				iPlayers++;
-			else if (GetClientTeam(i) == iTeam)
-				iTeamPlayers++;
-		}
+		if (IsClientInGame(i) && !IsFakeClient(i) && (team == -1 || GetClientTeam(i) == team))
+			iCount++;
 	}
-	return iTeam == -1 ? iPlayers : iTeamPlayers;
+	return iCount;
 }
 
 int iGetTankCount(int filter = -1) {
@@ -1986,15 +1982,16 @@ void vSetInvincibilityTime(int client, float flDuration) {
 	SetEntDataFloat(client, m_invulnerabilityTimer + 8, GetGameTime() + flDuration);
 }
 
-int iFindUselessSurvivorBot(bool bAlive) {
+int iFindUselessSurBot(bool bAlive) {
 	int client;
 	ArrayList aClients = new ArrayList(2);
 
 	for (int i = MaxClients; i >= 1; i--) {
-		if (!IsClientInGame(i) || IsClientInKickQueue(i) || !IsFakeClient(i) || GetClientTeam(i) != 2 || iGetIdlePlayerOfBot(i))
+		if (!bIsValidSurBot(i))
 			continue;
 
-		aClients.Set(aClients.Push(IsPlayerAlive(i) == bAlive ? (!(client = GetClientOfUserId(g_esPlayer[i].iBotPlayer)) || !IsClientInGame(client) || IsFakeClient(client) || GetClientTeam(client) == 2 ? 0 : 1) : (!(client = GetClientOfUserId(g_esPlayer[i].iBotPlayer)) || !IsClientInGame(client) || IsFakeClient(client) || GetClientTeam(client) == 2 ? 2 : 3)), i, 1);
+		client = GetClientOfUserId(g_esPlayer[i].iBotPlayer);
+		aClients.Set(aClients.Push(IsPlayerAlive(i) == bAlive ? (!client || !IsClientInGame(client) || IsFakeClient(client) || GetClientTeam(client) == 2 ? 0 : 1) : (!client || !IsClientInGame(client) || IsFakeClient(client) || GetClientTeam(client) == 2 ? 2 : 3)), i, 1);
 	}
 
 	if (!aClients.Length)
@@ -2010,7 +2007,7 @@ int iFindUselessSurvivorBot(bool bAlive) {
 	return client;
 }
 
-bool bIsValidSurvivorBot(int client) {
+bool bIsValidSurBot(int client) {
 	return IsClientInGame(client) && !IsClientInKickQueue(client) && IsFakeClient(client) && GetClientTeam(client) == 2 && !iGetIdlePlayerOfBot(client);
 }
 
@@ -2081,9 +2078,9 @@ int iTakeOverTank(int tank) {
 
 	delete aClients;
 
-	if (client && iGetStandingSurvivors() >= g_iSurvivorLimit) {
-		int iTeam = GetClientTeam(client);
-		switch (iTeam) {
+	if (client && iGetNormalSur() >= g_iSurvivorLimit) {
+		int team = GetClientTeam(client);
+		switch (team) {
 			case 2: {
 				g_esData[client].Clean();
 				g_esData[client].Save(client, false);
@@ -2099,7 +2096,7 @@ int iTakeOverTank(int tank) {
 		}
 
 		if (GetClientTeam(client) == 3)
-			g_esPlayer[client].iLastTeamID = iTeam != 3 ? 2 : 3;
+			g_esPlayer[client].iLastTeamID = team != 3 ? 2 : 3;
 	
 		if (iTakeOverZombieBot(client, tank) == 8 && IsPlayerAlive(client))
 			return client;
@@ -2108,7 +2105,7 @@ int iTakeOverTank(int tank) {
 	return 0;
 }
 
-int iGetStandingSurvivors() {
+int iGetNormalSur() {
 	int iCount;
 	for (int i = 1; i <= MaxClients; i++) {
 		if (IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i) && !bIsPinned(i))
@@ -2145,7 +2142,7 @@ bool bIsPinned(int client) {
 	return false;
 }
 
-void vCreateSurvivorGlow(int client) {
+void vCreateSurGlow(int client) {
 	if (!g_bGlowColorEnable || !bIsRoundStarted() || !IsClientInGame(client) || IsClientInKickQueue(client) || GetClientTeam(client) != 2 || !IsPlayerAlive(client) || bIsValidEntRef(g_esPlayer[client].iModelEntRef))
 		return;
 
@@ -2208,7 +2205,7 @@ int iGetColorType(int client) {
 	}
 }
 
-void vRemoveSurvivorGlow(int client) {
+void vRemoveSurGlow(int client) {
 	static int iEnt;
 	iEnt = g_esPlayer[client].iModelEntRef;
 	g_esPlayer[client].iModelEntRef = 0;
@@ -2227,12 +2224,12 @@ void OnNextFrame_ChangeTeamToSurvivor(int client) {
 	if (g_iControlled == 1 || !(client = GetClientOfUserId(client)) || !IsClientInGame(client))
 		return;
 
-	vChangeTeamToSurvivor(client);
+	vChangeTeamToSur(client);
 }
 
-void vChangeTeamToSurvivor(int client) {
-	int iTeam = GetClientTeam(client);
-	if (iTeam == 2)
+void vChangeTeamToSur(int client) {
+	int team = GetClientTeam(client);
+	if (team == 2)
 		return;
 
 	// 防止因切换而导致正处于Ghost状态的坦克丢失
@@ -2240,10 +2237,10 @@ void vChangeTeamToSurvivor(int client) {
 		SetEntProp(client, Prop_Send, "m_isGhost", 0); // SDKCall(g_hSDK_CTerrorPlayer_MaterializeFromGhost, client);
 
 	int iBot = GetClientOfUserId(g_esPlayer[client].iPlayerBot);
-	if (!iBot || !bIsValidSurvivorBot(iBot))
-		iBot = iFindUselessSurvivorBot(true);
+	if (!iBot || !bIsValidSurBot(iBot))
+		iBot = iFindUselessSurBot(true);
 
-	if (iTeam != 1)
+	if (team != 1)
 		ChangeClientTeam(client, 1);
 
 	if (iBot) {
@@ -2884,20 +2881,18 @@ void vSetupDetours(GameData hGameData = null) {
 	g_ddForEachTerrorPlayer_SpawnablePZScan.AddParam(HookParamType_CBaseEntity);
 }
 
-void vSetInfectedGhost(int client, bool bSavePos = false) {
+void vEnterGhostMode(int client, bool bSavePos = false) {
 	if (GetClientTeam(client) == 3 && !GetEntProp(client, Prop_Send, "m_isGhost")) {
-		static float vPos[3];
-		static float vAng[3];
-		static float vVel[3];
-
+		float vPos[3];
+		float vAng[3];
+		float vVel[3];
 		if (bSavePos) {
 			GetClientAbsOrigin(client, vPos);
 			GetClientEyeAngles(client, vAng);
-			GetEntPropVector(client, Prop_Data, "m_vecVelocity", vVel);
+			GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", vVel);
 		}
 
 		SDKCall(g_hSDK_CCSPlayer_State_Transition, client, 8);
-
 		if (bSavePos)
 			TeleportEntity(client, vPos, vAng, vVel);
 	}
@@ -2915,15 +2910,14 @@ void vSetZombieClass(int client, int zombieClass) {
 		RemoveEntity(ability);
 
 	SDKCall(g_hSDK_CTerrorPlayer_SetClass, client, zombieClass);
-
 	ability = SDKCall(g_hSDK_CBaseAbility_CreateForPlayer, client);
 	if (ability > MaxClients)
 		SetEntPropEnt(client, Prop_Send, "m_customAbility", ability);
 }
 
-int iTakeOverZombieBot(int client, int iZombieBot) {
+int iTakeOverZombieBot(int client, int target) {
 	AcceptEntityInput(client, "ClearParent");
-	SDKCall(g_hSDK_CTerrorPlayer_TakeOverZombieBot, client, iZombieBot);
+	SDKCall(g_hSDK_CTerrorPlayer_TakeOverZombieBot, client, target);
 	return GetEntProp(client, Prop_Send, "m_zombieClass");
 }
 
@@ -3076,8 +3070,6 @@ MRESReturn DD_ForEachTerrorPlayer_SpawnablePZScan_Pre(DHookParam hParams) {
 }
 
 MRESReturn DD_ForEachTerrorPlayer_SpawnablePZScan_Post(DHookParam hParams) {
-	/*StoreToAddress(hParams.GetAddress(1), !g_iSpawnablePZ || !IsClientInGame(g_iSpawnablePZ) || IsFakeClient(g_iSpawnablePZ) || GetClientTeam(g_iSpawnablePZ) != 3 ? 0 : view_as<int>(GetEntityAddress(g_iSpawnablePZ)), NumberType_Int32);
-	return MRES_Supercede;*/
 	vSpawnablePZScan(false);
 	return MRES_Ignored;
 }
