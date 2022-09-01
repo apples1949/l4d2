@@ -330,13 +330,13 @@ public void OnPluginStart() {
 	
 	AutoExecConfig(true, "bots");
 
-	RegConsoleCmd("sm_teams", 	cmdTeamPanel, 		"团队菜单");
-	RegConsoleCmd("sm_spec", 	cmdJoinSpectator, 	"加入旁观者");
-	RegConsoleCmd("sm_join", 	cmdJoinSurvivor, 	"加入生还者");
-	RegConsoleCmd("sm_tkbot", 	cmdTakeOverBot, 	"接管指定BOT");
+	RegConsoleCmd("sm_teams", 	cmdTeamPanel, 	"团队菜单");
+	RegConsoleCmd("sm_spec", 	cmdJoinTeam1, 	"加入旁观者");
+	RegConsoleCmd("sm_join", 	cmdJoinTeam2, 	"加入生还者");
+	RegConsoleCmd("sm_tkbot", 	cmdTakeOverBot, "接管指定BOT");
 
-	RegAdminCmd("sm_afk", 	cmdGoAFK, 	ADMFLAG_RCON, 	"闲置");
-	RegAdminCmd("sm_botset", cmdBotSet, ADMFLAG_RCON, 	"设置开局Bot的数量");
+	RegAdminCmd("sm_afk", 		cmdGoAFK,	ADMFLAG_RCON,	"闲置");
+	RegAdminCmd("sm_botset",	cmdBotSet,	ADMFLAG_RCON,	"设置开局Bot的数量");
 
 	HookEvent("round_end", 				Event_RoundEnd, 	EventHookMode_PostNoCopy);
 	HookEvent("round_start", 			Event_RoundStart, 	EventHookMode_PostNoCopy);
@@ -360,7 +360,7 @@ Action cmdTeamPanel(int client, int args) {
 	return Plugin_Handled;
 }
 
-Action cmdJoinSpectator(int client, int args) {
+Action cmdJoinTeam1(int client, int args) {
 	if (!client || !IsClientInGame(client) || IsFakeClient(client))
 		return Plugin_Handled;
 
@@ -391,12 +391,12 @@ int iGetSpectatorCount() {
 	return iCount;
 }
 
-Action cmdJoinSurvivor(int client, int args) {
+Action cmdJoinTeam2(int client, int args) {
 	if (!client || !IsClientInGame(client) || IsFakeClient(client))
 		return Plugin_Handled;
-
+	/*
 	if (bIsInTransition())
-		return Plugin_Handled;
+		return Plugin_Handled;*/
 
 	if (!(g_iJoinFlags & JOIN_MANUAL)) {
 		PrintToChat(client, "手动加入已禁用.");
@@ -694,7 +694,7 @@ int iJoinSurvivor_MenuHandler(Menu menu, MenuAction action, int param1, int para
 		case MenuAction_Select: {
 			switch (param2) {
 				case 0:
-					cmdJoinSurvivor(param1, 0);
+					cmdJoinTeam2(param1, 0);
 
 				case 2: {
 					if (iFindUselessSurBot(true))
