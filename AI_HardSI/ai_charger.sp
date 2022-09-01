@@ -89,6 +89,7 @@ public Action L4D2_OnChooseVictim(int specialInfected, int &curTarget) {
 	return Plugin_Continue;
 }
 
+bool g_bModify[MAXPLAYERS + 1];
 public Action OnPlayerRunCmd(int client, int &buttons) {
 	if (!IsClientInGame(client) || !IsFakeClient(client) || GetClientTeam(client) != 3 || !IsPlayerAlive(client) || GetEntProp(client, Prop_Send, "m_zombieClass") != 6 || GetEntProp(client, Prop_Send, "m_isGhost") )
 		return Plugin_Continue;
@@ -110,7 +111,7 @@ public Action OnPlayerRunCmd(int client, int &buttons) {
 			static float vTar[3];
 			GetClientAbsOrigin(client, vPos);
 			GetClientAbsOrigin(iTarget, vTar);
-			if (GetVectorDistance(vPos, vTar) < 150.0 && !bHitWall(client, iTarget)) {
+			if (GetVectorDistance(vPos, vTar) < 0.5 * g_fChargeProximity && !bHitWall(client, iTarget)) {
 				buttons |= IN_ATTACK;
 				buttons |= IN_ATTACK2;
 				return Plugin_Changed;
@@ -118,17 +119,69 @@ public Action OnPlayerRunCmd(int client, int &buttons) {
 		}
 	}
 
-	if (!g_bChargerBhop || fCurTargetDistance(client) < 150.0 || fNearestSurDist > 1000.0 || !bIsGrounded(client) || GetEntityMoveType(client) == MOVETYPE_LADDER || GetEntProp(client, Prop_Data, "m_nWaterLevel") > 1 || !GetEntProp(client, Prop_Send, "m_hasVisibleThreats"))
+	if (!g_bChargerBhop || GetEntityMoveType(client) == MOVETYPE_LADDER || GetEntProp(client, Prop_Data, "m_nWaterLevel") > 1 || !GetEntProp(client, Prop_Send, "m_hasVisibleThreats"))
 		return Plugin_Continue;
 
 	static float vVel[3];
+	static float fSpeed;
 	GetEntPropVector(client, Prop_Data, "m_vecVelocity", vVel);
-	if (SquareRoot(Pow(vVel[0], 2.0) + Pow(vVel[1], 2.0)) < GetEntPropFloat(client, Prop_Send, "m_flMaxspeed") - 10.0)
+	fSpeed = SquareRoot(Pow(vVel[0], 2.0) + Pow(vVel[1], 2.0));
+	if (fSpeed < GetEntPropFloat(client, Prop_Send, "m_flMaxspeed") - 10.0)
 		return Plugin_Continue;
 
 	static float vAng[3];
-	GetClientEyeAngles(client, vAng);
-	return aBunnyHop(client, buttons, vAng);
+	if (bIsGrounded(client)) {
+		g_bModify[client] = false;
+
+		if (fCurTargetDistance(client) > 0.5 * g_fChargeProximity && -1.0 < fNearestSurDist < 1000.0) {
+			GetClientEyeAngles(client, vAng);
+			return aBunnyHop(client, buttons, vAng);
+		}
+	}
+	else {
+		if (g_bModify[client] || fSpeed < GetEntPropFloat(client, Prop_Send, "m_flMaxspeed") + 180.0)
+			return Plugin_Continue;
+
+		if (bIsCharging(client))
+			return Plugin_Continue;
+
+		static int iTarget;
+		iTarget = g_iCurTarget[client];//GetClientAimTarget(client, true);
+		/*if (!bIsAliveSur(iTarget))
+			iTarget = g_iCurTarget[client];*/
+
+		if (!bIsAliveSur(iTarget))
+			return Plugin_Continue;
+
+		static float vPos[3];
+		static float vTar[3];
+		GetClientAbsOrigin(client, vPos);
+		GetClientAbsOrigin(iTarget, vTar);
+		fSpeed = GetVectorDistance(vPos, vTar);
+		if (fSpeed < 0.5 * g_fChargeProximity || fSpeed > 440.0)
+			return Plugin_Continue;
+
+		GetVectorAngles(vVel, vAng);
+		vVel = vAng;
+		vAng[0] = vAng[2] = 0.0;
+		GetAngleVectors(vAng, vAng, NULL_VECTOR, NULL_VECTOR);
+		NormalizeVector(vAng, vAng);
+
+		static float vDir[2][3];
+		vDir[0] = vPos;
+		vDir[1] = vTar;
+		vPos[2] = vTar[2] = 0.0;
+		MakeVectorFromPoints(vPos, vTar, vPos);
+		NormalizeVector(vPos, vPos);
+		if (RadToDeg(ArcCosine(GetVectorDotProduct(vAng, vPos))) < 60.0)
+			return Plugin_Continue;
+
+		MakeVectorFromPoints(vDir[0], vDir[1], vDir[0]);
+		TeleportEntity(client, NULL_VECTOR, vVel, vDir[0]);
+		g_bModify[client] = true;
+	}
+	
+	return Plugin_Continue;
 }
 
 bool bIsGrounded(int client) {
@@ -199,7 +252,7 @@ bool bWontFall(int client, const float vVel[3]) {
 		TR_GetEndPosition(vVec, hTrace);
 		NormalizeVector(vVel, vNor);
 		TR_GetPlaneNormal(hTrace, vPlane);
-		if (RadToDeg(ArcCosine(GetVectorDotProduct(vNor, vPlane))) > 150.0) {
+		if (RadToDeg(ArcCosine(GetVectorDotProduct(vNor, vPlane))) > 135.0) {
 			delete hTrace;
 			return false;
 		}
@@ -313,6 +366,12 @@ bool bHitWall(int client, int iTarget) {
 	bDidHit = TR_DidHit(hTrace);
 	delete hTrace;
 	return bDidHit;
+}
+
+bool bIsCharging(int client) {
+	static int iEnt;
+	iEnt = GetEntPropEnt(client, Prop_Send, "m_customAbility");
+	return iEnt > MaxClients && GetEntProp(iEnt, Prop_Send, "m_isCharging");
 }
 
 bool bCanCharge(int client) {

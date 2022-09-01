@@ -82,7 +82,7 @@ public Action OnPlayerRunCmd(int client, int &buttons) {
 	static float fSpeed;
 	GetEntPropVector(client, Prop_Data, "m_vecVelocity", vVel);
 	fSpeed = SquareRoot(Pow(vVel[0], 2.0) + Pow(vVel[1], 2.0));
-	if (fSpeed < g_fRunTopSpeed[client] - 10.0)
+	if (fSpeed < GetEntPropFloat(client, Prop_Send, "m_flMaxspeed") - 10.0)
 		return Plugin_Continue;
 
 	static float vAng[3];
@@ -98,7 +98,7 @@ public Action OnPlayerRunCmd(int client, int &buttons) {
 		}
 	}
 	else {
-		if (g_bModify[client] || fSpeed < g_fRunTopSpeed[client] + SPEEDBOOST)
+		if (g_bModify[client] || fSpeed < GetEntPropFloat(client, Prop_Send, "m_flMaxspeed") + SPEEDBOOST)
 			return Plugin_Continue;
 
 		static int iTarget;
@@ -114,7 +114,7 @@ public Action OnPlayerRunCmd(int client, int &buttons) {
 		GetClientAbsOrigin(client, vPos);
 		GetClientAbsOrigin(iTarget, vTar);
 		fSpeed = GetVectorDistance(vPos, vTar);
-		if (fSpeed < g_fTankAttackRange || fSpeed > 500.0)
+		if (fSpeed < g_fTankAttackRange || fSpeed > 440.0)
 			return Plugin_Continue;
 
 		GetVectorAngles(vVel, vAng);
@@ -213,7 +213,7 @@ bool bWontFall(int client, const float vVel[3]) {
 		TR_GetEndPosition(vVec, hTrace);
 		NormalizeVector(vVel, vNor);
 		TR_GetPlaneNormal(hTrace, vPlane);
-		if (RadToDeg(ArcCosine(GetVectorDotProduct(vNor, vPlane))) > 150.0) {
+		if (RadToDeg(ArcCosine(GetVectorDotProduct(vNor, vPlane))) > 135.0) {
 			delete hTrace;
 			return false;
 		}
@@ -352,7 +352,7 @@ public Action L4D_TankRock_OnRelease(int tank, int rock, float vecPos[3], float 
 		return Plugin_Continue;
 
 	static int iTarget;
-	iTarget = g_iCurTarget[tank];//GetClientAimTarget(tank, true);
+	iTarget = GetClientAimTarget(tank, true);
 	if (bIsAliveSur(iTarget) && !bIncapacitated(iTarget) && !bIsPinned(iTarget) && !bHitWall(tank, rock, iTarget) && !bWithinViewAngle(tank, iTarget, g_fAimOffsetSensitivity))
 		return Plugin_Continue;
 	

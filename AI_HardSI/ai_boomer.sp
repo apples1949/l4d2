@@ -168,7 +168,7 @@ bool bWontFall(int client, const float vVel[3]) {
 		TR_GetEndPosition(vVec, hTrace);
 		NormalizeVector(vVel, vNor);
 		TR_GetPlaneNormal(hTrace, vPlane);
-		if (RadToDeg(ArcCosine(GetVectorDotProduct(vNor, vPlane))) > 150.0) {
+		if (RadToDeg(ArcCosine(GetVectorDotProduct(vNor, vPlane))) > 135.0) {
 			delete hTrace;
 			return false;
 		}
