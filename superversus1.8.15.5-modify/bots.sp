@@ -44,10 +44,10 @@ ConVar
 	g_cvBotsLimit,
 	g_cvJoinFlags,
 	g_cvRespawnJoin,
-	g_cvSpecCmdLimit,
-	g_cvSpecNextNotify,
-	g_cvGiveWeaponType,
-	g_cvGiveWeaponTime,
+	g_cvSpecLimit,
+	g_cvSpecNotify,
+	g_cvGiveType,
+	g_cvGiveTime,
 	g_cvSurvivorLimit;
 
 int
@@ -55,8 +55,8 @@ int
 	g_iSurvivorBot,
 	g_iBotsLimit,
 	g_iJoinFlags,
-	g_iSpecCmdLimit,
-	g_iSpecNextNotify,
+	g_iSpecLimit,
+	g_iSpecNotify,
 	g_iOff_m_restoreCSWeaponID1,
 	g_iOff_m_iRestoreAmmoCount,
 	g_iOff_m_restoreCSWeaponID2,
@@ -64,8 +64,8 @@ int
 
 bool
 	g_bRespawnJoin,
-	g_bGiveWeaponType,
-	g_bGiveWeaponTime,
+	g_bGiveType,
+	g_bGiveTime,
 	g_bInSpawnTime,
 	g_bShouldFixAFK,
 	g_bShouldIgnore,
@@ -295,18 +295,18 @@ public void OnPluginStart() {
 
 	CreateConVar("bots_version", PLUGIN_VERSION, "bots(coop) plugin version.", FCVAR_NOTIFY|FCVAR_DONTRECORD);
 
-	g_cvBotsLimit = 			CreateConVar("bots_survivor_limit", 	"4", 		"开局Bot的数量", CVAR_FLAGS, true, 1.0, true, 31.0);
-	g_cvJoinFlags = 			CreateConVar("bots_join_survivor", 		"3", 		"加入生还者的方法. \n0=插件不进行处理, 1=输入!join手动加入, 2=进服后插件自动加入, 3=手动+自动", CVAR_FLAGS);
-	g_cvRespawnJoin = 			CreateConVar("bots_respawn_on_join", 	"1", 		"玩家第一次进服时如果没有存活的Bot可以接管是否复活. \n0=否, 1=是.", CVAR_FLAGS);
-	g_cvSpecCmdLimit = 			CreateConVar("bots_spec_cmd_limit", 	"1", 		"当完全旁观玩家达到多少个时禁止使用sm_spec命令.", CVAR_FLAGS);
-	g_cvSpecNextNotify = 		CreateConVar("bots_spec_next_notify", 	"3", 		"完全旁观玩家点击鼠标左键时, 提示加入生还者的方式 \n0=不提示, 1=聊天栏, 2=屏幕中央, 3=弹出菜单.", CVAR_FLAGS);
+	g_cvBotsLimit = 			CreateConVar("bots_limit", 				"4", 		"开局Bot的数量", CVAR_FLAGS, true, 1.0, true, 31.0);
+	g_cvJoinFlags = 			CreateConVar("bots_join_flags", 		"3", 		"加入生还者的方法. \n0=插件不进行处理, 1=输入!join手动加入, 2=进服后插件自动加入, 3=手动+自动", CVAR_FLAGS);
+	g_cvRespawnJoin = 			CreateConVar("bots_respawn_join", 		"1", 		"玩家第一次进服时如果没有存活的Bot可以接管是否复活. \n0=否, 1=是.", CVAR_FLAGS);
+	g_cvSpecLimit = 			CreateConVar("bots_spec_limit", 		"1", 		"当完全旁观玩家达到多少个时禁止使用sm_spec命令.", CVAR_FLAGS);
+	g_cvSpecNotify = 			CreateConVar("bots_spec_notify", 		"3", 		"完全旁观玩家点击鼠标左键时, 提示加入生还者的方式 \n0=不提示, 1=聊天栏, 2=屏幕中央, 3=弹出菜单.", CVAR_FLAGS);
 	g_esWeapon[0].cvFlags = 	CreateConVar("bots_give_slot0", 		"131071", 	"主武器给什么. \n0=不给, 131071=所有, 7=微冲, 1560=霰弹, 30720=狙击, 31=Tier1, 32736=Tier2, 98304=Tier0.", CVAR_FLAGS);
 	g_esWeapon[1].cvFlags = 	CreateConVar("bots_give_slot1", 		"1064", 	"副武器给什么. \n0=不给, 131071=所有.(如果选中了近战且该近战在当前地图上未解锁,则会随机给一把).", CVAR_FLAGS);
 	g_esWeapon[2].cvFlags = 	CreateConVar("bots_give_slot2", 		"0", 		"投掷物给什么. \n0=不给, 7=所有.", CVAR_FLAGS);
 	g_esWeapon[3].cvFlags =		CreateConVar("bots_give_slot3", 		"1", 		"医疗品给什么. \n0=不给, 15=所有.", CVAR_FLAGS);
 	g_esWeapon[4].cvFlags =		CreateConVar("bots_give_slot4", 		"3", 		"药品给什么. \n0=不给, 3=所有.", CVAR_FLAGS);
-	g_cvGiveWeaponType = 		CreateConVar("bots_give_type", 			"2", 		"根据什么来给玩家装备. \n0=不给, 1=每个槽位的设置, 2=当前存活生还者的平均装备质量(仅主副武器).", CVAR_FLAGS);
-	g_cvGiveWeaponTime = 		CreateConVar("bots_give_time", 			"0", 		"什么时候给玩家装备. \n0=每次出生时, 1=只在本插件创建Bot和复活玩家时.", CVAR_FLAGS);
+	g_cvGiveType = 				CreateConVar("bots_give_type", 			"2", 		"根据什么来给玩家装备. \n0=不给, 1=每个槽位的设置, 2=当前存活生还者的平均装备质量(仅主副武器).", CVAR_FLAGS);
+	g_cvGiveTime = 				CreateConVar("bots_give_time", 			"0", 		"什么时候给玩家装备. \n0=每次出生时, 1=只在本插件创建Bot和复活玩家时.", CVAR_FLAGS);
 
 	g_cvSurvivorLimit = FindConVar("survivor_limit");
 	g_cvSurvivorLimit.Flags &= ~FCVAR_NOTIFY; // 移除ConVar变动提示
@@ -316,8 +316,8 @@ public void OnPluginStart() {
 
 	g_cvJoinFlags.AddChangeHook(vCvarChanged_General);
 	g_cvRespawnJoin.AddChangeHook(vCvarChanged_General);
-	g_cvSpecCmdLimit.AddChangeHook(vCvarChanged_General);
-	g_cvSpecNextNotify.AddChangeHook(vCvarChanged_General);
+	g_cvSpecLimit.AddChangeHook(vCvarChanged_General);
+	g_cvSpecNotify.AddChangeHook(vCvarChanged_General);
 
 	g_esWeapon[0].cvFlags.AddChangeHook(vCvarChanged_Weapon);
 	g_esWeapon[1].cvFlags.AddChangeHook(vCvarChanged_Weapon);
@@ -325,10 +325,10 @@ public void OnPluginStart() {
 	g_esWeapon[3].cvFlags.AddChangeHook(vCvarChanged_Weapon);
 	g_esWeapon[4].cvFlags.AddChangeHook(vCvarChanged_Weapon);
 
-	g_cvGiveWeaponType.AddChangeHook(vCvarChanged_Weapon);
-	g_cvGiveWeaponTime.AddChangeHook(vCvarChanged_Weapon);
+	g_cvGiveType.AddChangeHook(vCvarChanged_Weapon);
+	g_cvGiveTime.AddChangeHook(vCvarChanged_Weapon);
 	
-	//AutoExecConfig(true, "bots");
+	AutoExecConfig(true, "bots");
 
 	RegConsoleCmd("sm_teams", 	cmdTeamPanel, 		"团队菜单");
 	RegConsoleCmd("sm_spec", 	cmdJoinSpectator, 	"加入旁观者");
@@ -370,8 +370,8 @@ Action cmdJoinSpectator(int client, int args) {
 		return Plugin_Handled;
 	}
 	
-	if (iGetSpectatorCount() >= g_iSpecCmdLimit) {
-		PrintToChat(client, "\x05当前旁观者数量已达到限制\x01-> \x04%d\x01.", g_iSpecCmdLimit);
+	if (iGetSpectatorCount() >= g_iSpecLimit) {
+		PrintToChat(client, "\x05当前旁观者数量已达到限制\x01-> \x04%d\x01.", g_iSpecLimit);
 		return Plugin_Handled;
 	}
 
@@ -659,7 +659,7 @@ Action spec_next_Listener(int client, char[] command, int argc) {
 
 	g_esPlayer[client].bSpecNotify = false;
 
-	switch (g_iSpecNextNotify) {
+	switch (g_iSpecNotify) {
 		case 1:
 			PrintToChat(client, "\x01聊天栏输入 \x05!join \x01加入游戏.");
 
@@ -748,8 +748,8 @@ void vCvarChanged_General(ConVar convar, const char[] oldValue, const char[] new
 void vGeCvars_General() {
 	g_iJoinFlags = 		g_cvJoinFlags.IntValue;
 	g_bRespawnJoin = 	g_cvRespawnJoin.BoolValue;
-	g_iSpecCmdLimit = 	g_cvSpecCmdLimit.IntValue;
-	g_iSpecNextNotify = g_cvSpecNextNotify.IntValue;
+	g_iSpecLimit = 	g_cvSpecLimit.IntValue;
+	g_iSpecNotify = g_cvSpecNotify.IntValue;
 }
 
 void vCvarChanged_Weapon(ConVar convar, const char[] oldValue, const char[] newValue) {
@@ -764,8 +764,8 @@ void vGeCvars_Weapon() {
 			iCount++;
 	}
 
-	g_bGiveWeaponType = iCount < MAX_SLOTS ? g_cvGiveWeaponType.BoolValue : false;
-	g_bGiveWeaponTime = g_cvGiveWeaponTime.BoolValue;
+	g_bGiveType = iCount < MAX_SLOTS ? g_cvGiveType.BoolValue : false;
+	g_bGiveTime = g_cvGiveTime.BoolValue;
 }
 
 int iGetSlotAllowed(int iSlot) {
@@ -1590,10 +1590,10 @@ MRESReturn DD_CBasePlayer_SetModel_Post(int pThis, DHookParam hParams) {
 }
 
 MRESReturn DD_CTerrorPlayer_GiveDefaultItems_Pre(int pThis) {
-	if (!g_bGiveWeaponType)
+	if (!g_bGiveType)
 		return MRES_Ignored;
 
-	if (g_bShouldFixAFK || g_bGiveWeaponTime && !g_bInSpawnTime)
+	if (g_bShouldFixAFK || g_bGiveTime && !g_bInSpawnTime)
 		return MRES_Ignored;
 
 	if (pThis < 1 || pThis > MaxClients || !IsClientInGame(pThis))
@@ -1653,7 +1653,7 @@ void vGiveDefaultItems(int client) {
 
 	vGiveSecondary(client);
 
-	switch (g_cvGiveWeaponType.IntValue) {
+	switch (g_cvGiveType.IntValue) {
 		case 1:
 			vGivePresetPrimary(client);
 		
