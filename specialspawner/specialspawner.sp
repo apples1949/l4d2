@@ -1029,7 +1029,7 @@ void vExecuteSpawnQueue(int iTotalSI, bool bRetry) {
 	delete aList;
 	g_bInSpawnTime = true;
 	g_cvSpawnRange.IntValue = bRetry ? 1000 : 1500;
-	g_iPreferredDirection = g_bFinaleStarted ? SPAWN_NEAR_IT_VICTIM : (!bFind ? SPAWN_SPECIALS_ANYWHERE/*SPAWN_LARGE_VOLUME*/ : SPAWN_SPECIALS_IN_FRONT_OF_SURVIVORS);
+	g_iPreferredDirection = g_bFinaleStarted ? SPAWN_NEAR_IT_VICTIM : (!bFind ? SPAWN_LARGE_VOLUME/*SPAWN_SPECIALS_ANYWHERE*/ : SPAWN_SPECIALS_IN_FRONT_OF_SURVIVORS);
 
 	count = 0;
 	bFind = false;
