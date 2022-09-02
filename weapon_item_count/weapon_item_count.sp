@@ -3,100 +3,94 @@
 #include <dhooks>
 #include <left4dhooks_stocks>
 
-#define PLUGIN_VERSION 	"1.2"
+#define PLUGIN_NAME				"Weapon Item Count"
+#define PLUGIN_AUTHOR			"sorallll"
+#define PLUGIN_DESCRIPTION		"设置物品拾取次数"
+#define PLUGIN_VERSION			"1.2.0"
+#define PLUGIN_URL				""
 
 #define GAMEDATA	"weapon_item_count"
 
-enum
-{
+enum {
 	EntRef,
 	UseCount
 };
 
 ConVar
-	g_hBypassAbsorbWeapon;
+	g_cvSpawnerAbsorb;
 
-bool
-	g_bBypassAbsorbWeapon;
+DynamicDetour
+	g_ddDetour;
 
 int
 	g_iSpawner[2048 + 1][2];
 
 int
-	g_iItemCountRules[view_as<int>(L4D2WeaponId_MAX)];
+	g_iItemRules[view_as<int>(L4D2WeaponId_MAX)];
 
-public Plugin myinfo =
-{
-	name = "设置物品拾取次数",
-	author = "",
-	description = "",
+public Plugin myinfo = {
+	name = PLUGIN_NAME,
+	author = PLUGIN_AUTHOR,
+	description = PLUGIN_DESCRIPTION,
 	version = PLUGIN_VERSION,
-	url = ""
+	url = PLUGIN_URL
 };
 
-public void OnPluginStart()
-{
-	vInitGameData();
+public void OnPluginStart() {
+	vInitData();
 
-	g_hBypassAbsorbWeapon = CreateConVar("bypass_absorb_weapon", "1", "Whether to bypass the absorb weapon count");
-	g_hBypassAbsorbWeapon.AddChangeHook(vConVarChanged);
+	CreateConVar("weapon_item_count_version", PLUGIN_VERSION, "Weapon Item Count plugin version.", FCVAR_NOTIFY|FCVAR_DONTRECORD);
 
-	RegServerCmd("setitemcount", cmdSetItemCount);
-	RegServerCmd("resetitemcount", cmdResetItemCount);
+	g_cvSpawnerAbsorb = CreateConVar("spawner_absorb", "1", "武器生成器吸收回去一件武器后减少对应拾取次数?");
+	g_cvSpawnerAbsorb.AddChangeHook(vCvarChanged);
+
+	RegServerCmd("item_count", cmdItemCount);
+	RegServerCmd("re_item_count", cmdResetItemCount);
 
 	vResetWeaponRules();
 }
 
 public void OnConfigsExecuted()
 {
-	vGetCvars();
+	vToggleDetour(g_cvSpawnerAbsorb.BoolValue);
 }
 
-void vConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
+void vCvarChanged(ConVar convar, const char[] oldValue, const char[] newValue)
 {
-	vGetCvars();
+	vToggleDetour(g_cvSpawnerAbsorb.BoolValue);
 }
 
-void vGetCvars()
-{
-	g_bBypassAbsorbWeapon = g_hBypassAbsorbWeapon.BoolValue;
-}
-
-Action cmdSetItemCount(int args)
-{
+Action cmdItemCount(int args) {
 	if (args < 2) {
-		PrintToServer("Usage: setitemcount <match> <count>");
+		PrintToServer("Usage: item_count <match> <count>");
 		return Plugin_Handled;
 	}
 
-	char sArg[64];
-	GetCmdArg(1, sArg, sizeof sArg);
-	L4D2WeaponId match = L4D2_GetWeaponIdByWeaponName2(sArg);
+	char arg[64];
+	GetCmdArg(1, arg, sizeof arg);
+	L4D2WeaponId match = L4D2_GetWeaponIdByWeaponName2(arg);
 	if (!L4D2_IsValidWeaponId(match))
 		return Plugin_Handled;
 
-	GetCmdArg(2, sArg, sizeof sArg);
-	int count = StringToInt(sArg);
+	GetCmdArg(2, arg, sizeof arg);
+	int count = StringToInt(arg);
 	if (count >= 0)
-		g_iItemCountRules[match] = count;
+		g_iItemRules[match] = count;
 
 	return Plugin_Handled;
 }
 
-Action cmdResetItemCount(int args)
-{
+Action cmdResetItemCount(int args) {
 	vResetWeaponRules();
 	return Plugin_Handled;
 }
 	
-void vResetWeaponRules()
-{
+void vResetWeaponRules() {
 	for (int i; i < view_as<int>(L4D2WeaponId_MAX); i++)
-		g_iItemCountRules[i] = -1;
+		g_iItemRules[i] = -1;
 }
 
-void vInitGameData()
-{
+void vInitData() {
 	char sPath[PLATFORM_MAX_PATH];
 	BuildPath(Path_SM, sPath, sizeof sPath, "gamedata/%s.txt", GAMEDATA);
 	if (!FileExists(sPath))
@@ -116,12 +110,31 @@ void vInitGameData()
 	if (!dDetour.Enable(Hook_Post, DD_CWeaponSpawn_GiveItem_Post))
 		SetFailState("Failed to detour post: \"DD::CWeaponSpawn::GiveItem\" (%s)", PLUGIN_VERSION);
 
+	g_ddDetour = DynamicDetour.FromConf(hGameData, "DD::CWeaponSpawn::AbsorbWeapon");
+	if (!g_ddDetour)
+		SetFailState("Failed to create DynamicDetour: \"DD::CWeaponSpawn::AbsorbWeapon\" (%s)", PLUGIN_VERSION);
+
 	delete hGameData;
 }
 
+void vToggleDetour(bool bEnable) {
+	static bool bEnabled;
+	if (!bEnabled && bEnable) {
+		bEnabled = true;
+
+		if (!g_ddDetour.Enable(Hook_Post, DD_CWeaponSpawn_AbsorbWeapon_Post))
+			SetFailState("Failed to detour post: \"DD::CWeaponSpawn::AbsorbWeapon\" (%s)", PLUGIN_VERSION);
+	}
+	else if (bEnabled && !bEnable) {
+		bEnabled = false;
+
+		if (!g_ddDetour.Disable(Hook_Post, DD_CWeaponSpawn_AbsorbWeapon_Post))
+			SetFailState("Failed to disable detour post: \"DD::CWeaponSpawn::AbsorbWeapon\" (%s)", PLUGIN_VERSION);
+	}
+}
+
 bool g_bRemoveSpawner;
-MRESReturn DD_CWeaponSpawn_GiveItem_Pre(int pThis, DHookReturn hReturn, DHookParam hParams)
-{
+MRESReturn DD_CWeaponSpawn_GiveItem_Pre(int pThis, DHookReturn hReturn, DHookParam hParams) {
 	if (pThis <= MaxClients || !IsValidEntity(pThis))
 		return MRES_Ignored;
 
@@ -132,7 +145,7 @@ MRESReturn DD_CWeaponSpawn_GiveItem_Pre(int pThis, DHookReturn hReturn, DHookPar
 	if (strcmp(cls, "CWeaponSpawn") != 0)
 		return MRES_Ignored;
 
-	if (!GetEntProp(pThis, Prop_Data, "m_itemCount")) {
+	if (GetEntProp(pThis, Prop_Data, "m_itemCount") <= 0) {
 		RemoveEntity(pThis);
 		hReturn.Value = 0;
 		return MRES_Supercede;
@@ -140,10 +153,10 @@ MRESReturn DD_CWeaponSpawn_GiveItem_Pre(int pThis, DHookReturn hReturn, DHookPar
 
 	hParams.GetString(2, cls, sizeof cls);
 	L4D2WeaponId weaponId = L4D2_GetWeaponIdByWeaponName(cls);
-	if (weaponId <= L4D2WeaponId_None || g_iItemCountRules[weaponId] < 0)
+	if (weaponId <= L4D2WeaponId_None || g_iItemRules[weaponId] < 0)
 		return MRES_Ignored;
 
-	if (!g_iItemCountRules[weaponId]) {
+	if (!g_iItemRules[weaponId]) {
 		RemoveEntity(pThis);
 		hReturn.Value = 0;
 		return MRES_Supercede;
@@ -154,22 +167,20 @@ MRESReturn DD_CWeaponSpawn_GiveItem_Pre(int pThis, DHookReturn hReturn, DHookPar
 		g_iSpawner[pThis][UseCount] = 0;
 	}
 
-	if (!g_bBypassAbsorbWeapon && g_iSpawner[pThis][UseCount] >= g_iItemCountRules[weaponId]) {
+	int count = g_iItemRules[weaponId] - g_iSpawner[pThis][UseCount];
+	if (count <= 0) {
 		RemoveEntity(pThis);
 		hReturn.Value = 0;
 		return MRES_Supercede;
 	}
 
-	if (!g_iSpawner[pThis][UseCount] || !g_bBypassAbsorbWeapon)
-		SetEntProp(pThis, Prop_Data, "m_itemCount", g_iItemCountRules[weaponId] - g_iSpawner[pThis][UseCount]);
-
-	g_bRemoveSpawner = GetEntProp(pThis, Prop_Data, "m_itemCount") <= 1;
+	SetEntProp(pThis, Prop_Data, "m_itemCount", count);
+	g_bRemoveSpawner = count == 1;
 	g_iSpawner[pThis][UseCount]++;
 	return MRES_Ignored;
 }
 
-MRESReturn DD_CWeaponSpawn_GiveItem_Post(int pThis, DHookReturn hReturn, DHookParam hParams)
-{
+MRESReturn DD_CWeaponSpawn_GiveItem_Post(int pThis, DHookReturn hReturn, DHookParam hParams) {
 	if (g_bRemoveSpawner && IsValidEntity(pThis))
 		RemoveEntity(pThis);
 
@@ -177,8 +188,18 @@ MRESReturn DD_CWeaponSpawn_GiveItem_Post(int pThis, DHookReturn hReturn, DHookPa
 	return MRES_Ignored;
 }
 
-L4D2WeaponId L4D2_GetWeaponIdByWeaponName2(const char[] weaponName)
-{
+MRESReturn DD_CWeaponSpawn_AbsorbWeapon_Post(int pThis, DHookReturn hReturn, DHookParam hParams) {
+	if (!hReturn.Value)
+		return MRES_Ignored;
+
+	if (!bIsValidEntRef(g_iSpawner[pThis][EntRef]))
+		return MRES_Ignored;
+
+	g_iSpawner[pThis][UseCount]--;
+	return MRES_Ignored;
+}
+
+L4D2WeaponId L4D2_GetWeaponIdByWeaponName2(const char[] weaponName) {
 	static char namebuf[64] = "weapon_";
 	L4D2WeaponId weaponId = L4D2_GetWeaponIdByWeaponName(weaponName);
 
@@ -190,7 +211,6 @@ L4D2WeaponId L4D2_GetWeaponIdByWeaponName2(const char[] weaponName)
 	return view_as<L4D2WeaponId>(weaponId);
 }
 
-static bool bIsValidEntRef(int entity)
-{
+bool bIsValidEntRef(int entity) {
 	return entity && EntRefToEntIndex(entity) != INVALID_ENT_REFERENCE;
 }
