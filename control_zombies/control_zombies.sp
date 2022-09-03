@@ -11,7 +11,12 @@
 	#include <profiler>
 	Profiler g_profiler;
 #endif
-#define PLUGIN_VERSION "3.4.8"
+
+#define PLUGIN_NAME				"Control Zombies In Co-op"
+#define PLUGIN_AUTHOR			"sorallll"
+#define PLUGIN_DESCRIPTION		""
+#define PLUGIN_VERSION			"3.4.9"
+#define PLUGIN_URL				"https://steamcommunity.com/id/sorallll"
 
 /*****************************************************************************************************/
 // ====================================================================================================
@@ -308,11 +313,12 @@ esPlayer
 
 // 如果签名失效, 请到此处更新https://github.com/Psykotikism/L4D1-2_Signatures
 public Plugin myinfo = {
-	name = "Control Zombies In Co-op",
-	author = "sorallll",
+	name = PLUGIN_NAME,
+	author = PLUGIN_AUTHOR,
+	description = PLUGIN_DESCRIPTION,
 	version = PLUGIN_VERSION,
-	url = "https://steamcommunity.com/id/sorallll"
-}
+	url = PLUGIN_URL
+};
 
 #if DEBUG
 bool g_bLeft4Dhooks;
@@ -331,6 +337,11 @@ public void OnLibraryRemoved(const char[] name) {
 #endif
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max) {
+	if (!IsDedicatedServer()) {
+		strcopy(error, err_max, "插件仅支持专用服务器.");
+		return APLRes_SilentFailure;
+	}
+
 	CreateNative("CZ_RespawnPZ", aNative_RespawnPZ);
 	CreateNative("CZ_SetSpawnablePZ", aNative_SetSpawnablePZ);
 
