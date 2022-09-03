@@ -65,6 +65,8 @@ ConVar
 float
 	g_fSpawnTimeMin,
 	g_fSpawnTimeMax,
+	g_fExtraLimit,
+	g_fExtraSize,
 	g_fSuicideTime,
 	g_fRushDistance,
 	g_fSpawnTimes[MAXPLAYERS + 1],
@@ -124,9 +126,7 @@ int
 	g_iSpawnSizeCache = -1,
 	g_iSpawnCounts[6],
 	g_iBaseLimit,
-	g_iExtraLimit,
 	g_iBaseSize,
-	g_iExtraSize,
 	g_iCurrentClass = -1;
 
 bool
@@ -642,9 +642,9 @@ void vGetCvars_General() {
 		g_iSpawnWeights[i] = g_cvSpawnWeights[i].IntValue;
 
 	g_iBaseLimit = g_cvBaseLimit.IntValue;
-	g_iExtraLimit = g_cvExtraLimit.IntValue;
+	g_fExtraLimit = g_cvExtraLimit.FloatValue;
 	g_iBaseSize = g_cvBaseSize.IntValue;
-	g_iExtraSize = g_cvExtraSize.IntValue;
+	g_fExtraSize = g_cvExtraSize.FloatValue;
 	g_fSuicideTime = g_cvSuicideTime.FloatValue;
 	g_fRushDistance = g_cvRushDistance.FloatValue;
 }
@@ -788,8 +788,8 @@ void vSetMaxSpecialsCount() {
 		iSize = g_iBaseSize;
 	}
 	else {
-		iLimit = g_iBaseLimit + g_iExtraLimit * iCount;
-		iSize = g_iBaseSize + RoundToCeil(1.0 * iCount / g_iExtraSize);
+		iLimit = g_iBaseLimit + RoundToNearest(g_fExtraLimit * iCount);
+		iSize = g_iBaseSize + RoundToNearest(iCount / g_fExtraSize);
 	}
 
 	if (iLimit == g_iSILimit && iSize == g_iSpawnSize)
