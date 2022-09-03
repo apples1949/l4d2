@@ -313,6 +313,7 @@ public void OnPluginStart() {
 	g_cvSurvivorLimit.SetBounds(ConVarBound_Upper, true, 31.0);
 
 	g_cvBotsLimit.AddChangeHook(vCvarChanged_Limit);
+	g_cvSurvivorLimit.AddChangeHook(vCvarChanged_Limit);
 
 	g_cvJoinFlags.AddChangeHook(vCvarChanged_General);
 	g_cvRespawnJoin.AddChangeHook(vCvarChanged_General);
@@ -610,8 +611,7 @@ Action cmdGoIdle(int client, int args) {
 	return Plugin_Handled;
 }
 
-void vGoAFKTimer(int client, float flDuration)
-{
+void vGoAFKTimer(int client, float flDuration) {
 	static int m_GoAFKTimer = -1;
 	if (m_GoAFKTimer == -1)
 		m_GoAFKTimer = FindSendPropInfo("CTerrorPlayer", "m_lookatPlayer") - 12;
@@ -746,10 +746,10 @@ void vCvarChanged_General(ConVar convar, const char[] oldValue, const char[] new
 }
 
 void vGeCvars_General() {
-	g_iJoinFlags = 		g_cvJoinFlags.IntValue;
-	g_bRespawnJoin = 	g_cvRespawnJoin.BoolValue;
-	g_iSpecLimit = 	g_cvSpecLimit.IntValue;
-	g_iSpecNotify = g_cvSpecNotify.IntValue;
+	g_iJoinFlags =		g_cvJoinFlags.IntValue;
+	g_bRespawnJoin =	g_cvRespawnJoin.BoolValue;
+	g_iSpecLimit =		g_cvSpecLimit.IntValue;
+	g_iSpecNotify =		g_cvSpecNotify.IntValue;
 }
 
 void vCvarChanged_Weapon(ConVar convar, const char[] oldValue, const char[] newValue) {
