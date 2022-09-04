@@ -67,13 +67,13 @@ void StringToLowerCase(char[] szInput) {
 
 public void OnConfigsExecuted() {
 	if (!g_bExecuted) {
+		vExecuteCommands();
 		g_bExecuted = true;
-		vExecuteCommandList();
 	}
 }
 
 // https://forums.alliedmods.net/showthread.php?p=2607757
-void vExecuteCommandList() {
+void vExecuteCommands() {
 	char sCommand[PLATFORM_MAX_PATH];
 	ArrayList aCmdList = g_aCmdList.Clone();
 	//g_aCmdList.Clear();
