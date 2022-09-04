@@ -431,7 +431,7 @@ Action aJoinTeam2(int client) {
 	bool bCanRespawn = g_bRespawnJoin && bIsFirstTime(client);
 	int iBot = GetClientOfUserId(g_esPlayer[client].iPlayerBot);
 	if (!iBot || !bIsValidSurBot(iBot))
-		iBot = iFindUselessSurBot(true);
+		iBot = iFindUselessSurBot(bCanRespawn);
 
 	if (!iBot) {
 		if ((iBot = iAddSurBot()) == -1) {
@@ -905,7 +905,7 @@ void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast) {
 			g_esPlayer[client].bSpecNotify = true;
 
 			if (g_iJoinFlags & JOIN_AUTOMATIC && event.GetInt("oldteam") == TEAM_NOTEAM)
-				CreateTimer(1.0, tmrJoinSurvivorTeam, event.GetInt("userid"), TIMER_REPEAT|TIMER_FLAG_NO_MAPCHANGE);
+				CreateTimer(1.0, tmrJoinTeam2, event.GetInt("userid"), TIMER_REPEAT|TIMER_FLAG_NO_MAPCHANGE);
 		}
 
 		case TEAM_SURVIVOR:
@@ -913,7 +913,7 @@ void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast) {
 	}
 }
 
-Action tmrJoinSurvivorTeam(Handle timer, int client) {
+Action tmrJoinTeam2(Handle timer, int client) {
 	if (!(g_iJoinFlags & JOIN_AUTOMATIC) || !(client = GetClientOfUserId(client)) || !IsClientInGame(client) || IsFakeClient(client) || GetClientTeam(client) > TEAM_SPECTATOR || iGetBotOfIdlePlayer(client)) 
 		return Plugin_Stop;
 
