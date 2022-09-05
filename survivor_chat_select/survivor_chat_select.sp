@@ -7,7 +7,7 @@
 #include <adminmenu>
 #include <dhooks>
 
-#define PLUGIN_VERSION "1.7.0"
+#define PLUGIN_VERSION "1.7.1"
 #define PLUGIN_NAME 	"Survivor Chat Select"
 #define PLUGIN_PREFIX	"\x01[\x04SCS\x01]"
 
@@ -676,6 +676,7 @@ bool bIsGettingUp(int client) {
 	return false;
 }
 
+int g_iPlaceHolder[MAXPLAYERS + 1];
 public void OnEntityCreated(int entity, const char[] classname) {
 	if (!g_bAutoModel)
 		return;
@@ -684,9 +685,7 @@ public void OnEntityCreated(int entity, const char[] classname) {
 		return;
 
 	if ((classname[0] == 'p' && strcmp(classname[1], "layer", false) == 0) || (classname[0] == 's' && strcmp(classname[1], "urvivor_bot", false) == 0)) {
-		if (g_bInTransition && bDuringTransition(entity))
-			return;
-
+		g_iPlaceHolder[entity] = g_bInTransition && bDuringTransition(entity) ? GetClientUserId(entity) : 0;
 		SDKHook(entity, SDKHook_SpawnPost, OnSpawnPost);
 	}
 }
@@ -698,14 +697,22 @@ bool bDuringTransition(int client) {
 void OnSpawnPost(int client) {
 	SDKUnhook(client, SDKHook_SpawnPost, OnSpawnPost);
 
+	int iPlaceHolder = g_iPlaceHolder[client];
+	g_iPlaceHolder[client] = 0;
+
 	if (!g_bAutoModel)
 		return;
 
 	if (GetClientTeam(client) == 4)
 		return;
 
-	if (!iGetIdlePlayerOfBot(client))
-		RequestFrame(OnNextFrame_SpawnPost, GetClientUserId(client));
+	int userid = GetClientUserId(client);
+	int player = iGetIdlePlayerOfBot(client);
+	if (!player || !g_bInTransition || (IsClientInGame(player) && userid == iPlaceHolder))
+		RequestFrame(OnNextFrame_SpawnPost, userid);
+
+	/*if (!iGetIdlePlayerOfBot(client))
+		RequestFrame(OnNextFrame_SpawnPost, GetClientUserId(client));*/
 }
 
 void OnNextFrame_SpawnPost(int client) {
