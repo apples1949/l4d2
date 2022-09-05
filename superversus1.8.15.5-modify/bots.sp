@@ -288,7 +288,7 @@ public Plugin myinfo = {
 public void OnPluginStart() {
 	vInitData();
 	g_smSteamIDs = new StringMap();
-	g_aMeleeScripts = new ArrayList(64);
+	g_aMeleeScripts = new ArrayList(ByteCountToCells(64));
 
 	AddCommandListener(spec_next_Listener, "spec_next");
 	HookUserMessage(GetUserMessageId("SayText2"), umSayText2, true);
@@ -342,7 +342,7 @@ public void OnPluginStart() {
 	HookEvent("round_end", 				Event_RoundEnd, 	EventHookMode_PostNoCopy);
 	HookEvent("round_start", 			Event_RoundStart, 	EventHookMode_PostNoCopy);
 	HookEvent("player_spawn", 			Event_PlayerSpawn);
-	HookEvent("player_death", 			Event_PlayerDeath, EventHookMode_Pre);
+	HookEvent("player_death", 			Event_PlayerDeath,	EventHookMode_Pre);
 	HookEvent("player_team", 			Event_PlayerTeam);
 	HookEvent("player_bot_replace", 	Event_PlayerBotReplace);
 	HookEvent("bot_player_replace", 	Event_BotPlayerReplace);
