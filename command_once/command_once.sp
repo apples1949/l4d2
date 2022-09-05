@@ -35,13 +35,18 @@ public void OnPluginStart() {
 }
 
 Action cmdExec_Once(int client, int args) {
-	vExecuteCommandList();
+	int count = iExecuteCommandList();
+	ReplyToCommand(client, "已执行 %d 条命令", count);
 	return Plugin_Handled;
 }
 
 Action cmdReset_Once(int client, int args) {
+	int count = g_aCmdList.Length;
+
 	g_aCmdList.Clear();
 	g_bExecuted = false;
+
+	ReplyToCommand(client, "已重置 %d 条命令", count);
 	return Plugin_Handled;
 }
 
@@ -62,12 +67,12 @@ Action cmdOnce(int args) {
 public void OnConfigsExecuted() {
 	if (!g_bExecuted) {
 		g_bExecuted = true;
-		vExecuteCommandList();
+		iExecuteCommandList();
 	}
 }
 
 // https://forums.alliedmods.net/showthread.php?p=2607757
-void vExecuteCommandList() {
+int iExecuteCommandList() {
 	ArrayList aCmdList = g_aCmdList.Clone();
 	//g_aCmdList.Clear();
 
@@ -84,6 +89,7 @@ void vExecuteCommandList() {
 	}
 
 	delete aCmdList;
+	return length;
 }
 
 #if DEBUG
