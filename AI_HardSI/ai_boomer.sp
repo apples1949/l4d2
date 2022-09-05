@@ -80,7 +80,7 @@ public Action OnPlayerRunCmd(int client, int &buttons) {
 	if (!IsClientInGame(client) || !IsFakeClient(client) || GetClientTeam(client) != 3 || !IsPlayerAlive(client) || GetEntProp(client, Prop_Send, "m_zombieClass") != 2 || GetEntProp(client, Prop_Send, "m_isGhost") )
 		return Plugin_Continue;
 
-	if (!bIsGrounded(client) || GetEntityMoveType(client) == MOVETYPE_LADDER || GetEntProp(client, Prop_Data, "m_nWaterLevel") > 1)
+	if (!bIsGrounded(client) || GetEntityMoveType(client) == MOVETYPE_LADDER || GetEntProp(client, Prop_Data, "m_nWaterLevel") > 1 && (!GetEntProp(client, Prop_Send, "m_hasVisibleThreats") && !bTargetSur(client)))
 		return Plugin_Continue;
 
 	static float vVel[3];
@@ -104,6 +104,10 @@ bool bIsGrounded(int client) {
 	int iEnt = GetEntPropEnt(client, Prop_Send, "m_hGroundEntity");
 	return iEnt != -1 && IsValidEntity(iEnt);
 	//return GetEntityFlags(client) & FL_ONGROUND != 0;
+}
+
+bool bTargetSur(int client) {
+	return bIsAliveSur(GetClientAimTarget(client, true));
 }
 
 Action aBunnyHop(int client, int &buttons, const float vAng[3]) {
