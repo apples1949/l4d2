@@ -159,8 +159,7 @@ bool bIsGrounded(int client) {
 	//return GetEntityFlags(client) & FL_ONGROUND != 0;
 }
 
-bool bTargetSur(int client)
-{
+bool bTargetSur(int client) {
 	return bIsAliveSur(GetClientAimTarget(client, true));
 }
 
