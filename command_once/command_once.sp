@@ -4,8 +4,8 @@
 
 #define PLUGIN_NAME				"Command Once"
 #define PLUGIN_AUTHOR			"sorallll"
-#define PLUGIN_DESCRIPTION		"在服务器读取完cfg后执行一次所有使用该命令设置的内容"
-#define PLUGIN_VERSION			"1.0.1"
+#define PLUGIN_DESCRIPTION		"在服务器首次OnConfigsExecuted()触发后执行所有使用该命令设置的内容"
+#define PLUGIN_VERSION			"1.0.2"
 #define PLUGIN_URL				""
 
 #define DEBUG					0
@@ -15,7 +15,7 @@ ArrayList
 	g_aCmdList;
 
 bool
-	g_bOnce;
+	g_bExecuted;
 
 public Plugin myinfo = {
 	name = PLUGIN_NAME,
@@ -29,11 +29,24 @@ public void OnPluginStart() {
 	g_aCmdList = new ArrayList(ByteCountToCells(ARGS_BUFFER_LENGTH));
 	CreateConVar("command_once_version", PLUGIN_VERSION, "Command Once plugin version.", FCVAR_NOTIFY|FCVAR_DONTRECORD);
 
-	RegServerCmd("cmd_once", cmdOnce, "在服务器读取完cfg后执行一次所有使用该命令设置的内容");
+	RegAdminCmd("sm_exec_once", 	cmdExec_Once,	ADMFLAG_RCON,	"手动执行");
+	RegAdminCmd("sm_reset_once",	cmdReset_Once,	ADMFLAG_RCON,	"重置命令");
+	RegServerCmd("cmd_once", cmdOnce, "在服务器首次OnConfigsExecuted()触发后执行所有使用该命令设置的内容");
+}
+
+Action cmdExec_Once(int client, int args) {
+	vExecuteCommandList();
+	return Plugin_Handled;
+}
+
+Action cmdReset_Once(int client, int args) {
+	g_aCmdList.Clear();
+	g_bExecuted = false;
+	return Plugin_Handled;
 }
 
 Action cmdOnce(int args) {
-	if (g_bOnce)
+	if (g_bExecuted)
 		return Plugin_Handled;
 
 	static char cmd[ARGS_BUFFER_LENGTH];
@@ -47,8 +60,8 @@ Action cmdOnce(int args) {
 }
 
 public void OnConfigsExecuted() {
-	if (!g_bOnce) {
-		g_bOnce = true;
+	if (!g_bExecuted) {
+		g_bExecuted = true;
 		vExecuteCommandList();
 	}
 }
@@ -56,7 +69,7 @@ public void OnConfigsExecuted() {
 // https://forums.alliedmods.net/showthread.php?p=2607757
 void vExecuteCommandList() {
 	ArrayList aCmdList = g_aCmdList.Clone();
-	g_aCmdList.Clear();
+	//g_aCmdList.Clear();
 
 	static char sCommand[ARGS_BUFFER_LENGTH];
 
