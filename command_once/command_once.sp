@@ -9,13 +9,18 @@
 #define PLUGIN_URL				""
 
 #define DEBUG					0
-#define ARGS_BUFFER_LENGTH		8192
+#define LOG_PATH				"addons/sourcemod/logs/command_once.log"
 
 ArrayList
 	g_aCmdList;
 
 bool
 	g_bExecuted;
+
+enum struct esCmd {
+	char cmd[64];
+	char value[255];
+}
 
 public Plugin myinfo = {
 	name = PLUGIN_NAME,
@@ -26,7 +31,7 @@ public Plugin myinfo = {
 };
 
 public void OnPluginStart() {
-	g_aCmdList = new ArrayList(ByteCountToCells(ARGS_BUFFER_LENGTH));
+	g_aCmdList = new ArrayList(sizeof esCmd);
 	CreateConVar("command_once_version", PLUGIN_VERSION, "Command Once plugin version.", FCVAR_NOTIFY|FCVAR_DONTRECORD);
 
 	RegAdminCmd("sm_exec_once", 	cmdExec_Once,	ADMFLAG_RCON,	"手动执行");
@@ -35,31 +40,44 @@ public void OnPluginStart() {
 }
 
 Action cmdExec_Once(int client, int args) {
-	int count = iExecuteCommandList();
-	ReplyToCommand(client, "已执行 %d 条命令", count);
+	int valid, invalid;
+	vExecuteCommandList(valid, invalid);
+	ReplyToCommand(client, "total: %d valid: %d invalid: %d", valid + invalid, valid, invalid);
 	return Plugin_Handled;
 }
 
 Action cmdReset_Once(int client, int args) {
-	int count = g_aCmdList.Length;
-
+	int iCmdCount = g_aCmdList.Length;
 	g_aCmdList.Clear();
 	g_bExecuted = false;
 
-	ReplyToCommand(client, "已重置 %d 条命令", count);
+	ReplyToCommand(client, "已重置 %d 条命令", iCmdCount);
 	return Plugin_Handled;
 }
 
 Action cmdOnce(int args) {
+	if (args < 2)
+		return Plugin_Handled;
+
 	if (g_bExecuted)
 		return Plugin_Handled;
 
-	static char cmd[ARGS_BUFFER_LENGTH];
-	if (!GetCmdArgString(cmd, sizeof cmd))
+	char cmd[64];
+	GetCmdArg(1, cmd, sizeof cmd);
+	if (g_aCmdList.FindString(cmd) != -1) {
+		//LogError("命令 \"%s\" 已存在", cmd);
 		return Plugin_Handled;
+	}
 
-	if (g_aCmdList.FindString(cmd) == -1)
-		g_aCmdList.PushString(cmd);
+	char value[255];
+	GetCmdArgString(value, sizeof value);
+	strcopy(value, sizeof value, value[strlen(cmd)]);
+	TrimString(value);
+
+	esCmd command;
+	strcopy(command.cmd, sizeof command.cmd, cmd);
+	strcopy(command.value, sizeof command.value, value);
+	g_aCmdList.PushArray(command);
 
 	return Plugin_Handled;
 }
@@ -67,48 +85,43 @@ Action cmdOnce(int args) {
 public void OnConfigsExecuted() {
 	if (!g_bExecuted) {
 		g_bExecuted = true;
-		iExecuteCommandList();
+		vExecuteCommandList();
 	}
 }
 
 // https://forums.alliedmods.net/showthread.php?p=2607757
-int iExecuteCommandList() {
+void vExecuteCommandList(int &valid = 0, int &invalid = 0) {
+	esCmd command;
+	int flags;
+	char result[254];
+	ConVar hndl;
+
 	ArrayList aCmdList = g_aCmdList.Clone();
-	//g_aCmdList.Clear();
+	int iCmdCount = aCmdList.Length;
+	for (int i; i < iCmdCount; i++) {
+		aCmdList.GetArray(i, command);
+		flags = GetCommandFlags(command.cmd);
+		SetCommandFlags(command.cmd, flags & ~FCVAR_CHEAT);
+		ServerCommandEx(result, sizeof result, "%s %s", command.cmd, command.value);
+		SetCommandFlags(command.cmd, flags);
+		if (!result[0])
+			valid++;
+		else {
+			hndl = FindConVar(command.cmd);
+			if (!hndl) {
+				LogError("%s", result);
+				invalid++;
+			}
+			else {
+				hndl.SetString(command.value, true, false);
+				valid++;
+			}
+		}
 
-	static char sCommand[ARGS_BUFFER_LENGTH];
-
-	int length = aCmdList.Length;
-	for (int i; i < length; i++) {
-		aCmdList.GetString(i, sCommand, sizeof sCommand);
-		InsertServerCommand("%s", sCommand);
-		ServerExecute();
 		#if DEBUG
-		LogCustom("logs/command_once.log", "%s", sCommand);
+		LogToFile(LOG_PATH, "cmd: \"%s\" value: \"%s\"", command.cmd, command.value);
 		#endif
 	}
 
 	delete aCmdList;
-	return length;
 }
-
-#if DEBUG
-void LogCustom(const char[] path, const char[] sMessage, any ...) {
-	static char time[32];
-	FormatTime(time, sizeof time, "%x %X");
-
-	static char map[64];
-	GetCurrentMap(map, sizeof map);
-
-	static char buffer[254];
-	VFormat(buffer, sizeof buffer, sMessage, 3);
-	Format(buffer, sizeof buffer, "[%s] [%s] %s", time, map, buffer);
-
-	static char sPath[PLATFORM_MAX_PATH];
-	BuildPath(Path_SM, sPath, sizeof sPath, path);
-	File file = OpenFile(sPath, "a+");
-	file.WriteLine("%s", buffer);
-	file.Flush();
-	delete file;
-}
-#endif
