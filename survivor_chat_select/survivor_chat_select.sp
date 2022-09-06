@@ -800,7 +800,7 @@ int iCheckLeastUsedSurvivor(int client) {
 }
 
 void vSetCharacterInfo(int client, int iCharacter, int iModelIndex) {
-	switch (g_iOrignalMapSet) {
+	/*switch (g_iOrignalMapSet) {
 		case 1: {
 			switch (iCharacter) {
 				case 4:
@@ -816,6 +816,19 @@ void vSetCharacterInfo(int client, int iCharacter, int iModelIndex) {
 					iCharacter = 2;
 			}
 		}
+	}*/
+	switch (iCharacter) {
+		case 4:
+			iCharacter = 0;
+
+		case 5:
+			iCharacter = 1;
+
+		case 6:
+			iCharacter = 3;
+
+		case 7:
+			iCharacter = 2;
 	}
 
 	SetEntProp(client, Prop_Send, "m_survivorCharacter", iCharacter);
