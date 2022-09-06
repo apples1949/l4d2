@@ -100,21 +100,21 @@ void vExecuteCommandList(int &valid = 0, int &invalid = 0) {
 	int iCmdCount = aCmdList.Length;
 	for (int i; i < iCmdCount; i++) {
 		aCmdList.GetArray(i, command);
-		flags = GetCommandFlags(command.cmd);
-		SetCommandFlags(command.cmd, flags & ~FCVAR_CHEAT);
-		ServerCommandEx(result, sizeof result, "%s %s", command.cmd, command.value);
-		SetCommandFlags(command.cmd, flags);
-		if (!result[0])
+		hndl = FindConVar(command.cmd);
+		if (hndl) {
+			hndl.SetString(command.value, true, false);
 			valid++;
+		}
 		else {
-			hndl = FindConVar(command.cmd);
-			if (!hndl) {
+			flags = GetCommandFlags(command.cmd);
+			SetCommandFlags(command.cmd, flags & ~FCVAR_CHEAT);
+			ServerCommandEx(result, sizeof result, "%s %s", command.cmd, command.value);
+			SetCommandFlags(command.cmd, flags);
+			if (!result[0])
+				valid++;
+			else {
 				LogError("%s", result);
 				invalid++;
-			}
-			else {
-				hndl.SetString(command.value, true, false);
-				valid++;
 			}
 		}
 
