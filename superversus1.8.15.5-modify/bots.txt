@@ -95,23 +95,27 @@
 				"windows"	"117" // 0x75
 			}
 
-			"CTerrorPlayer::RestoreWeapons::m_restoreCSWeaponID1"
+			/* CTerrorPlayer::RestoreWeapons(CTerrorPlayer *__hidden this) */
+			"m_hWeaponHandle"
 			{
 				"linux"		"16272"
 				"windows"	"16292"
 			}
 
-			"CTerrorPlayer::RestoreWeapons::m_iRestoreAmmoCount"
+			/* CTerrorPlayer::RestoreWeapons(CTerrorPlayer *__hidden this) */
+			"m_iRestoreAmmo"
 			{
 				"linux"		"16276"
 				"windows"	"16296"
 			}
 
-			"CTerrorPlayer::RestoreWeapons::m_restoreCSWeaponID2"
+			/* CTerrorPlayer::RestoreWeapons(CTerrorPlayer *__hidden this) */
+			"m_restoreWeaponID"
 			{
 				"linux"		"16280"
 				"windows"	"16300"
 			}
+
 			/**
 			 * CTerrorPlayer::OnIncapacitatedAsSurvivor(CTakeDamageInfo const&)
 			 *
@@ -130,10 +134,16 @@
 			 * 5. Multiply the offset by 4 to get the offset for the hidden melee weapon.
 			 **/
 
-			"CTerrorPlayer::OnIncapacitatedAsSurvivor::m_hHiddenWeapon"
+			"m_hHiddenWeapon"
 			{
 				"linux"		"16288"
 				"windows"	"16308"
+			}
+
+			"RestartScenarioTimer"
+			{
+				"linux"		"424"
+				"windows"	"424"
 			}
 		}
 
