@@ -730,7 +730,7 @@ void OnSpawnPost(int client) {
 			RequestFrame(OnNextFrame_SpawnPost, userid);
 	}
 	else {
-		if (player && IsClientInGame(player))
+		if (player && IsClientInGame(player) && GetClientUserId(player) != g_iPlaceHolder[player])
 			RequestFrame(OnNextFrame_SpawnPost, userid);
 	}
 }
