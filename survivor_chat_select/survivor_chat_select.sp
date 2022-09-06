@@ -1,13 +1,12 @@
 #pragma semicolon 1
 #pragma newdecls required
 #include <sourcemod>
-#include <sdktools>
 #include <sdkhooks>
 #include <clientprefs>
 #include <adminmenu>
 #include <dhooks>
 
-#define PLUGIN_VERSION "1.7.1"
+#define PLUGIN_VERSION "1.7.2"
 #define PLUGIN_NAME 	"Survivor Chat Select"
 #define PLUGIN_PREFIX	"\x01[\x04SCS\x01]"
 
@@ -152,7 +151,6 @@ public void OnAdminMenuReady(Handle aTopMenu) {
 
 	hTopMenu = topmenu;
 	TopMenuObject player_commands = hTopMenu.FindCategory(ADMINMENU_PLAYERCOMMANDS);
-
 	if (player_commands != INVALID_TOPMENUOBJECT)
 		hTopMenu.AddItem("sm_csc", AdminMenu_Csc, player_commands, "sm_csc", ADMFLAG_ROOT);
 }
@@ -174,7 +172,7 @@ Action cmdCsc(int client, int args) {
 	char sUserId[16];
 	char sName[MAX_NAME_LENGTH];
 
-	Menu menu = new Menu(iCscMenuHandler);
+	Menu menu = new Menu(iCsc_MenuHandler);
 	menu.SetTitle("目标玩家:");
 
 	for (int i = 1; i <= MaxClients; i++) {
@@ -191,7 +189,7 @@ Action cmdCsc(int client, int args) {
 	return Plugin_Handled;
 }
 
-int iCscMenuHandler(Menu menu, MenuAction action, int client, int param2) {
+int iCsc_MenuHandler(Menu menu, MenuAction action, int client, int param2) {
 	switch (action) {
 		case MenuAction_Select: {
 			char sItem[16];
@@ -214,7 +212,7 @@ int iCscMenuHandler(Menu menu, MenuAction action, int client, int param2) {
 }
 
 void vShowMenuAdmin(int client) {
-	Menu menu = new Menu(iShowMenuAdminMenuHandler);
+	Menu menu = new Menu(iShowMenuAdmin_MenuHandler);
 	menu.SetTitle("人物:");
 
 	menu.AddItem("0", "Nick");
@@ -230,7 +228,7 @@ void vShowMenuAdmin(int client) {
 	menu.Display(client, MENU_TIME_FOREVER);
 }
 
-int iShowMenuAdminMenuHandler(Menu menu, MenuAction action, int client, int param2) {
+int iShowMenuAdmin_MenuHandler(Menu menu, MenuAction action, int client, int param2) {
 	switch (action) {
 		case MenuAction_Select: {
 			switch (param2) {
@@ -271,7 +269,7 @@ Action cmdCsm(int client, int args) {
 	if (!bCanUse(client)) 
 		return Plugin_Handled;
 
-	Menu menu = new Menu(iCsmMenuHandler);
+	Menu menu = new Menu(iCsm_MenuHandler);
 	menu.SetTitle("选择人物:");
 
 	menu.AddItem("0", "Nick");
@@ -288,7 +286,7 @@ Action cmdCsm(int client, int args) {
 	return Plugin_Handled;
 }
 
-int iCsmMenuHandler(Menu menu, MenuAction action, int client, int param2) {
+int iCsm_MenuHandler(Menu menu, MenuAction action, int client, int param2) {
 	switch (action) {
 		case MenuAction_Select: {
 			switch (param2) {
@@ -351,6 +349,11 @@ bool bCanUse(int client, bool bCheckAdmin = true) {
 		return false;
 	}
 
+	if (bIsPinned(client)) {
+		ReplyToCommand(client, "被控制时无法使用该指令.");
+		return false;
+	}
+
 	return true;
 }
 
@@ -377,6 +380,92 @@ bool L4D_IsPlayerStaggering(int client) {
 	}
 
 	return true;
+}
+
+//https://github.com/LuxLuma/L4D2_Adrenaline_Recovery
+bool bIsGettingUp(int client) {
+	static char sModel[31];
+	GetClientModel(client, sModel, sizeof sModel);
+	switch (sModel[29]) {
+		case 'b': {	//nick
+			switch (GetEntProp(client, Prop_Send, "m_nSequence")) {
+				case 680, 667, 671, 672, 630, 620, 627:
+					return true;
+			}
+		}
+
+		case 'd': {	//rochelle
+			switch (GetEntProp(client, Prop_Send, "m_nSequence")) {
+				case 687, 679, 678, 674, 638, 635, 629:
+					return true;
+			}
+		}
+
+		case 'c': {	//coach
+			switch (GetEntProp(client, Prop_Send, "m_nSequence")) {
+				case 669, 661, 660, 656, 630, 627, 621:
+					return true;
+			}
+		}
+
+		case 'h': {	//ellis
+			switch (GetEntProp(client, Prop_Send, "m_nSequence")) {
+				case 684, 676, 675, 671, 625, 635, 632:
+					return true;
+			}
+		}
+
+		case 'v': {	//bill
+			switch (GetEntProp(client, Prop_Send, "m_nSequence")) {
+				case 772, 764, 763, 759, 538, 535, 528:
+					return true;
+			}
+		}
+
+		case 'n': {	//zoey
+			switch (GetEntProp(client, Prop_Send, "m_nSequence")) {
+				case 824, 823, 819, 809, 547, 544, 537:
+					return true;
+			}
+		}
+
+		case 'e': {	//francis
+			switch (GetEntProp(client, Prop_Send, "m_nSequence")) {
+				case 775, 767, 766, 762, 541, 539, 531:
+					return true;
+			}
+		}
+
+		case 'a': {	//louis
+			switch (GetEntProp(client, Prop_Send, "m_nSequence")) {
+				case 772, 764, 763, 759, 538, 535, 528:
+					return true;
+			}
+		}
+
+		case 'w': {	//adawong
+			switch (GetEntProp(client, Prop_Send, "m_nSequence")) {
+				case 687, 679, 678, 674, 638, 635, 629:
+					return true;
+			}
+		}
+	}
+
+	return false;
+}
+
+bool bIsPinned(int client) {
+	if (GetEntPropEnt(client, Prop_Send, "m_tongueOwner") > 0)
+		return true;
+	if (GetEntPropEnt(client, Prop_Send, "m_pounceAttacker") > 0)
+		return true;
+	if (GetEntPropEnt(client, Prop_Send, "m_jockeyAttacker") > 0)
+		return true;
+	if (GetEntPropEnt(client, Prop_Send, "m_carryAttacker") > 0)
+		return true;
+	if (GetEntPropEnt(client, Prop_Send, "m_pummelAttacker") > 0)
+		return true;
+	return false;
 }
 
 Action cmdZoeyUse(int client, int args) {
@@ -604,78 +693,6 @@ void vSetCharacter(int client, int iCharacter, int iModelIndex, bool bSave = tru
 	}
 }
 
-//https://github.com/LuxLuma/L4D2_Adrenaline_Recovery
-bool bIsGettingUp(int client) {
-	static char sModel[31];
-	GetClientModel(client, sModel, sizeof sModel);
-	switch (sModel[29]) {
-		case 'b': {	//nick
-			switch (GetEntProp(client, Prop_Send, "m_nSequence")) {
-				case 680, 667, 671, 672, 630, 620, 627:
-					return true;
-			}
-		}
-
-		case 'd': {	//rochelle
-			switch (GetEntProp(client, Prop_Send, "m_nSequence")) {
-				case 687, 679, 678, 674, 638, 635, 629:
-					return true;
-			}
-		}
-
-		case 'c': {	//coach
-			switch (GetEntProp(client, Prop_Send, "m_nSequence")) {
-				case 669, 661, 660, 656, 630, 627, 621:
-					return true;
-			}
-		}
-
-		case 'h': {	//ellis
-			switch (GetEntProp(client, Prop_Send, "m_nSequence")) {
-				case 684, 676, 675, 671, 625, 635, 632:
-					return true;
-			}
-		}
-
-		case 'v': {	//bill
-			switch (GetEntProp(client, Prop_Send, "m_nSequence")) {
-				case 772, 764, 763, 759, 538, 535, 528:
-					return true;
-			}
-		}
-
-		case 'n': {	//zoey
-			switch (GetEntProp(client, Prop_Send, "m_nSequence")) {
-				case 824, 823, 819, 809, 547, 544, 537:
-					return true;
-			}
-		}
-
-		case 'e': {	//francis
-			switch (GetEntProp(client, Prop_Send, "m_nSequence")) {
-				case 775, 767, 766, 762, 541, 539, 531:
-					return true;
-			}
-		}
-
-		case 'a': {	//louis
-			switch (GetEntProp(client, Prop_Send, "m_nSequence")) {
-				case 772, 764, 763, 759, 538, 535, 528:
-					return true;
-			}
-		}
-
-		case 'w': {	//adawong
-			switch (GetEntProp(client, Prop_Send, "m_nSequence")) {
-				case 687, 679, 678, 674, 638, 635, 629:
-					return true;
-			}
-		}
-	}
-
-	return false;
-}
-
 int g_iPlaceHolder[MAXPLAYERS + 1];
 public void OnEntityCreated(int entity, const char[] classname) {
 	if (!g_bAutoModel)
@@ -763,6 +780,7 @@ int iCheckLeastUsedSurvivor(int client) {
 			continue;
 
 		GetClientModel(i, sModel, sizeof sModel);
+		StringToLowerCase(sModel);
 		if (!g_smSurvivorModels.GetValue(sModel, iCharBuff))
 			continue;
 		
@@ -799,6 +817,20 @@ int iCheckLeastUsedSurvivor(int client) {
 	return iCharBuff;
 }
 
+/**
+ * Converts the given string to lower case
+ *
+ * @param szString	Input string for conversion and also the output
+ * @return			void
+ */
+void StringToLowerCase(char[] szInput) {
+	int iIterator;
+	while (szInput[iIterator] != EOS) {
+		szInput[iIterator] = CharToLower(szInput[iIterator]);
+		++iIterator;
+	}
+}
+
 void vSetCharacterInfo(int client, int iCharacter, int iModelIndex) {
 	switch (g_iOrignalMapSet) {
 		case 1: {
@@ -826,7 +858,7 @@ void vSetCharacterInfo(int client, int iCharacter, int iModelIndex) {
 		SetClientInfo(client, "name", g_sSurvivorNames[iModelIndex]);
 		g_bHideNameChange = false;
 	}
-		
+
 	vReEquipWeapons(client);
 }
 
