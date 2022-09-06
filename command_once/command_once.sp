@@ -5,7 +5,7 @@
 #define PLUGIN_NAME				"Command Once"
 #define PLUGIN_AUTHOR			"sorallll"
 #define PLUGIN_DESCRIPTION		"在服务器首次OnConfigsExecuted()触发后执行所有使用该命令设置的内容"
-#define PLUGIN_VERSION			"1.0.2"
+#define PLUGIN_VERSION			"1.0.3"
 #define PLUGIN_URL				""
 
 #define DEBUG					0
@@ -40,18 +40,18 @@ public void OnPluginStart() {
 }
 
 Action cmdExec_Once(int client, int args) {
-	int valid, invalid;
-	vExecuteCommandList(valid, invalid);
-	ReplyToCommand(client, "total: %d valid: %d invalid: %d", valid + invalid, valid, invalid);
+	int invalid;
+	int count = iExecuteCmds(invalid);
+	ReplyToCommand(client, "total: %d valid: %d invalid: %d", count, count - invalid, invalid);
 	return Plugin_Handled;
 }
 
 Action cmdReset_Once(int client, int args) {
-	int iCmdCount = g_aCmdList.Length;
+	int count = g_aCmdList.Length;
 	g_aCmdList.Clear();
 	g_bExecuted = false;
 
-	ReplyToCommand(client, "已重置 %d 条命令", iCmdCount);
+	ReplyToCommand(client, "已重置 %d 条命令", count);
 	return Plugin_Handled;
 }
 
@@ -85,38 +85,35 @@ Action cmdOnce(int args) {
 public void OnConfigsExecuted() {
 	if (!g_bExecuted) {
 		g_bExecuted = true;
-		vExecuteCommandList();
+		RequestFrame(OnNextFrame_Executed);
 	}
 }
 
 // https://forums.alliedmods.net/showthread.php?p=2607757
-void vExecuteCommandList(int &valid = 0, int &invalid = 0) {
+void OnNextFrame_Executed() {
+	iExecuteCmds();
+}
+
+int iExecuteCmds(int &invalid = 0) {
 	esCmd command;
-	int flags;
 	char result[254];
 	ConVar hndl;
 
 	ArrayList aCmdList = g_aCmdList.Clone();
-	int iCmdCount = aCmdList.Length;
-	for (int i; i < iCmdCount; i++) {
+	int count = aCmdList.Length;
+	for (int i; i < count; i++) {
 		aCmdList.GetArray(i, command);
+		ServerCommandEx(result, sizeof result, "%s %s", command.cmd, command.value);
+		if (!result[0])
+			continue;
+
 		hndl = FindConVar(command.cmd);
-		if (hndl) {
+		if (!hndl) {
+			LogError("%s", result);
+			invalid++;
+		}
+		else
 			hndl.SetString(command.value, true, false);
-			valid++;
-		}
-		else {
-			flags = GetCommandFlags(command.cmd);
-			SetCommandFlags(command.cmd, flags & ~FCVAR_CHEAT);
-			ServerCommandEx(result, sizeof result, "%s %s", command.cmd, command.value);
-			SetCommandFlags(command.cmd, flags);
-			if (!result[0])
-				valid++;
-			else {
-				LogError("%s", result);
-				invalid++;
-			}
-		}
 
 		#if DEBUG
 		LogToFile(LOG_PATH, "cmd: \"%s\" value: \"%s\"", command.cmd, command.value);
@@ -124,4 +121,5 @@ void vExecuteCommandList(int &valid = 0, int &invalid = 0) {
 	}
 
 	delete aCmdList;
+	return count;
 }
