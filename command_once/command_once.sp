@@ -56,7 +56,7 @@ Action cmdReset_Once(int client, int args) {
 }
 
 Action cmdOnce(int args) {
-	if (args < 2)
+	if (args < 1)
 		return Plugin_Handled;
 
 	if (g_bExecuted)
@@ -78,7 +78,6 @@ Action cmdOnce(int args) {
 	strcopy(command.cmd, sizeof command.cmd, cmd);
 	strcopy(command.value, sizeof command.value, value);
 	g_aCmdList.PushArray(command);
-
 	return Plugin_Handled;
 }
 
