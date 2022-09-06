@@ -725,11 +725,14 @@ void OnSpawnPost(int client) {
 
 	int userid = GetClientUserId(client);
 	int player = iGetIdlePlayerOfBot(client);
-	if (!player || !g_bInTransition || (IsClientInGame(player) && userid == iPlaceHolder))
-		RequestFrame(OnNextFrame_SpawnPost, userid);
-
-	/*if (!iGetIdlePlayerOfBot(client))
-		RequestFrame(OnNextFrame_SpawnPost, GetClientUserId(client));*/
+	if (userid != iPlaceHolder) {
+		if (!player)
+			RequestFrame(OnNextFrame_SpawnPost, userid);
+	}
+	else {
+		if (player && IsClientInGame(player))
+			RequestFrame(OnNextFrame_SpawnPost, userid);
+	}
 }
 
 void OnNextFrame_SpawnPost(int client) {
