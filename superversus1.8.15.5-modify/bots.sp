@@ -392,7 +392,7 @@ Action cmdJoinTeam1(int client, int args) {
 	}
 
 	if (idle)
-		SDKCall(g_hSDK_CTerrorPlayer_TakeOverBot, client, true);
+		TakeOverBot(client);
 
 	ChangeClientTeam(client, TEAM_SPECTATOR);
 	return Plugin_Handled;
@@ -475,7 +475,9 @@ Action aJoinTeam2(int client) {
 
 		SetHumanSpec(findBot, client);
 		if (takeOver)
-			SDKCall(g_hSDK_CTerrorPlayer_TakeOverBot, client, true);
+			TakeOverBot(client);
+		else
+			SetObsMode(client, findBot);
 	}
 	else {
 		SetHumanSpec(findBot, client);
@@ -485,10 +487,12 @@ Action aJoinTeam2(int client) {
 				PrintToChat(client, "\x05重复加入默认为\x01-> \x04死亡状态\x01.");
 			}
 			else if (TakeOverAllowed(findBot, findBot))
-				SDKCall(g_hSDK_CTerrorPlayer_TakeOverBot, client, true);
+				TakeOverBot(client);
+			else
+				SetObsMode(client, findBot);
 		}
 		else {
-			SDKCall(g_hSDK_CTerrorPlayer_TakeOverBot, client, true);
+			TakeOverBot(client);
 			PrintToChat(client, "\x05重复加入默认为\x01-> \x04死亡状态\x01.");
 		}
 	}
@@ -594,8 +598,10 @@ int TakeOverBot_Handler(Menu menu, MenuAction action, int param1, int param2) {
 			menu.GetItem(param2, item, sizeof item);
 			if (item[0] == 'o') {
 				bot = GetEntPropEnt(param1, Prop_Send, "m_hObserverTarget");
-				if (bot > 0 && IsValidSurBot(bot))
-					TakeOverBot(param1, bot);
+				if (bot > 0 && IsValidSurBot(bot)) {
+					SetHumanSpec(bot, param1);
+					TakeOverBot(param1);
+				}
 				else
 					PrintToChat(param1, "当前旁观目标非可接管BOT.");
 			}
@@ -611,7 +617,8 @@ int TakeOverBot_Handler(Menu menu, MenuAction action, int param1, int param2) {
 						if (team != 1)
 							ChangeClientTeam(param1, TEAM_SPECTATOR);
 
-						TakeOverBot(param1, bot);
+						SetHumanSpec(bot, param1);
+						TakeOverBot(param1);
 					}
 				}
 			}
@@ -890,8 +897,10 @@ void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast) {
 			continue;
 
 		idlePlayer = GetIdlePlayerOfBot(i);
-		if (idlePlayer && IsClientInGame(idlePlayer) && !IsFakeClient(idlePlayer) && GetClientTeam(idlePlayer) == TEAM_SPECTATOR)
-			TakeOverBot(idlePlayer, i);
+		if (idlePlayer && IsClientInGame(idlePlayer) && !IsFakeClient(idlePlayer) && GetClientTeam(idlePlayer) == TEAM_SPECTATOR) {
+			SetHumanSpec(i, idlePlayer);
+			TakeOverBot(idlePlayer);
+		}
 	}
 }
 
@@ -919,8 +928,10 @@ void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast) {
 		return;
 
 	int idlePlayer = GetIdlePlayerOfBot(client);
-	if (idlePlayer && IsClientInGame(idlePlayer) && !IsFakeClient(idlePlayer) && GetClientTeam(idlePlayer) == TEAM_SPECTATOR)
-		TakeOverBot(idlePlayer, client);
+	if (idlePlayer && IsClientInGame(idlePlayer) && !IsFakeClient(idlePlayer) && GetClientTeam(idlePlayer) == TEAM_SPECTATOR) {
+		SetHumanSpec(client, idlePlayer);
+		TakeOverBot(idlePlayer);
+	}
 }
 
 void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast) {
@@ -1510,13 +1521,15 @@ enum Obs_Mode
 **/
 void SetHumanSpec(int bot, int client) {
 	SDKCall(g_hSDK_SurvivorBot_SetHumanSpectator, bot, client);
+}
+
+void SetObsMode(int client, int bot) {
 	SetEntPropEnt(client, Prop_Send, "m_hObserverTarget", bot);
 	if (GetEntProp(client, Prop_Send, "m_iObserverMode") == 6)
 		SetEntProp(client, Prop_Send, "m_iObserverMode", 5);
 }
 
-void TakeOverBot(int client, int bot) {
-	SDKCall(g_hSDK_SurvivorBot_SetHumanSpectator, bot, client);
+void TakeOverBot(int client) {
 	SDKCall(g_hSDK_CTerrorPlayer_TakeOverBot, client, true);
 }
 
@@ -1588,6 +1601,7 @@ MRESReturn DD_CTerrorPlayer_GoAwayFromKeyboard_Post(int pThis, DHookReturn hRetu
 	if (g_bShouldFixAFK && g_iSurvivorBot > 0 && IsFakeClient(g_iSurvivorBot)) {
 		g_bShouldIgnore = true;
 		SetHumanSpec(g_iSurvivorBot, pThis);
+		SetObsMode(pThis, g_iSurvivorBot);
 		WriteTakeoverPanel(pThis, g_iSurvivorBot);
 		g_bShouldIgnore = false;
 	}
