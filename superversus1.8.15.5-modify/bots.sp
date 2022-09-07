@@ -477,19 +477,23 @@ Action aJoinTeam2(int client) {
 		if (takeOver)
 			TakeOverBot(client);
 		else
-			SetObsMode(client, findBot);
+			SetObsMode(client);
 	}
 	else {
 		SetHumanSpec(findBot, client);
 		if (IsPlayerAlive(findBot)) {
 			if (newBot) {
-				SDKCall(g_hSDK_CCSPlayer_State_Transition, newBot, 6);
+				TeleportToSurvivor(findBot); //传送旁观位置
+				SDKCall(g_hSDK_CCSPlayer_State_Transition, findBot, 6);
+				TakeOverBot(client);
 				PrintToChat(client, "\x05重复加入默认为\x01-> \x04死亡状态\x01.");
 			}
-			else if (TakeOverAllowed(findBot, findBot))
-				TakeOverBot(client);
-			else
-				SetObsMode(client, findBot);
+			else {
+				if (TakeOverAllowed(findBot, findBot))
+					TakeOverBot(client);
+				else
+					SetObsMode(client);
+			}
 		}
 		else {
 			TakeOverBot(client);
@@ -1523,10 +1527,8 @@ void SetHumanSpec(int bot, int client) {
 	SDKCall(g_hSDK_SurvivorBot_SetHumanSpectator, bot, client);
 }
 
-void SetObsMode(int client, int bot) {
-	SetEntPropEnt(client, Prop_Send, "m_hObserverTarget", bot);
-	if (GetEntProp(client, Prop_Send, "m_iObserverMode") == 6)
-		SetEntProp(client, Prop_Send, "m_iObserverMode", 5);
+void SetObsMode(int client) {
+	SetEntProp(client, Prop_Send, "m_iObserverMode", 5);
 }
 
 void TakeOverBot(int client) {
@@ -1601,7 +1603,7 @@ MRESReturn DD_CTerrorPlayer_GoAwayFromKeyboard_Post(int pThis, DHookReturn hRetu
 	if (g_bShouldFixAFK && g_iSurvivorBot > 0 && IsFakeClient(g_iSurvivorBot)) {
 		g_bShouldIgnore = true;
 		SetHumanSpec(g_iSurvivorBot, pThis);
-		SetObsMode(pThis, g_iSurvivorBot);
+		SetObsMode(pThis);
 		WriteTakeoverPanel(pThis, g_iSurvivorBot);
 		g_bShouldIgnore = false;
 	}
