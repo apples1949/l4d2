@@ -42,7 +42,7 @@ Address
 ConVar
 	g_cvBotsLimit,
 	g_cvJoinFlags,
-	g_cvRespawnJoin,
+	g_cvRespawn,
 	g_cvSpecLimit,
 	g_cvSpecNotify,
 	g_cvGiveType,
@@ -59,11 +59,12 @@ int
 	g_iOff_m_iRestoreAmmo,
 	g_iOff_m_restoreWeaponID,
 	g_iOff_m_hHiddenWeapon,
+	g_iOff_m_isOutOfCheckpoint,
 	g_iOff_RestartScenarioTimer;
 
 bool
 	g_bLateLoad,
-	g_bRespawnJoin,
+	g_bRespawn,
 	g_bGiveType,
 	g_bGiveTime,
 	g_bInSpawnTime,
@@ -75,21 +76,21 @@ bool
 enum struct esWeapon {
 	ConVar cvFlags;
 
-	int iCount;
-	int iAllowed[20];
+	int count;
+	int allowed[20];
 }
 
 esWeapon
 	g_esWeapon[MAX_SLOTS];
 
 enum struct esPlayer {
-	int iPlayerBot;
-	int iBotPlayer;
+	int bot;
+	int player;
 
-	bool bSpecNotify;
+	bool notify;
 
-	char sModel[PLATFORM_MAX_PATH];
-	char sSteamID[32];
+	char model[PLATFORM_MAX_PATH];
+	char SteamID[32];
 }
 
 esPlayer
@@ -292,7 +293,7 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 }
 
 public void OnPluginStart() {
-	vInitData();
+	InitData();
 	g_smSteamIDs = new StringMap();
 	g_aMeleeScripts = new ArrayList(ByteCountToCells(64));
 
@@ -303,7 +304,7 @@ public void OnPluginStart() {
 
 	g_cvBotsLimit = 			CreateConVar("bots_limit", 				"4", 		"开局Bot的数量", CVAR_FLAGS, true, 1.0, true, 31.0);
 	g_cvJoinFlags = 			CreateConVar("bots_join_flags", 		"3", 		"加入生还者的方法. \n0=插件不进行处理, 1=输入!join手动加入, 2=进服后插件自动加入, 3=手动+自动", CVAR_FLAGS);
-	g_cvRespawnJoin = 			CreateConVar("bots_respawn_join", 		"1", 		"玩家第一次进服时如果没有存活的Bot可以接管是否复活. \n0=否, 1=是.", CVAR_FLAGS);
+	g_cvRespawn = 				CreateConVar("bots_join_respawn", 		"1", 		"玩家第一次进服时如果没有存活的Bot可以接管是否复活. \n0=否, 1=是.", CVAR_FLAGS);
 	g_cvSpecLimit = 			CreateConVar("bots_spec_limit", 		"1", 		"当完全旁观玩家达到多少个时禁止使用sm_spec命令.", CVAR_FLAGS);
 	g_cvSpecNotify = 			CreateConVar("bots_spec_notify", 		"3", 		"完全旁观玩家点击鼠标左键时, 提示加入生还者的方式 \n0=不提示, 1=聊天栏, 2=屏幕中央, 3=弹出菜单.", CVAR_FLAGS);
 	g_esWeapon[0].cvFlags = 	CreateConVar("bots_give_slot0", 		"131071", 	"主武器给什么. \n0=不给, 131071=所有, 7=微冲, 1560=霰弹, 30720=狙击, 31=Tier1, 32736=Tier2, 98304=Tier0.", CVAR_FLAGS);
@@ -318,22 +319,22 @@ public void OnPluginStart() {
 	g_cvSurvivorLimit.Flags &= ~FCVAR_NOTIFY; // 移除ConVar变动提示
 	g_cvSurvivorLimit.SetBounds(ConVarBound_Upper, true, 31.0);
 
-	g_cvBotsLimit.AddChangeHook(vCvarChanged_Limit);
-	g_cvSurvivorLimit.AddChangeHook(vCvarChanged_Limit);
+	g_cvBotsLimit.AddChangeHook(CvarChanged_Limit);
+	g_cvSurvivorLimit.AddChangeHook(CvarChanged_Limit);
 
-	g_cvJoinFlags.AddChangeHook(vCvarChanged_General);
-	g_cvRespawnJoin.AddChangeHook(vCvarChanged_General);
-	g_cvSpecLimit.AddChangeHook(vCvarChanged_General);
-	g_cvSpecNotify.AddChangeHook(vCvarChanged_General);
+	g_cvJoinFlags.AddChangeHook(CvarChanged_General);
+	g_cvRespawn.AddChangeHook(CvarChanged_General);
+	g_cvSpecLimit.AddChangeHook(CvarChanged_General);
+	g_cvSpecNotify.AddChangeHook(CvarChanged_General);
 
-	g_esWeapon[0].cvFlags.AddChangeHook(vCvarChanged_Weapon);
-	g_esWeapon[1].cvFlags.AddChangeHook(vCvarChanged_Weapon);
-	g_esWeapon[2].cvFlags.AddChangeHook(vCvarChanged_Weapon);
-	g_esWeapon[3].cvFlags.AddChangeHook(vCvarChanged_Weapon);
-	g_esWeapon[4].cvFlags.AddChangeHook(vCvarChanged_Weapon);
+	g_esWeapon[0].cvFlags.AddChangeHook(CvarChanged_Weapon);
+	g_esWeapon[1].cvFlags.AddChangeHook(CvarChanged_Weapon);
+	g_esWeapon[2].cvFlags.AddChangeHook(CvarChanged_Weapon);
+	g_esWeapon[3].cvFlags.AddChangeHook(CvarChanged_Weapon);
+	g_esWeapon[4].cvFlags.AddChangeHook(CvarChanged_Weapon);
 
-	g_cvGiveType.AddChangeHook(vCvarChanged_Weapon);
-	g_cvGiveTime.AddChangeHook(vCvarChanged_Weapon);
+	g_cvGiveType.AddChangeHook(CvarChanged_Weapon);
+	g_cvGiveTime.AddChangeHook(CvarChanged_Weapon);
 	
 	AutoExecConfig(true, "bots");
 
@@ -355,63 +356,58 @@ public void OnPluginStart() {
 	HookEvent("finale_vehicle_leaving", Event_FinaleVehicleLeaving);
 
 	if (g_bLateLoad)
-		g_bRoundStart = !bOnEndScenario();
+		g_bRoundStart = !OnEndScenario();
 }
 
 public void OnPluginEnd() {
-	vStatsConditionPatch(false);
+	StatsConditionPatch(false);
 }
 
 Action cmdTeamPanel(int client, int args) {
 	if (!client || !IsClientInGame(client) || IsFakeClient(client))
 		return Plugin_Handled;
 
-	vDisplayTeamPanel(client);
+	DisplayTeamPanel(client);
 	return Plugin_Handled;
 }
 
 Action cmdJoinTeam1(int client, int args) {
+	if (!client || !IsClientInGame(client) || IsFakeClient(client))
+		return Plugin_Handled;
+
 	if (!g_bRoundStart) {
 		ReplyToCommand(client, "回合尚未开始.");
 		return Plugin_Handled;
 	}
 
-	if (!client || !IsClientInGame(client) || IsFakeClient(client))
-		return Plugin_Handled;
-
-	bool bIdle = !!iGetBotOfIdlePlayer(client);
-	if (!bIdle && GetClientTeam(client) == TEAM_SPECTATOR) {
+	bool idle = !!GetBotOfIdlePlayer(client);
+	if (!idle && GetClientTeam(client) == TEAM_SPECTATOR) {
 		PrintToChat(client, "你当前已在旁观者队伍.");
 		return Plugin_Handled;
 	}
 	
-	if (iGetSpectatorCount() >= g_iSpecLimit) {
+	if (GetSpectatorCount() >= g_iSpecLimit) {
 		PrintToChat(client, "\x05当前旁观者数量已达到限制\x01-> \x04%d\x01.", g_iSpecLimit);
 		return Plugin_Handled;
 	}
 
-	if (bIdle)
+	if (idle)
 		SDKCall(g_hSDK_CTerrorPlayer_TakeOverBot, client, true);
 
 	ChangeClientTeam(client, TEAM_SPECTATOR);
 	return Plugin_Handled;
 }
 
-int iGetSpectatorCount() {
-	int iCount;
+int GetSpectatorCount() {
+	int count;
 	for (int i = 1; i <= MaxClients; i++) {
-		if (IsClientInGame(i) && !IsFakeClient(i) && GetClientTeam(i) == TEAM_SPECTATOR && !iGetBotOfIdlePlayer(i))
-			iCount++;
+		if (IsClientInGame(i) && !IsFakeClient(i) && GetClientTeam(i) == TEAM_SPECTATOR && !GetBotOfIdlePlayer(i))
+			count++;
 	}
-	return iCount;
+	return count;
 }
 
 Action cmdJoinTeam2(int client, int args) {
-	if (!g_bRoundStart) {
-		ReplyToCommand(client, "回合尚未开始.");
-		return Plugin_Handled;
-	}
-
 	if (!client || !IsClientInGame(client) || IsFakeClient(client))
 		return Plugin_Handled;
 
@@ -427,7 +423,7 @@ Action cmdJoinTeam2(int client, int args) {
 
 	switch (GetClientTeam(client)) {
 		case TEAM_SPECTATOR: {
-			if (iGetBotOfIdlePlayer(client))
+			if (GetBotOfIdlePlayer(client))
 				return Plugin_Handled;
 		}
 
@@ -444,82 +440,90 @@ Action cmdJoinTeam2(int client, int args) {
 }
 
 Action aJoinTeam2(int client) {
-	bool bCanRespawn = g_bRespawnJoin && bIsFirstTime(client);
-	int iBot = GetClientOfUserId(g_esPlayer[client].iPlayerBot);
-	if (!iBot || !bIsValidSurBot(iBot))
-		iBot = iFindUselessSurBot(bCanRespawn);
+	int findBot = GetClientOfUserId(g_esPlayer[client].bot);
+	bool canRespawn = g_bRespawn && IsFirstTime(client);
+	if (!findBot || !IsValidSurBot(findBot))
+		findBot = FindUselessSurBot(canRespawn);
 
-	if (!iBot) {
-		if ((iBot = iAddSurBot()) == -1) {
+	bool newBot;
+	if (!findBot) {
+		if ((findBot= SpawnSurBot()) == -1) {
 			ChangeClientTeam(client, TEAM_SURVIVOR);
 			if (!IsPlayerAlive(client)) {
-				if (bCanRespawn)
-					vRoundRespawn(client);
+				if (canRespawn)
+					RoundRespawn(client);
 				else
 					PrintToChat(client, "\x05重复加入默认为\x01-> \x04死亡状态\x01.");
 			}
 	
 			if (IsPlayerAlive(client))
-				vTeleportToSurvivor(client);
+				TeleportToSurvivor(client);
 
 			return Plugin_Handled;
 		}
-		else if (IsPlayerAlive(iBot)) {
-			if (bCanRespawn)
-				vTeleportToSurvivor(iBot);
-			else
-				SDKCall(g_hSDK_CCSPlayer_State_Transition, iBot, 6);
-		}
+		newBot = true;
 	}
 
-	if (bCanRespawn) {
-		if (!IsPlayerAlive(iBot)) {
-			vRoundRespawn(iBot);
-			vTeleportToSurvivor(iBot);
+	bool takeOver;
+	if (canRespawn) {
+		if (!IsPlayerAlive(findBot)) {
+			RoundRespawn(client);
+			takeOver = TakeOverAllowed(TeleportToSurvivor(findBot), findBot);
 		}
+		else
+			takeOver = TakeOverAllowed(newBot ? TeleportToSurvivor(findBot) : findBot, findBot);
 
-		vSetHumanSpectator(iBot, client);
+		SetHumanSpec(findBot, client);
+		if (takeOver)
+			SDKCall(g_hSDK_CTerrorPlayer_TakeOverBot, client, true);
 	}
 	else {
-		if (IsPlayerAlive(iBot))
-			vSetHumanSpectator(iBot, client);
+		SetHumanSpec(findBot, client);
+		if (IsPlayerAlive(findBot)) {
+			if (newBot) {
+				SDKCall(g_hSDK_CCSPlayer_State_Transition, newBot, 6);
+				PrintToChat(client, "\x05重复加入默认为\x01-> \x04死亡状态\x01.");
+			}
+			else if (TakeOverAllowed(findBot, findBot))
+				SDKCall(g_hSDK_CTerrorPlayer_TakeOverBot, client, true);
+		}
 		else {
-			vTakeOverBot(client, iBot);
+			SDKCall(g_hSDK_CTerrorPlayer_TakeOverBot, client, true);
 			PrintToChat(client, "\x05重复加入默认为\x01-> \x04死亡状态\x01.");
-		}		
+		}
 	}
 
 	return Plugin_Handled;
 }
 
 Action cmdTakeOverBot(int client, int args) {
+	if (!client || !IsClientInGame(client) || IsFakeClient(client))
+		return Plugin_Handled;
+
 	if (!g_bRoundStart) {
 		ReplyToCommand(client, "回合尚未开始.");
 		return Plugin_Handled;
 	}
 
-	if (!client || !IsClientInGame(client) || IsFakeClient(client))
-		return Plugin_Handled;
-
-	if (!iIsAllowedTeam(client)) {
+	if (!IsAllowedTeam(client)) {
 		PrintToChat(client, "不符合接管条件.");
 		return Plugin_Handled;
 	}
 
-	if (!iFindUselessSurBot(true)) {
+	if (!FindUselessSurBot(true)) {
 		PrintToChat(client, "\x01没有 \x05空闲的电脑BOT \x01可以接管\x01.");
 		return Plugin_Handled;
 	}
 
-	vTakeOverBotMenu(client);
+	TakeOverBotMenu(client);
 	return Plugin_Handled;
 }
 
-int iIsAllowedTeam(int client) {
+int IsAllowedTeam(int client) {
 	int team = GetClientTeam(client);
 	switch (team) {
 		case TEAM_SPECTATOR: {
-			if (iGetBotOfIdlePlayer(client))
+			if (GetBotOfIdlePlayer(client))
 				team = 0;
 		}
 
@@ -531,19 +535,19 @@ int iIsAllowedTeam(int client) {
 	return team;
 }
 
-void vTakeOverBotMenu(int client) {
+void TakeOverBotMenu(int client) {
 	char item[12];
 	char info[64];
-	Menu menu = new Menu(iTakeOverBot_MenuHandler);
+	Menu menu = new Menu(TakeOverBot_Handler);
 	menu.SetTitle("- 请选择接管目标 - [!tkbot]");
 	menu.AddItem("o", "当前旁观目标");
 
 	for (int i = 1; i <= MaxClients; i++) {
-		if (!bIsValidSurBot(i))
+		if (!IsValidSurBot(i))
 			continue;
 
 		FormatEx(item, sizeof item, "%d", GetClientUserId(i));
-		FormatEx(info, sizeof info, "%s - %s", IsPlayerAlive(i) ? "存活" : "死亡", sGetModelName(i));
+		FormatEx(info, sizeof info, "%s - %s", IsPlayerAlive(i) ? "存活" : "死亡", GetModelName(i));
 		menu.AddItem(item, info);
 	}
 
@@ -553,61 +557,61 @@ void vTakeOverBotMenu(int client) {
 }
 
 // L4D2_Adrenaline_Recovery (https://github.com/LuxLuma/L4D2_Adrenaline_Recovery)
-char[] sGetModelName(int client) {
-	int iChar;
+char[] GetModelName(int client) {
 	char sModel[31];
+	int charIndex;
 	GetClientModel(client, sModel, sizeof sModel);
 	switch (sModel[29]) {
 		case 'b'://nick
-			iChar = 0;
+			charIndex = 0;
 		case 'd'://rochelle
-			iChar = 1;
+			charIndex = 1;
 		case 'c'://coach
-			iChar = 2;
+			charIndex = 2;
 		case 'h'://ellis
-			iChar = 3;
+			charIndex = 3;
 		case 'v'://bill
-			iChar = 4;
+			charIndex = 4;
 		case 'n'://zoey
-			iChar = 5;
+			charIndex = 5;
 		case 'e'://francis
-			iChar = 6;
+			charIndex = 6;
 		case 'a'://louis
-			iChar = 7;
+			charIndex = 7;
 		default:
-			iChar = 8;
+			charIndex = 8;
 	}
 
-	strcopy(sModel, sizeof sModel, iChar == 8 ? "未知" : g_sSurvivorNames[iChar]);
+	strcopy(sModel, sizeof sModel, charIndex == 8 ? "未知" : g_sSurvivorNames[charIndex]);
 	return sModel;
 }
 
-int iTakeOverBot_MenuHandler(Menu menu, MenuAction action, int param1, int param2) {
+int TakeOverBot_Handler(Menu menu, MenuAction action, int param1, int param2) {
 	switch (action) {
 		case MenuAction_Select: {
-			int iBot;
+			int bot;
 			char item[12];
 			menu.GetItem(param2, item, sizeof item);
 			if (item[0] == 'o') {
-				iBot = GetEntPropEnt(param1, Prop_Send, "m_hObserverTarget");
-				if (iBot > 0 && bIsValidSurBot(iBot))
-					vTakeOverBot(param1, iBot);
+				bot = GetEntPropEnt(param1, Prop_Send, "m_hObserverTarget");
+				if (bot > 0 && IsValidSurBot(bot))
+					TakeOverBot(param1, bot);
 				else
 					PrintToChat(param1, "当前旁观目标非可接管BOT.");
 			}
 			else {
-				iBot = GetClientOfUserId(StringToInt(item));
-				if (!iBot || !bIsValidSurBot(iBot))
+				bot = GetClientOfUserId(StringToInt(item));
+				if (!bot || !IsValidSurBot(bot))
 					PrintToChat(param1, "选定的目标BOT已失效.");
 				else {
-					int team = iIsAllowedTeam(param1);
+					int team = IsAllowedTeam(param1);
 					if (!team)
 						PrintToChat(param1, "不符合接管条件.");
 					else {
 						if (team != 1)
 							ChangeClientTeam(param1, TEAM_SPECTATOR);
 
-						vTakeOverBot(param1, iBot);
+						TakeOverBot(param1, bot);
 					}
 				}
 			}
@@ -621,22 +625,22 @@ int iTakeOverBot_MenuHandler(Menu menu, MenuAction action, int param1, int param
 }
 
 Action cmdGoIdle(int client, int args) {
+	if (!client || !IsClientInGame(client) || IsFakeClient(client))
+		return Plugin_Handled;
+
 	if (!g_bRoundStart) {
 		ReplyToCommand(client, "回合尚未开始.");
 		return Plugin_Handled;
 	}
 
-	if (!client || !IsClientInGame(client) || IsFakeClient(client))
-		return Plugin_Handled;
-
 	if (GetClientTeam(client) != TEAM_SURVIVOR || !IsPlayerAlive(client))
 		return Plugin_Handled;
 
-	vGoAFKTimer(client, 1.0);
+	GoAFKTimer(client, 1.0);
 	return Plugin_Handled;
 }
 
-void vGoAFKTimer(int client, float flDuration) {
+void GoAFKTimer(int client, float flDuration) {
 	static int m_GoAFKTimer = -1;
 	if (m_GoAFKTimer == -1)
 		m_GoAFKTimer = FindSendPropInfo("CTerrorPlayer", "m_lookatPlayer") - 12;
@@ -656,33 +660,33 @@ Action cmdBotSet(int client, int args) {
 		return Plugin_Handled;
 	}
 
-	int iArg = GetCmdArgInt(1);
-	if (iArg < 1 || iArg > MaxClients - 1) {
+	int arg = GetCmdArgInt(1);
+	if (arg < 1 || arg > MaxClients - 1) {
 		ReplyToCommand(client, "\x01参数范围 \x051\x01~\x05%d\x01.", MaxClients - 1);
 		return Plugin_Handled;
 	}
 
 	delete g_hBotsTimer;
-	g_cvBotsLimit.SetInt(iArg);
+	g_cvBotsLimit.SetInt(arg);
 	g_hBotsTimer = CreateTimer(1.0, tmrBotsUpdate);
-	ReplyToCommand(client, "\x05开局BOT数量已设置为\x01-> \x04%d\x01.", iArg);
+	ReplyToCommand(client, "\x05开局BOT数量已设置为\x01-> \x04%d\x01.", arg);
 	return Plugin_Handled;
 }
 
 Action spec_next_Listener(int client, char[] command, int argc) {
-	if (!g_esPlayer[client].bSpecNotify || !(g_iJoinFlags & JOIN_MANUAL))
+	if (!g_esPlayer[client].notify || !(g_iJoinFlags & JOIN_MANUAL))
 		return Plugin_Continue;
 
-	if (bIsInTransition())
+	if (IsInTransition())
 		return Plugin_Continue;
 
 	if (!client || !IsClientInGame(client) || IsFakeClient(client))
 		return Plugin_Continue;
 
-	if (GetClientTeam(client) != TEAM_SPECTATOR || iGetBotOfIdlePlayer(client))
+	if (GetClientTeam(client) != TEAM_SPECTATOR || GetBotOfIdlePlayer(client))
 		return Plugin_Continue;
 
-	g_esPlayer[client].bSpecNotify = false;
+	g_esPlayer[client].notify = false;
 
 	switch (g_iSpecNotify) {
 		case 1:
@@ -692,21 +696,21 @@ Action spec_next_Listener(int client, char[] command, int argc) {
 			PrintHintText(client, "聊天栏输入 !join 加入游戏");
 
 		case 3:
-			vJoinSurvivorMenu(client);
+			JoinSurvivorMenu(client);
 	}
 
 	return Plugin_Continue;
 }
 
-void vJoinSurvivorMenu(int client) {
+void JoinSurvivorMenu(int client) {
 	EmitSoundToClient(client, SOUND_SPECMENU, SOUND_FROM_PLAYER, SNDCHAN_AUTO, SNDLEVEL_NORMAL, SND_NOFLAGS, SNDVOL_NORMAL, SNDPITCH_NORMAL, -1, NULL_VECTOR, NULL_VECTOR, true, 0.0);
 
-	Menu menu = new Menu(iJoinSurvivor_MenuHandler);
+	Menu menu = new Menu(JoinSurvivor_Handler);
 	menu.SetTitle("加入生还者?");
 	menu.AddItem("y", "是");
 	menu.AddItem("n", "否");
 
-	if (iFindUselessSurBot(true))
+	if (FindUselessSurBot(true))
 		menu.AddItem("t", "接管指定BOT");
 
 	menu.ExitButton = false;
@@ -714,7 +718,7 @@ void vJoinSurvivorMenu(int client) {
 	menu.Display(client, MENU_TIME_FOREVER);
 }
 
-int iJoinSurvivor_MenuHandler(Menu menu, MenuAction action, int param1, int param2) {
+int JoinSurvivor_Handler(Menu menu, MenuAction action, int param1, int param2) {
 	switch (action) {
 		case MenuAction_Select: {
 			switch (param2) {
@@ -722,8 +726,8 @@ int iJoinSurvivor_MenuHandler(Menu menu, MenuAction action, int param1, int para
 					cmdJoinTeam2(param1, 0);
 
 				case 2: {
-					if (iFindUselessSurBot(true))
-						vTakeOverBotMenu(param1);
+					if (FindUselessSurBot(true))
+						TakeOverBotMenu(param1);
 					else
 						PrintToChat(param1, "\x01没有 \x05空闲的电脑BOT \x01可以接管\x01.");
 				}
@@ -753,62 +757,62 @@ Action umSayText2(UserMsg msg_id, BfRead msg, const int[] players, int playersNu
 }
 
 public void OnConfigsExecuted() {
-	vGeCvars_Limit();
-	vGeCvars_Weapon();
-	vGeCvars_General();
+	GeCvars_Limit();
+	GeCvars_Weapon();
+	GeCvars_General();
 }
 
-void vCvarChanged_Limit(ConVar convar, const char[] oldValue, const char[] newValue) {
-	vGeCvars_Limit();
+void CvarChanged_Limit(ConVar convar, const char[] oldValue, const char[] newValue) {
+	GeCvars_Limit();
 }
 
-void vGeCvars_Limit() {
+void GeCvars_Limit() {
 	g_cvSurvivorLimit.SetInt((g_iBotsLimit = g_cvBotsLimit.IntValue));
 }
 
-void vCvarChanged_General(ConVar convar, const char[] oldValue, const char[] newValue) {
-	vGeCvars_General();
+void CvarChanged_General(ConVar convar, const char[] oldValue, const char[] newValue) {
+	GeCvars_General();
 }
 
-void vGeCvars_General() {
+void GeCvars_General() {
 	g_iJoinFlags =		g_cvJoinFlags.IntValue;
-	g_bRespawnJoin =	g_cvRespawnJoin.BoolValue;
+	g_bRespawn =		g_cvRespawn.BoolValue;
 	g_iSpecLimit =		g_cvSpecLimit.IntValue;
 	g_iSpecNotify =		g_cvSpecNotify.IntValue;
 }
 
-void vCvarChanged_Weapon(ConVar convar, const char[] oldValue, const char[] newValue) {
-	vGeCvars_Weapon();
+void CvarChanged_Weapon(ConVar convar, const char[] oldValue, const char[] newValue) {
+	GeCvars_Weapon();
 }
 
-void vGeCvars_Weapon() {
-	int iCount;
+void GeCvars_Weapon() {
+	int count;
 	for (int i; i < MAX_SLOTS; i++) {
-		g_esWeapon[i].iCount = 0;
-		if (!g_esWeapon[i].cvFlags.BoolValue || !iGetSlotAllowed(i))
-			iCount++;
+		g_esWeapon[i].count = 0;
+		if (!g_esWeapon[i].cvFlags.BoolValue || !GetSlotAllowed(i))
+			count++;
 	}
 
-	g_bGiveType = iCount < MAX_SLOTS ? g_cvGiveType.BoolValue : false;
+	g_bGiveType = count < MAX_SLOTS ? g_cvGiveType.BoolValue : false;
 	g_bGiveTime = g_cvGiveTime.BoolValue;
 }
 
-int iGetSlotAllowed(int iSlot) {
+int GetSlotAllowed(int iSlot) {
 	for (int i; i < 17; i++) {
 		if (!g_sWeaponName[iSlot][i][0])
 			break;
 
 		if ((1 << i) & g_esWeapon[iSlot].cvFlags.IntValue)
-			g_esWeapon[iSlot].iAllowed[g_esWeapon[iSlot].iCount++] = i;
+			g_esWeapon[iSlot].allowed[g_esWeapon[iSlot].count++] = i;
 	}
-	return g_esWeapon[iSlot].iCount;
+	return g_esWeapon[iSlot].count;
 }
 
 public void OnClientDisconnect(int client) {
 	if (IsFakeClient(client))
 		return;
 
-	g_esPlayer[client].sSteamID[0] = '\0';
+	g_esPlayer[client].SteamID[0] = '\0';
 
 	if (g_bRoundStart) {
 		delete g_hBotsTimer;
@@ -819,20 +823,20 @@ public void OnClientDisconnect(int client) {
 Action tmrBotsUpdate(Handle timer) {
 	g_hBotsTimer = null;
 
-	if (!bIsInTransition())
-		vSpawnCheck();
+	if (!IsInTransition())
+		SpawnCheck();
 	else
 		g_hBotsTimer = CreateTimer(1.0, tmrBotsUpdate);
 
 	return Plugin_Continue;
 }
 
-void vSpawnCheck() {
+void SpawnCheck() {
 	if (!g_bRoundStart)
 		return;
 
-	int iSurvivor		= iGetTeamCount(TEAM_SURVIVOR, true);
-	int iHumanSurvivor	= iGetTeamCount(TEAM_SURVIVOR, false);
+	int iSurvivor		= GetTeamPlayers(TEAM_SURVIVOR, true);
+	int iHumanSurvivor	= GetTeamPlayers(TEAM_SURVIVOR, false);
 	int iSurvivorLimit	= g_iBotsLimit;
 	int iSurvivorMax	= iHumanSurvivor > iSurvivorLimit ? iHumanSurvivor : iSurvivorLimit;
 
@@ -843,51 +847,51 @@ void vSpawnCheck() {
 		PrintToConsoleAll("Spawning %d bot(s)", iSurvivorLimit - iSurvivor);
 
 	for (; iSurvivorMax < iSurvivor; iSurvivorMax++)
-		vKickUnusedSurBot();
+		KickUnusedSurBot();
 	
 	for (; iSurvivor < iSurvivorLimit; iSurvivor++)
-		vSpawnFakeSurClient();
+		SpawnExtraSurBot();
 }
 
-void vKickUnusedSurBot() {
-	int iBot = iFindUnusedSurBot(); // 优先踢出没有对应真实玩家且后生成的Bot
-	if (iBot) {
-		vRemovePlayerWeapons(iBot);
-		KickClient(iBot, "Kicking Useless Client.");
+void KickUnusedSurBot() {
+	int bot = FindUnusedSurBot(); // 优先踢出没有对应真实玩家且后生成的Bot
+	if (bot) {
+		RemoveAllWeapons(bot);
+		KickClient(bot, "Kicking Useless Client.");
 	}
 }
 
-void vSpawnFakeSurClient() {
-	int iBot = iAddSurBot();
-	if (iBot != -1) {
-		if (!IsPlayerAlive(iBot))
-			vRoundRespawn(iBot);
+void SpawnExtraSurBot() {
+	int bot = SpawnSurBot();
+	if (bot != -1) {
+		if (!IsPlayerAlive(bot))
+			RoundRespawn(bot);
 
-		vTeleportToSurvivor(iBot);
+		TeleportToSurvivor(bot);
 	}
 }
 
 public void OnMapEnd() {
-	vResetPlugin();
+	ResetPlugin();
 }
 
-void vResetPlugin() {
+void ResetPlugin() {
 	g_smSteamIDs.Clear();
 	delete g_hBotsTimer;
 	g_bRoundStart = false;
 }
 
 void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast) {
-	vResetPlugin();
+	ResetPlugin();
 
-	int iIdlePlayer;
+	int idlePlayer;
 	for (int i = 1; i <= MaxClients; i++) {
 		if (!IsClientInGame(i) || !IsFakeClient(i) || GetClientTeam(i) != TEAM_SURVIVOR)
 			continue;
 
-		iIdlePlayer = iGetIdlePlayerOfBot(i);
-		if (iIdlePlayer && IsClientInGame(iIdlePlayer) && !IsFakeClient(iIdlePlayer) && GetClientTeam(iIdlePlayer) == TEAM_SPECTATOR)
-			vTakeOverBot(iIdlePlayer, i);
+		idlePlayer = GetIdlePlayerOfBot(i);
+		if (idlePlayer && IsClientInGame(idlePlayer) && !IsFakeClient(idlePlayer) && GetClientTeam(idlePlayer) == TEAM_SPECTATOR)
+			TakeOverBot(idlePlayer, i);
 	}
 }
 
@@ -903,8 +907,8 @@ void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast) {
 	delete g_hBotsTimer;
 	g_hBotsTimer = CreateTimer(2.0, tmrBotsUpdate);
 		
-	if (!IsFakeClient(client) && bIsFirstTime(client))
-		vRecordSteamID(client);
+	if (!IsFakeClient(client) && IsFirstTime(client))
+		RecordSteamID(client);
 
 	SetEntProp(client, Prop_Send, "m_isGhost", 0);
 }
@@ -914,9 +918,9 @@ void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast) {
 	if (!client || !IsClientInGame(client) || !IsFakeClient(client) || GetClientTeam(client) != TEAM_SURVIVOR)
 		return;
 
-	int iIdlePlayer = iGetIdlePlayerOfBot(client);
-	if (iIdlePlayer && IsClientInGame(iIdlePlayer) && !IsFakeClient(iIdlePlayer) && GetClientTeam(iIdlePlayer) == TEAM_SPECTATOR)
-		vTakeOverBot(iIdlePlayer, client);
+	int idlePlayer = GetIdlePlayerOfBot(client);
+	if (idlePlayer && IsClientInGame(idlePlayer) && !IsFakeClient(idlePlayer) && GetClientTeam(idlePlayer) == TEAM_SPECTATOR)
+		TakeOverBot(idlePlayer, client);
 }
 
 void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast) {
@@ -926,7 +930,7 @@ void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast) {
 
 	switch (event.GetInt("team")) {
 		case TEAM_SPECTATOR: {
-			g_esPlayer[client].bSpecNotify = true;
+			g_esPlayer[client].notify = true;
 
 			if (g_iJoinFlags & JOIN_AUTOMATIC && event.GetInt("oldteam") == TEAM_NOTEAM)
 				CreateTimer(1.0, tmrJoinTeam2, event.GetInt("userid"), TIMER_REPEAT|TIMER_FLAG_NO_MAPCHANGE);
@@ -938,7 +942,7 @@ void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast) {
 }
 
 Action tmrJoinTeam2(Handle timer, int client) {
-	if (!(g_iJoinFlags & JOIN_AUTOMATIC) || !(client = GetClientOfUserId(client)) || !IsClientInGame(client) || IsFakeClient(client) || GetClientTeam(client) > TEAM_SPECTATOR || iGetBotOfIdlePlayer(client)) 
+	if (!(g_iJoinFlags & JOIN_AUTOMATIC) || !(client = GetClientOfUserId(client)) || !IsClientInGame(client) || IsFakeClient(client) || GetClientTeam(client) > TEAM_SPECTATOR || GetBotOfIdlePlayer(client)) 
 		return Plugin_Stop;
 
 	if (!g_bRoundStart || GetClientTeam(client) <= TEAM_NOTEAM)
@@ -957,16 +961,16 @@ void Event_PlayerBotReplace(Event event, char[] name, bool dontBroadcast) {
 	int botId = event.GetInt("bot");
 	int bot = GetClientOfUserId(botId);
 
-	g_esPlayer[bot].iBotPlayer = playerId;
-	g_esPlayer[player].iPlayerBot = botId;
+	g_esPlayer[bot].player = playerId;
+	g_esPlayer[player].bot = botId;
 
-	if (!g_esPlayer[player].sModel[0])
+	if (!g_esPlayer[player].model[0])
 		return;
 
 	SetEntProp(bot, Prop_Send, "m_survivorCharacter", GetEntProp(player, Prop_Send, "m_survivorCharacter"));
-	SetEntityModel(bot, g_esPlayer[player].sModel);
+	SetEntityModel(bot, g_esPlayer[player].model);
 	for (int i; i < 8; i++) {
-		if (strcmp(g_esPlayer[player].sModel, g_sSurvivorModels[i], false) == 0) {
+		if (strcmp(g_esPlayer[player].model, g_sSurvivorModels[i], false) == 0) {
 			g_bHideNameChange = true;
 			SetClientInfo(bot, "name", g_sSurvivorNames[i]);
 			g_bHideNameChange = false;
@@ -1014,69 +1018,69 @@ void Event_FinaleVehicleLeaving(Event event, const char[] name, bool dontBroadca
 	}
 }
 
-bool bIsFirstTime(int client) {
-	if (!bCacheSteamID(client))
+bool IsFirstTime(int client) {
+	if (!CacheSteamID(client))
 		return false;
 
 	bool bAllowed = true;
-	g_smSteamIDs.GetValue(g_esPlayer[client].sSteamID, bAllowed);
+	g_smSteamIDs.GetValue(g_esPlayer[client].SteamID, bAllowed);
 	return bAllowed;
 }
 
-void vRecordSteamID(int client) {
-	if (bCacheSteamID(client))
-		g_smSteamIDs.SetValue(g_esPlayer[client].sSteamID, false, true);
+void RecordSteamID(int client) {
+	if (CacheSteamID(client))
+		g_smSteamIDs.SetValue(g_esPlayer[client].SteamID, false, true);
 }
 
-bool bCacheSteamID(int client) {
-	if (g_esPlayer[client].sSteamID[0])
+bool CacheSteamID(int client) {
+	if (g_esPlayer[client].SteamID[0])
 		return true;
 
-	if (GetClientAuthId(client, AuthId_Steam2, g_esPlayer[client].sSteamID, sizeof esPlayer::sSteamID))
+	if (GetClientAuthId(client, AuthId_Steam2, g_esPlayer[client].SteamID, sizeof esPlayer::SteamID))
 		return true;
 
-	g_esPlayer[client].sSteamID[0] = '\0';
+	g_esPlayer[client].SteamID[0] = '\0';
 	return false;
 }
 
-int iGetBotOfIdlePlayer(int client) {
+int GetBotOfIdlePlayer(int client) {
 	for (int i = 1; i <= MaxClients; i++) {
-		if (IsClientInGame(i) && IsFakeClient(i) && GetClientTeam(i) == TEAM_SURVIVOR && iGetIdlePlayerOfBot(i) == client)
+		if (IsClientInGame(i) && IsFakeClient(i) && GetClientTeam(i) == TEAM_SURVIVOR && GetIdlePlayerOfBot(i) == client)
 			return i;
 	}
 	return 0;
 }
 
-int iGetIdlePlayerOfBot(int client) {
+int GetIdlePlayerOfBot(int client) {
 	if (!HasEntProp(client, Prop_Send, "m_humanSpectatorUserID"))
 		return 0;
 
 	return GetClientOfUserId(GetEntProp(client, Prop_Send, "m_humanSpectatorUserID"));
 }
 
-int iGetTeamCount(int team, bool bIncludeBots) {
-	int iCount;
+int GetTeamPlayers(int team, bool bIncludeBots) {
+	int count;
 	for (int i = 1; i <= MaxClients; i++) {
 		if (!IsClientInGame(i) || GetClientTeam(i) != team)
 			continue;
 
-		if (!bIncludeBots && IsFakeClient(i) && !iGetIdlePlayerOfBot(i))
+		if (!bIncludeBots && IsFakeClient(i) && !GetIdlePlayerOfBot(i))
 			continue;
 
-		iCount++;
+		count++;
 	}
-	return iCount;
+	return count;
 }
 
-int iFindUnusedSurBot() {
+int FindUnusedSurBot() {
 	int client = MaxClients;
 	ArrayList aClients = new ArrayList(2);
 
 	for (; client >= 1; client--) {
-		if (!bIsValidSurBot(client))
+		if (!IsValidSurBot(client))
 			continue;
 
-		aClients.Set(aClients.Push(bIsSpecInvalid(GetClientOfUserId(g_esPlayer[client].iBotPlayer)) ? 0 : 1), client, 1);
+		aClients.Set(aClients.Push(IsSpecInvalid(GetClientOfUserId(g_esPlayer[client].player)) ? 0 : 1), client, 1);
 	}
 
 	if (!aClients.Length)
@@ -1090,16 +1094,16 @@ int iFindUnusedSurBot() {
 	return client;
 }
 
-int iFindUselessSurBot(bool bAlive) {
+int FindUselessSurBot(bool bAlive) {
 	int client;
 	ArrayList aClients = new ArrayList(2);
 
 	for (int i = MaxClients; i >= 1; i--) {
-		if (!bIsValidSurBot(i))
+		if (!IsValidSurBot(i))
 			continue;
 
-		client = GetClientOfUserId(g_esPlayer[i].iBotPlayer);
-		aClients.Set(aClients.Push(IsPlayerAlive(i) == bAlive ? (bIsSpecInvalid(client) ? 0 : 1) : (bIsSpecInvalid(client) ? 2 : 3)), i, 1);
+		client = GetClientOfUserId(g_esPlayer[i].player);
+		aClients.Set(aClients.Push(IsPlayerAlive(i) == bAlive ? (IsSpecInvalid(client) ? 0 : 1) : (IsSpecInvalid(client) ? 2 : 3)), i, 1);
 	}
 
 	if (!aClients.Length)
@@ -1115,15 +1119,15 @@ int iFindUselessSurBot(bool bAlive) {
 	return client;
 }
 
-bool bIsValidSurBot(int client) {
-	return IsClientInGame(client) && !IsClientInKickQueue(client) && IsFakeClient(client) && GetClientTeam(client) == TEAM_SURVIVOR && !iGetIdlePlayerOfBot(client);
+bool IsValidSurBot(int client) {
+	return IsClientInGame(client) && !IsClientInKickQueue(client) && IsFakeClient(client) && GetClientTeam(client) == TEAM_SURVIVOR && !GetIdlePlayerOfBot(client);
 }
 
-bool bIsSpecInvalid(int client) {
+bool IsSpecInvalid(int client) {
 	return !client || !IsClientInGame(client) || IsFakeClient(client) || GetClientTeam(client) == TEAM_SURVIVOR;
 }
 
-void vTeleportToSurvivor(int client, bool bRandom = true) {
+int TeleportToSurvivor(int client, bool bRandom = true) {
 	int iSurvivor = 1;
 	ArrayList aClients = new ArrayList(2);
 
@@ -1150,7 +1154,7 @@ void vTeleportToSurvivor(int client, bool bRandom = true) {
 	delete aClients;
 
 	if (iSurvivor) {
-		vSetInvincibilityTime(client, 1.5);
+		SetInvincibilityTime(client, 1.5);
 		SetEntProp(client, Prop_Send, "m_bDucked", 1);
 		SetEntProp(client, Prop_Send, "m_fFlags", GetEntProp(client, Prop_Send, "m_fFlags")|FL_DUCKING);
 
@@ -1158,9 +1162,11 @@ void vTeleportToSurvivor(int client, bool bRandom = true) {
 		GetClientAbsOrigin(iSurvivor, vPos);
 		TeleportEntity(client, vPos, NULL_VECTOR, NULL_VECTOR);
 	}
+
+	return iSurvivor;
 }
 
-void vSetInvincibilityTime(int client, float flDuration) {
+void SetInvincibilityTime(int client, float flDuration) {
 	static int m_invulnerabilityTimer = -1;
 	if (m_invulnerabilityTimer == -1)
 		m_invulnerabilityTimer = FindSendPropInfo("CTerrorPlayer", "m_noAvoidanceTimer") - 12;
@@ -1172,6 +1178,9 @@ void vSetInvincibilityTime(int client, float flDuration) {
 // 给玩家近战
 // L4D2- Melee In The Saferoom (https://forums.alliedmods.net/showpost.php?p=2611529&postcount=484)
 public void OnMapStart() {
+	GetMeleeStringTable();
+	PrecacheSound(SOUND_SPECMENU);
+
 	int i;
 	for (; i < sizeof g_sWeaponModels; i++) {
 		if (!IsModelPrecached(g_sWeaponModels[i]))
@@ -1184,26 +1193,23 @@ public void OnMapStart() {
 		if (!IsGenericPrecached(buffer))
 			PrecacheGeneric(buffer, true);
 	}
-
-	PrecacheSound(SOUND_SPECMENU);
-	vGetMeleeWeaponsStringTable();
 }
 
-void vGetMeleeWeaponsStringTable() {
+void GetMeleeStringTable() {
 	g_aMeleeScripts.Clear();
 
-	int iTable = FindStringTable("meleeweapons");
-	if (iTable != INVALID_STRING_TABLE) {
-		int iNum = GetStringTableNumStrings(iTable);
+	int table = FindStringTable("meleeweapons");
+	if (table != INVALID_STRING_TABLE) {
+		int num = GetStringTableNumStrings(table);
 		char sMeleeName[64];
-		for (int i; i < iNum; i++) {
-			ReadStringTable(iTable, i, sMeleeName, sizeof sMeleeName);
+		for (int i; i < num; i++) {
+			ReadStringTable(table, i, sMeleeName, sizeof sMeleeName);
 			g_aMeleeScripts.PushString(sMeleeName);
 		}
 	}
 }
 
-void vGiveMelee(int client, const char[] sMeleeName) {
+void GiveMelee(int client, const char[] sMeleeName) {
 	char sScriptName[64];
 	if (g_aMeleeScripts.FindString(sMeleeName) != -1)
 		strcopy(sScriptName, sizeof sScriptName, sMeleeName);
@@ -1213,7 +1219,7 @@ void vGiveMelee(int client, const char[] sMeleeName) {
 	GivePlayerItem(client, sScriptName);
 }
 
-void vDisplayTeamPanel(int client) {
+void DisplayTeamPanel(int client) {
 	static const char sZombieClass[][] = {
 		"None",
 		"Smoker",
@@ -1231,7 +1237,7 @@ void vDisplayTeamPanel(int client) {
 	panel.SetTitle("---团队信息---");
 
 	char text[254];
-	FormatEx(text, sizeof text, "旁观者 (%d)", iGetTeamCount(TEAM_SPECTATOR, false));
+	FormatEx(text, sizeof text, "旁观者 (%d)", GetTeamPlayers(TEAM_SPECTATOR, false));
 	panel.DrawItem(text);
 
 	int i = 1;
@@ -1241,11 +1247,11 @@ void vDisplayTeamPanel(int client) {
 
 		FormatEx(text, sizeof text, "%N", i);
 		ReplaceString(text, sizeof text, "[", "");
-		Format(text, sizeof text, "%s - %s", iGetBotOfIdlePlayer(i) ? "闲置" : "观众", text);
+		Format(text, sizeof text, "%s - %s", GetBotOfIdlePlayer(i) ? "闲置" : "观众", text);
 		panel.DrawText(text);
 	}
 
-	FormatEx(text, sizeof text, "生还者 (%d/%d) - %d Bot(s)", iGetTeamCount(TEAM_SURVIVOR, false), g_iBotsLimit, iGetSurBotsCount());
+	FormatEx(text, sizeof text, "生还者 (%d/%d) - %d Bot(s)", GetTeamPlayers(TEAM_SURVIVOR, false), g_iBotsLimit, GetSurBotsCount());
 	panel.DrawItem(text);
 
 	static ConVar cvSurvivorMaxInc;
@@ -1265,18 +1271,18 @@ void vDisplayTeamPanel(int client) {
 		else
 		 {
 			if (GetEntProp(i, Prop_Send, "m_isIncapacitated"))
-				Format(text, sizeof text, "倒地 - %d HP - %s", GetClientHealth(i) + iGetTempHealth(i), text);
+				Format(text, sizeof text, "倒地 - %d HP - %s", GetClientHealth(i) + GetTempHealth(i), text);
 			else if (GetEntProp(i, Prop_Send, "m_currentReviveCount") >= iSurvivorMaxInc)
-				Format(text, sizeof text, "黑白 - %d HP - %s", GetClientHealth(i) + iGetTempHealth(i), text);
+				Format(text, sizeof text, "黑白 - %d HP - %s", GetClientHealth(i) + GetTempHealth(i), text);
 			else
-				Format(text, sizeof text, "%dHP - %s", GetClientHealth(i) + iGetTempHealth(i), text);
+				Format(text, sizeof text, "%dHP - %s", GetClientHealth(i) + GetTempHealth(i), text);
 	
 		}
 
 		panel.DrawText(text);
 	}
 
-	FormatEx(text, sizeof text, "感染者 (%d)", iGetTeamCount(TEAM_INFECTED, false));
+	FormatEx(text, sizeof text, "感染者 (%d)", GetTeamPlayers(TEAM_INFECTED, false));
 	panel.DrawItem(text);
 
 	int iClass;
@@ -1303,15 +1309,15 @@ void vDisplayTeamPanel(int client) {
 	}
 
 	panel.DrawItem("刷新");
-	panel.Send(client, iTeamPanelHandler, 30);
+	panel.Send(client, TeamPanel_Handler, 30);
 	delete panel;
 }
 
-int iTeamPanelHandler(Menu menu, MenuAction action, int param1, int param2) {
+int TeamPanel_Handler(Menu menu, MenuAction action, int param1, int param2) {
 	switch (action) {
 		case MenuAction_Select: {
 			if (param2 == 4)
-				vDisplayTeamPanel(param1);
+				DisplayTeamPanel(param1);
 		}
 
 		case MenuAction_End:
@@ -1321,25 +1327,25 @@ int iTeamPanelHandler(Menu menu, MenuAction action, int param1, int param2) {
 	return 0;
 }
 
-int iGetSurBotsCount() {
-	int iCount;
+int GetSurBotsCount() {
+	int count;
 	for (int i = 1; i <= MaxClients; i++) {
-		if (bIsValidSurBot(i))
-			iCount++;
+		if (IsValidSurBot(i))
+			count++;
 	}
-	return iCount;
+	return count;
 }
 
-int iGetTempHealth(int client) {
+int GetTempHealth(int client) {
 	static ConVar cvPainPillsDecay;
 	if (!cvPainPillsDecay)
 		cvPainPillsDecay = FindConVar("pain_pills_decay_rate");
 
-	int iHealth = RoundToFloor(GetEntPropFloat(client, Prop_Send, "m_healthBuffer") - (GetGameTime() - GetEntPropFloat(client, Prop_Send, "m_healthBufferTime")) * cvPainPillsDecay.FloatValue);
-	return iHealth < 0 ? 0 : iHealth;
+	int health = RoundToFloor(GetEntPropFloat(client, Prop_Send, "m_healthBuffer") - (GetGameTime() - GetEntPropFloat(client, Prop_Send, "m_healthBufferTime")) * cvPainPillsDecay.FloatValue);
+	return health < 0 ? 0 : health;
 }
 
-void vInitData() {
+void InitData() {
 	char sPath[PLATFORM_MAX_PATH];
 	BuildPath(Path_SM, sPath, sizeof sPath, "gamedata/%s.txt", GAMEDATA);
 	if (!FileExists(sPath))
@@ -1369,22 +1375,26 @@ void vInitData() {
 	if (g_iOff_m_hHiddenWeapon == -1)
 		SetFailState("Failed to find offset: \"m_hHiddenWeapon\" (%s)", PLUGIN_VERSION);
 
+	g_iOff_m_isOutOfCheckpoint = hGameData.GetOffset("m_isOutOfCheckpoint");
+	if (g_iOff_m_isOutOfCheckpoint == -1)
+		SetFailState("Failed to find offset: \"m_isOutOfCheckpoint\" (%s)", PLUGIN_VERSION);
+
 	g_iOff_RestartScenarioTimer = hGameData.GetOffset("RestartScenarioTimer");
 	if (g_iOff_RestartScenarioTimer == -1)
 		SetFailState("Failed to find offset: \"RestartScenarioTimer\" (%s)", PLUGIN_VERSION);
 
 	StartPrepSDKCall(SDKCall_Static);
-	Address pAddr = hGameData.GetMemSig("NextBotCreatePlayerBot<SurvivorBot>");
-	if (!pAddr)
+	Address addr = hGameData.GetMemSig("NextBotCreatePlayerBot<SurvivorBot>");
+	if (!addr)
 		SetFailState("Failed to find address: \"NextBotCreatePlayerBot<SurvivorBot>\" in \"CDirector::AddSurvivorBot\" (%s)", PLUGIN_VERSION);
 	if (!hGameData.GetOffset("OS")) {
-		Address offset = view_as<Address>(LoadFromAddress(pAddr + view_as<Address>(1), NumberType_Int32));	// (addr+5) + *(addr+1) = call function addr
+		Address offset = view_as<Address>(LoadFromAddress(addr + view_as<Address>(1), NumberType_Int32));	// (addr+5) + *(addr+1) = call function addr
 		if (!offset)
 			SetFailState("Failed to find address: \"NextBotCreatePlayerBot<SurvivorBot>\" (%s)", PLUGIN_VERSION);
 
-		pAddr += offset + view_as<Address>(5); // sizeof(instruction)
+		addr += offset + view_as<Address>(5); // sizeof(instruction)
 	}
-	if (!PrepSDKCall_SetAddress(pAddr))
+	if (!PrepSDKCall_SetAddress(addr))
 		SetFailState("Failed to find address: \"NextBotCreatePlayerBot<SurvivorBot>\" (%s)", PLUGIN_VERSION);
 	PrepSDKCall_AddParameter(SDKType_String, SDKPass_Pointer);
 	PrepSDKCall_SetReturnInfo(SDKType_CBasePlayer, SDKPass_Pointer);
@@ -1425,13 +1435,13 @@ void vInitData() {
 	if (!(g_hSDK_CDirector_IsInTransition = EndPrepSDKCall()))
 		SetFailState("Failed to create SDKCall: \"CDirector::IsInTransition\" (%s)", PLUGIN_VERSION);
 
-	vInitPatchs(hGameData);
-	vSetupDetours(hGameData);
+	InitPatchs(hGameData);
+	SetupDetours(hGameData);
 
 	delete hGameData;
 }
 
-void vInitPatchs(GameData hGameData = null) {
+void InitPatchs(GameData hGameData = null) {
 	int iOffset = hGameData.GetOffset("RoundRespawn_Offset");
 	if (iOffset == -1)
 		SetFailState("Failed to find offset: \"RoundRespawn_Offset\" (%s)", PLUGIN_VERSION);
@@ -1451,7 +1461,7 @@ void vInitPatchs(GameData hGameData = null) {
 }
 
 // [L4D1 & L4D2] SM Respawn Improved (https://forums.alliedmods.net/showthread.php?t=323220)
-void vStatsConditionPatch(bool bPatch) {
+void StatsConditionPatch(bool bPatch) {
 	static bool bPatched;
 	if (!bPatched && bPatch) {
 		bPatched = true;
@@ -1464,22 +1474,22 @@ void vStatsConditionPatch(bool bPatch) {
 }
 
 // Left 4 Dead 2 - CreateSurvivorBot (https://forums.alliedmods.net/showpost.php?p=2729883&postcount=16)
-int iAddSurBot() {
+int SpawnSurBot() {
 	g_bInSpawnTime = true;
-	int iBot = SDKCall(g_hSDK_NextBotCreatePlayerBot_SurvivorBot, NULL_STRING);
-	if (iBot != -1)
-		ChangeClientTeam(iBot, TEAM_SURVIVOR);
+	int bot = SDKCall(g_hSDK_NextBotCreatePlayerBot_SurvivorBot, NULL_STRING);
+	if (bot != -1)
+		ChangeClientTeam(bot, TEAM_SURVIVOR);
 
 	g_bInSpawnTime = false;
-	return iBot;
+	return bot;
 }
 
-void vRoundRespawn(int client) {			
-	vStatsConditionPatch(true);
+void RoundRespawn(int client) {			
+	StatsConditionPatch(true);
 	g_bInSpawnTime = true;
 	SDKCall(g_hSDK_CTerrorPlayer_RoundRespawn, client);
 	g_bInSpawnTime = false;
-	vStatsConditionPatch(false);
+	StatsConditionPatch(false);
 }
 
 /**
@@ -1498,27 +1508,31 @@ enum Obs_Mode
 	NUM_OBSERVER_MODES
 };
 **/
-void vSetHumanSpectator(int iBot, int client) {
-	SDKCall(g_hSDK_SurvivorBot_SetHumanSpectator, iBot, client);
-	SetEntPropEnt(client, Prop_Send, "m_hObserverTarget", iBot);
+void SetHumanSpec(int bot, int client) {
+	SDKCall(g_hSDK_SurvivorBot_SetHumanSpectator, bot, client);
+	SetEntPropEnt(client, Prop_Send, "m_hObserverTarget", bot);
 	if (GetEntProp(client, Prop_Send, "m_iObserverMode") == 6)
 		SetEntProp(client, Prop_Send, "m_iObserverMode", 5);
 }
 
-void vTakeOverBot(int client, int iBot) {
-	SDKCall(g_hSDK_SurvivorBot_SetHumanSpectator, iBot, client);
+void TakeOverBot(int client, int bot) {
+	SDKCall(g_hSDK_SurvivorBot_SetHumanSpectator, bot, client);
 	SDKCall(g_hSDK_CTerrorPlayer_TakeOverBot, client, true);
 }
 
-bool bOnEndScenario() {
+bool TakeOverAllowed(int client, int bot) {
+	return !client || !GetEntData(client, g_iOff_m_isOutOfCheckpoint) && !GetEntProp(bot, Prop_Send, "m_isIncapacitated");
+}
+
+bool OnEndScenario() {
 	return view_as<float>(LoadFromAddress(g_pDirector + view_as<Address>(g_iOff_RestartScenarioTimer + 8), NumberType_Int32)) > GetGameTime();
 }
 
-bool bIsInTransition() {
+bool IsInTransition() {
 	return SDKCall(g_hSDK_CDirector_IsInTransition, g_pDirector);
 }
 
-void vSetupDetours(GameData hGameData = null) {
+void SetupDetours(GameData hGameData = null) {
 	DynamicDetour dDetour = DynamicDetour.FromConf(hGameData, "DD::CTerrorPlayer::GoAwayFromKeyboard");
 	if (!dDetour)
 		SetFailState("Failed to create DynamicDetour: \"DD::CTerrorPlayer::GoAwayFromKeyboard\" (%s)", PLUGIN_VERSION);
@@ -1573,8 +1587,8 @@ MRESReturn DD_CTerrorPlayer_GoAwayFromKeyboard_Pre(int pThis, DHookReturn hRetur
 MRESReturn DD_CTerrorPlayer_GoAwayFromKeyboard_Post(int pThis, DHookReturn hReturn) {
 	if (g_bShouldFixAFK && g_iSurvivorBot > 0 && IsFakeClient(g_iSurvivorBot)) {
 		g_bShouldIgnore = true;
-		vSetHumanSpectator(g_iSurvivorBot, pThis);
-		vWriteTakeoverPanel(pThis, g_iSurvivorBot);
+		SetHumanSpec(g_iSurvivorBot, pThis);
+		WriteTakeoverPanel(pThis, g_iSurvivorBot);
 		g_bShouldIgnore = false;
 	}
 
@@ -1602,14 +1616,14 @@ MRESReturn DD_CBasePlayer_SetModel_Post(int pThis, DHookParam hParams) {
 		return MRES_Ignored;
 
 	if (GetClientTeam(pThis) != TEAM_SURVIVOR) {
-		g_esPlayer[pThis].sModel[0] = '\0';
+		g_esPlayer[pThis].model[0] = '\0';
 		return MRES_Ignored;
 	}
 	
 	char sModel[PLATFORM_MAX_PATH];
 	hParams.GetString(1, sModel, sizeof sModel);
 	if (StrContains(sModel, "models/survivors/survivor_", false) == 0)
-		strcopy(g_esPlayer[pThis].sModel, sizeof esPlayer::sModel, sModel);
+		strcopy(g_esPlayer[pThis].model, sizeof esPlayer::model, sModel);
 
 	return MRES_Ignored;
 }
@@ -1624,87 +1638,87 @@ MRESReturn DD_CTerrorPlayer_GiveDefaultItems_Pre(int pThis) {
 	if (pThis < 1 || pThis > MaxClients || !IsClientInGame(pThis))
 		return MRES_Ignored;
 
-	if (GetClientTeam(pThis) != TEAM_SURVIVOR || !IsPlayerAlive(pThis) || bShouldIgnore(pThis))
+	if (GetClientTeam(pThis) != TEAM_SURVIVOR || !IsPlayerAlive(pThis) || ShouldIgnore(pThis))
 		return MRES_Ignored;
 
-	vGiveDefaultItems(pThis);
-	vResetRestoreWeapons(pThis);
+	GiveDefaultItems(pThis);
+	ClearRestoreWeapons(pThis);
 	return MRES_Supercede;
 }
 
-void vWriteTakeoverPanel(int client, int iBot) {
-	char sChar[2];
-	IntToString(GetEntProp(iBot, Prop_Send, "m_survivorCharacter"), sChar, sizeof sChar);
+void WriteTakeoverPanel(int client, int bot) {
+	char buf[2];
+	IntToString(GetEntProp(bot, Prop_Send, "m_survivorCharacter"), buf, sizeof buf);
 	BfWrite bf = view_as<BfWrite>(StartMessageOne("VGUIMenu", client));
 	bf.WriteString("takeover_survivor_bar");
 	bf.WriteByte(true);
 	bf.WriteByte(IN_ATTACK);
 	bf.WriteString("character");
-	bf.WriteString(sChar);
+	bf.WriteString(buf);
 	EndMessage();
 }
 
-bool bShouldIgnore(int client) {
+bool ShouldIgnore(int client) {
 	if (IsFakeClient(client)) {
-		if (iGetIdlePlayerOfBot(client))
+		if (GetIdlePlayerOfBot(client))
 			return true;
 
 		return false;
 	}
 
 	for (int i = 1; i <= MaxClients; i++) {
-		if (IsClientInGame(i) && IsFakeClient(i) && GetClientTeam(i) == TEAM_SPECTATOR && iGetIdlePlayerOfBot(i) == client)
+		if (IsClientInGame(i) && IsFakeClient(i) && GetClientTeam(i) == TEAM_SPECTATOR && GetIdlePlayerOfBot(i) == client)
 			return true;
 	}
 
 	return false;
 }
 
-void vResetRestoreWeapons(int client) {
+void ClearRestoreWeapons(int client) {
 	SetEntData(client, g_iOff_m_hWeaponHandle, 0);
 	SetEntData(client, g_iOff_m_iRestoreAmmo, 0);
 	SetEntData(client, g_iOff_m_restoreWeaponID, 0);
 }
 
-void vGiveDefaultItems(int client) {
-	vRemovePlayerWeapons(client);
+void GiveDefaultItems(int client) {
+	RemoveAllWeapons(client);
 
 	for (int i = 4; i >= 2; i--) {
-		if (!g_esWeapon[i].iCount)
+		if (!g_esWeapon[i].count)
 			continue;
 
-		GivePlayerItem(client, g_sWeaponName[i][g_esWeapon[i].iAllowed[GetRandomInt(0, g_esWeapon[i].iCount - 1)]]);
+		GivePlayerItem(client, g_sWeaponName[i][g_esWeapon[i].allowed[GetRandomInt(0, g_esWeapon[i].count - 1)]]);
 	}
 
-	vGiveSecondary(client);
+	GiveSecondary(client);
 
 	switch (g_cvGiveType.IntValue) {
 		case 1:
-			vGivePresetPrimary(client);
+			GivePresetPrimary(client);
 		
 		case 2:
 			vGiveAveragePrimary(client);
 	}
 }
 
-void vGiveSecondary(int client) {
-	if (g_esWeapon[1].iCount) {
-		int iRandom = g_esWeapon[1].iAllowed[GetRandomInt(0, g_esWeapon[1].iCount - 1)];
+void GiveSecondary(int client) {
+	if (g_esWeapon[1].count) {
+		int iRandom = g_esWeapon[1].allowed[GetRandomInt(0, g_esWeapon[1].count - 1)];
 		if (iRandom > 2)
-			vGiveMelee(client, g_sWeaponName[1][iRandom]);
+			GiveMelee(client, g_sWeaponName[1][iRandom]);
 		else
 			GivePlayerItem(client, g_sWeaponName[1][iRandom]);
 	}
 }
 
-void vGivePresetPrimary(int client) {
-	if (g_esWeapon[0].iCount)
-		GivePlayerItem(client, g_sWeaponName[0][g_esWeapon[0].iAllowed[GetRandomInt(0, g_esWeapon[0].iCount - 1)]]);
+void GivePresetPrimary(int client) {
+	if (g_esWeapon[0].count)
+		GivePlayerItem(client, g_sWeaponName[0][g_esWeapon[0].allowed[GetRandomInt(0, g_esWeapon[0].count - 1)]]);
 }
 
-bool bIsWeaponTier1(int iWeapon) {
+bool IsWeaponTier1(int weapon) {
 	char sWeapon[32];
-	GetEntityClassname(iWeapon, sWeapon, sizeof sWeapon);
+	GetEntityClassname(weapon, sWeapon, sizeof sWeapon);
 	for (int i; i < 5; i++) {
 		if (strcmp(sWeapon, g_sWeaponName[0][i], false) == 0)
 			return true;
@@ -1713,22 +1727,22 @@ bool bIsWeaponTier1(int iWeapon) {
 }
 
 void vGiveAveragePrimary(int client) {
-	int i = 1, iTier, iTotal, iWeapon;
+	int i = 1, tier, total, weapon;
 	if (g_bRoundStart) {
 		for (; i <= MaxClients; i++) {
 			if (i == client || !IsClientInGame(i) || GetClientTeam(i) != TEAM_SURVIVOR || !IsPlayerAlive(i))
 				continue;
 
-			iTotal += 1;
-			iWeapon = GetPlayerWeaponSlot(i, 0);
-			if (iWeapon <= MaxClients || !IsValidEntity(iWeapon))
+			total += 1;
+			weapon = GetPlayerWeaponSlot(i, 0);
+			if (weapon <= MaxClients || !IsValidEntity(weapon))
 				continue;
 
-			iTier += bIsWeaponTier1(iWeapon) ? 1 : 2;
+			tier += IsWeaponTier1(weapon) ? 1 : 2;
 		}
 	}
 
-	switch (iTotal > 0 ? RoundToNearest(float(iTier) / float(iTotal)) : 0) {
+	switch (total > 0 ? RoundToNearest(float(tier) / float(total)) : 0) {
 		case 1:
 			GivePlayerItem(client, g_sWeaponName[0][GetRandomInt(0, 4)]);
 
@@ -1737,20 +1751,20 @@ void vGiveAveragePrimary(int client) {
 	}
 }
 
-void vRemovePlayerWeapons(int client) {
-	int iWeapon;
+void RemoveAllWeapons(int client) {
+	int weapon;
 	for (int i; i < MAX_SLOTS; i++) {
-		if ((iWeapon = GetPlayerWeaponSlot(client, i)) <= MaxClients)
+		if ((weapon = GetPlayerWeaponSlot(client, i)) <= MaxClients)
 			continue;
 
-		RemovePlayerItem(client, iWeapon);
-		RemoveEntity(iWeapon);
+		RemovePlayerItem(client, weapon);
+		RemoveEntity(weapon);
 	}
 
-	iWeapon = GetEntDataEnt2(client, g_iOff_m_hHiddenWeapon);
+	weapon = GetEntDataEnt2(client, g_iOff_m_hHiddenWeapon);
 	SetEntData(client, g_iOff_m_hHiddenWeapon, -1);
-	if (iWeapon > MaxClients && IsValidEntity(iWeapon) && GetEntPropEnt(iWeapon, Prop_Data, "m_hOwnerEntity") == client) {
-		RemovePlayerItem(client, iWeapon);
-		RemoveEntity(iWeapon);
+	if (weapon > MaxClients && IsValidEntity(weapon) && GetEntPropEnt(weapon, Prop_Data, "m_hOwnerEntity") == client) {
+		RemovePlayerItem(client, weapon);
+		RemoveEntity(weapon);
 	}
 }

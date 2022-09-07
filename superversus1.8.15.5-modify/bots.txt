@@ -133,13 +133,24 @@
 			 * 4. The variable that is being assigned a value below those two function calls has an offset.
 			 * 5. Multiply the offset by 4 to get the offset for the hidden melee weapon.
 			 **/
-
 			"m_hHiddenWeapon"
 			{
 				"linux"		"16288"
 				"windows"	"16308"
 			}
 
+			/**
+			* 搜索字符串 "takeover_survivor_bar"
+			**/
+			"m_isOutOfCheckpoint"
+			{
+				"linux"		"14820"
+				"windows"	"14840"
+			}
+
+			/**
+			* 搜索字符串 "#L4D_Scenario_Restart"
+			**/
 			"RestartScenarioTimer"
 			{
 				"linux"		"424"
