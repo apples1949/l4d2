@@ -476,8 +476,6 @@ Action aJoinTeam2(int client) {
 		SetHumanSpec(findBot, client);
 		if (takeOver)
 			TakeOverBot(client);
-		else
-			SetObsMode(client);
 	}
 	else {
 		SetHumanSpec(findBot, client);
@@ -488,12 +486,8 @@ Action aJoinTeam2(int client) {
 				TakeOverBot(client);
 				PrintToChat(client, "\x05重复加入默认为\x01-> \x04死亡状态\x01.");
 			}
-			else {
-				if (TakeOverAllowed(findBot, findBot))
-					TakeOverBot(client);
-				else
-					SetObsMode(client);
-			}
+			else if (TakeOverAllowed(findBot, findBot))
+				TakeOverBot(client);
 		}
 		else {
 			TakeOverBot(client);
@@ -1525,9 +1519,6 @@ enum Obs_Mode
 **/
 void SetHumanSpec(int bot, int client) {
 	SDKCall(g_hSDK_SurvivorBot_SetHumanSpectator, bot, client);
-}
-
-void SetObsMode(int client) {
 	SetEntProp(client, Prop_Send, "m_iObserverMode", 5);
 }
 
@@ -1603,7 +1594,6 @@ MRESReturn DD_CTerrorPlayer_GoAwayFromKeyboard_Post(int pThis, DHookReturn hRetu
 	if (g_bShouldFixAFK && g_iSurvivorBot > 0 && IsFakeClient(g_iSurvivorBot)) {
 		g_bShouldIgnore = true;
 		SetHumanSpec(g_iSurvivorBot, pThis);
-		SetObsMode(pThis);
 		WriteTakeoverPanel(pThis, g_iSurvivorBot);
 		g_bShouldIgnore = false;
 	}
