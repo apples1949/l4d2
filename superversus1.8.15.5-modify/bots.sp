@@ -37,7 +37,6 @@ ArrayList
 
 Address
 	g_pDirector,
-	g_pSavedSurvivorBotsCount,
 	g_pStatsCondition;
 
 ConVar
@@ -828,7 +827,7 @@ public void OnClientDisconnect(int client) {
 Action tmrBotsUpdate(Handle timer) {
 	g_hBotsTimer = null;
 
-	if (!RestoringSurBots())
+	if (!IsInTransition())
 		SpawnCheck();
 	else
 		g_hBotsTimer = CreateTimer(1.0, tmrBotsUpdate);
@@ -954,7 +953,7 @@ Action tmrJoinTeam2(Handle timer, int client) {
 	if (!(g_iJoinFlags & JOIN_AUTOMATIC) || !(client = GetClientOfUserId(client)) || !IsClientInGame(client) || IsFakeClient(client) || GetClientTeam(client) > TEAM_SPECTATOR || GetBotOfIdlePlayer(client)) 
 		return Plugin_Stop;
 
-	if (!g_bRoundStart || RestoringSurBots() || GetClientTeam(client) <= TEAM_NOTEAM)
+	if (!g_bRoundStart || IsInTransition() || GetClientTeam(client) <= TEAM_NOTEAM)
 		return Plugin_Continue;
 
 	aJoinTeam2(client);
@@ -1368,10 +1367,6 @@ void InitData() {
 	if (!g_pDirector)
 		SetFailState("Failed to find address: \"CDirector\" (%s)", PLUGIN_VERSION);
 
-	g_pSavedSurvivorBotsCount = hGameData.GetAddress("SavedSurvivorBotsCount");
-	if (!g_pSavedSurvivorBotsCount)
-		SetFailState("Failed to find address: \"SavedSurvivorBotsCount\"");
-
 	g_iOff_m_hWeaponHandle = hGameData.GetOffset("m_hWeaponHandle");
 	if (g_iOff_m_hWeaponHandle == -1)
 		SetFailState("Failed to find offset: \"m_hWeaponHandle\" (%s)", PLUGIN_VERSION);
@@ -1540,10 +1535,6 @@ bool OnEndScenario() {
 
 bool IsInTransition() {
 	return SDKCall(g_hSDK_CDirector_IsInTransition, g_pDirector);
-}
-
-bool RestoringSurBots() {
-	return IsInTransition() && LoadFromAddress(g_pSavedSurvivorBotsCount, NumberType_Int32);
 }
 
 void SetupDetours(GameData hGameData = null) {
