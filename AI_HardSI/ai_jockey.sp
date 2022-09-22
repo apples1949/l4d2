@@ -146,12 +146,12 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 		if (g_bDoNormalJump[client]) {
 			if (buttons & IN_FORWARD) {
 				vAng = angles;
-				vAng[0] = GetRandomFloat(-10.0, 0.0);
+				vAng[0] = Math_GetRandomFloat(-10.0, 0.0);
 				TeleportEntity(client, NULL_VECTOR, vAng, NULL_VECTOR);
 			}
 
 			buttons |= IN_JUMP;
-			switch (GetRandomInt(0, 2)) {
+			switch (Math_GetRandomInt(0, 2)) {
 				case 0:
 					buttons |= IN_DUCK;
 	
@@ -164,7 +164,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 			static float fGameTime;
 			if (g_fLeapAgainTime[client] < (fGameTime = GetGameTime())) {
 				if (fNearest < g_fJockeyLeapRange) {
-					switch (GetRandomInt(0, 1)) {
+					switch (Math_GetRandomInt(0, 1)) {
 						case 0:
 							buttons |= IN_FORWARD;
 	
@@ -172,9 +172,9 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 							buttons |= IN_BACK;
 					}
 
-					if (GetRandomInt(0, 1) && bWithinViewAngle(client, 60.0)) {
+					if (Math_GetRandomInt(0, 1) && bWithinViewAngle(client, 60.0)) {
 						vAng = angles;
-						vAng[0] = GetRandomFloat(-30.0, -10.0);
+						vAng[0] = Math_GetRandomFloat(-30.0, -10.0);
 						TeleportEntity(client, NULL_VECTOR, vAng, NULL_VECTOR);
 					}
 				}
@@ -324,4 +324,40 @@ bool PointWithinViewAngle(const float vecSrcPosition[3], const float vecTargetPo
  */
 float GetFOVDotProduct(float angle) {
 	return Cosine(DegToRad(angle) / 2.0);
+}
+
+// https://github.com/bcserv/smlib/blob/transitional_syntax/scripting/include/smlib/math.inc
+/**
+ * Returns a random, uniform Integer number in the specified (inclusive) range.
+ * This is safe to use multiple times in a function.
+ * The seed is set automatically for each plugin.
+ * Rewritten by MatthiasVance, thanks.
+ *
+ * @param min			Min value used as lower border
+ * @param max			Max value used as upper border
+ * @return				Random Integer number between min and max
+ */
+int Math_GetRandomInt(int min, int max)
+{
+	int random = GetURandomInt();
+
+	if (random == 0) {
+		random++;
+	}
+
+	return RoundToCeil(float(random) / (float(2147483647) / float(max - min + 1))) + min - 1;
+}
+
+/**
+ * Returns a random, uniform Float number in the specified (inclusive) range.
+ * This is safe to use multiple times in a function.
+ * The seed is set automatically for each plugin.
+ *
+ * @param min			Min value used as lower border
+ * @param max			Max value used as upper border
+ * @return				Random Float number between min and max
+ */
+float Math_GetRandomFloat(float min, float max)
+{
+	return (GetURandomFloat() * (max  - min)) + min;
 }

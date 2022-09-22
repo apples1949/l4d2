@@ -243,7 +243,7 @@ bool bWontFall(int client, const float vVel[3]) {
 	hTrace = TR_TraceHullFilterEx(vVec, vDown, vMins, vMaxs, MASK_PLAYERSOLID_BRUSHONLY, bTraceEntityFilter);
 	if (TR_DidHit(hTrace)) {
 		TR_GetEndPosition(vEnd, hTrace);
-		if (vVec[2] - vEnd[2] > 128.0) {
+		if (vVec[2] - vEnd[2] > 104.0) {
 			delete hTrace;
 			return false;
 		}
@@ -348,7 +348,7 @@ public Action L4D2_OnSelectTankAttack(int client, int &sequence) {
 	if (sequence != 50 || !IsFakeClient(client))
 		return Plugin_Continue;
 
-	sequence = GetRandomInt(0, 1) ? 49 : 51;
+	sequence = Math_GetRandomInt(0, 1) ? 49 : 51;
 	return Plugin_Handled;
 }
 
@@ -492,7 +492,7 @@ int iGetClosestSur(int client, int iExclude = -1, int iEnt, float fDistance) {
 
 	aClients.Sort(Sort_Ascending, Sort_Float);
 	iIndex = aClients.FindValue(0, 2);
-	i = aClients.Get(iIndex != -1 && aClients.Get(iIndex, 0) < g_fTankThrowForce ? iIndex : GetRandomInt(0, RoundToCeil((aClients.Length - 1) * 0.8)), 1);
+	i = aClients.Get(iIndex != -1 && aClients.Get(iIndex, 0) < g_fTankThrowForce ? iIndex : Math_GetRandomInt(0, RoundToCeil((aClients.Length - 1) * 0.8)), 1);
 	delete aClients;
 	return i;
 }
@@ -578,4 +578,26 @@ bool PointWithinViewAngle(const float vecSrcPosition[3], const float vecTargetPo
  */
 float GetFOVDotProduct(float angle) {
 	return Cosine(DegToRad(angle) / 2.0);
+}
+
+// https://github.com/bcserv/smlib/blob/transitional_syntax/scripting/include/smlib/math.inc
+/**
+ * Returns a random, uniform Integer number in the specified (inclusive) range.
+ * This is safe to use multiple times in a function.
+ * The seed is set automatically for each plugin.
+ * Rewritten by MatthiasVance, thanks.
+ *
+ * @param min			Min value used as lower border
+ * @param max			Max value used as upper border
+ * @return				Random Integer number between min and max
+ */
+int Math_GetRandomInt(int min, int max)
+{
+	int random = GetURandomInt();
+
+	if (random == 0) {
+		random++;
+	}
+
+	return RoundToCeil(float(random) / (float(2147483647) / float(max - min + 1))) + min - 1;
 }
