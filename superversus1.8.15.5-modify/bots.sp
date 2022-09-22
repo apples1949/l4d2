@@ -37,6 +37,7 @@ ArrayList
 
 Address
 	g_pDirector,
+	g_pSavedSurvivorBotsCount,
 	g_pStatsCondition;
 
 ConVar
@@ -297,9 +298,8 @@ public void OnPluginStart() {
 	g_smSteamIDs = new StringMap();
 	g_aMeleeScripts = new ArrayList(ByteCountToCells(64));
 
-	AddCommandListener(spec_next_Listener, "spec_next");
+	AddCommandListener(Listener_spec_next, "spec_next");
 	HookUserMessage(GetUserMessageId("SayText2"), umSayText2, true);
-
 	CreateConVar("bots_version", PLUGIN_VERSION, "bots(coop) plugin version.", FCVAR_NOTIFY|FCVAR_DONTRECORD);
 
 	g_cvBotsLimit = 			CreateConVar("bots_limit", 				"4", 		"开局Bot的数量", CVAR_FLAGS, true, 1.0, true, 31.0);
@@ -468,10 +468,10 @@ Action aJoinTeam2(int client) {
 	if (canRespawn) {
 		if (!IsPlayerAlive(findBot)) {
 			RoundRespawn(client);
-			takeOver = TakeOverAllowed(TeleportToSurvivor(findBot), findBot);
+			takeOver = TakeOverAllowed(client, TeleportToSurvivor(findBot), findBot);
 		}
 		else
-			takeOver = TakeOverAllowed(newBot ? TeleportToSurvivor(findBot) : findBot, findBot);
+			takeOver = TakeOverAllowed(client, newBot ? TeleportToSurvivor(findBot) : findBot, findBot);
 
 		SetHumanSpec(findBot, client);
 		if (takeOver)
@@ -486,7 +486,7 @@ Action aJoinTeam2(int client) {
 				TakeOverBot(client);
 				PrintToChat(client, "\x05重复加入默认为\x01-> \x04死亡状态\x01.");
 			}
-			else if (TakeOverAllowed(findBot, findBot))
+			else if (TakeOverAllowed(client, findBot, findBot))
 				TakeOverBot(client);
 		}
 		else {
@@ -540,7 +540,7 @@ int IsAllowedTeam(int client) {
 void TakeOverBotMenu(int client) {
 	char item[12];
 	char info[64];
-	Menu menu = new Menu(TakeOverBot_Handler);
+	Menu menu = new Menu(TakeOverBot_MenuHandler);
 	menu.SetTitle("- 请选择接管目标 - [!tkbot]");
 	menu.AddItem("o", "当前旁观目标");
 
@@ -588,7 +588,7 @@ char[] GetModelName(int client) {
 	return sModel;
 }
 
-int TakeOverBot_Handler(Menu menu, MenuAction action, int param1, int param2) {
+int TakeOverBot_MenuHandler(Menu menu, MenuAction action, int param1, int param2) {
 	switch (action) {
 		case MenuAction_Select: {
 			int bot;
@@ -641,12 +641,12 @@ Action cmdGoIdle(int client, int args) {
 	if (GetClientTeam(client) != TEAM_SURVIVOR || !IsPlayerAlive(client))
 		return Plugin_Handled;
 
-	GoAFKTimer(client, 1.0);
+	GoAFKTimer(client, 1.5);
 	return Plugin_Handled;
 }
 
 void GoAFKTimer(int client, float flDuration) {
-	static int m_GoAFKTimer = -1;
+	static int m_GoAFKTimer;
 	if (m_GoAFKTimer == -1)
 		m_GoAFKTimer = FindSendPropInfo("CTerrorPlayer", "m_lookatPlayer") - 12;
 
@@ -678,7 +678,7 @@ Action cmdBotSet(int client, int args) {
 	return Plugin_Handled;
 }
 
-Action spec_next_Listener(int client, char[] command, int argc) {
+Action Listener_spec_next(int client, char[] command, int argc) {
 	if (!g_esPlayer[client].notify || !(g_iJoinFlags & JOIN_MANUAL))
 		return Plugin_Continue;
 
@@ -710,7 +710,7 @@ Action spec_next_Listener(int client, char[] command, int argc) {
 void JoinSurvivorMenu(int client) {
 	EmitSoundToClient(client, SOUND_SPECMENU, SOUND_FROM_PLAYER, SNDCHAN_AUTO, SNDLEVEL_NORMAL, SND_NOFLAGS, SNDVOL_NORMAL, SNDPITCH_NORMAL, -1, NULL_VECTOR, NULL_VECTOR, true, 0.0);
 
-	Menu menu = new Menu(JoinSurvivor_Handler);
+	Menu menu = new Menu(JoinSurvivor_MenuHandler);
 	menu.SetTitle("加入生还者?");
 	menu.AddItem("y", "是");
 	menu.AddItem("n", "否");
@@ -723,7 +723,7 @@ void JoinSurvivorMenu(int client) {
 	menu.Display(client, MENU_TIME_FOREVER);
 }
 
-int JoinSurvivor_Handler(Menu menu, MenuAction action, int param1, int param2) {
+int JoinSurvivor_MenuHandler(Menu menu, MenuAction action, int param1, int param2) {
 	switch (action) {
 		case MenuAction_Select: {
 			switch (param2) {
@@ -828,7 +828,7 @@ public void OnClientDisconnect(int client) {
 Action tmrBotsUpdate(Handle timer) {
 	g_hBotsTimer = null;
 
-	if (!IsInTransition())
+	if (!RestoringSurBots())
 		SpawnCheck();
 	else
 		g_hBotsTimer = CreateTimer(1.0, tmrBotsUpdate);
@@ -942,7 +942,7 @@ void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast) {
 			g_esPlayer[client].notify = true;
 
 			if (g_iJoinFlags & JOIN_AUTOMATIC && event.GetInt("oldteam") == TEAM_NOTEAM)
-				CreateTimer(1.0, tmrJoinTeam2, event.GetInt("userid"), TIMER_REPEAT|TIMER_FLAG_NO_MAPCHANGE);
+				CreateTimer(0.1, tmrJoinTeam2, event.GetInt("userid"), TIMER_REPEAT|TIMER_FLAG_NO_MAPCHANGE);
 		}
 
 		case TEAM_SURVIVOR:
@@ -954,7 +954,7 @@ Action tmrJoinTeam2(Handle timer, int client) {
 	if (!(g_iJoinFlags & JOIN_AUTOMATIC) || !(client = GetClientOfUserId(client)) || !IsClientInGame(client) || IsFakeClient(client) || GetClientTeam(client) > TEAM_SPECTATOR || GetBotOfIdlePlayer(client)) 
 		return Plugin_Stop;
 
-	if (!g_bRoundStart || GetClientTeam(client) <= TEAM_NOTEAM)
+	if (!g_bRoundStart || RestoringSurBots() || GetClientTeam(client) <= TEAM_NOTEAM)
 		return Plugin_Continue;
 
 	aJoinTeam2(client);
@@ -1121,7 +1121,7 @@ int FindUselessSurBot(bool bAlive) {
 		aClients.Sort(Sort_Descending, Sort_Integer);
 
 		client = aClients.Length - 1;
-		client = aClients.Get(GetRandomInt(aClients.FindValue(aClients.Get(client, 0)), client), 1);
+		client = aClients.Get(Math_GetRandomInt(aClients.FindValue(aClients.Get(client, 0)), client), 1);
 	}
 
 	delete aClients;
@@ -1156,7 +1156,7 @@ int TeleportToSurvivor(int client, bool bRandom = true) {
 			iSurvivor = aClients.Get(aClients.Length - 1, 1);
 		else {
 			iSurvivor = aClients.Length - 1;
-			iSurvivor = aClients.Get(GetRandomInt(aClients.FindValue(aClients.Get(iSurvivor, 0)), iSurvivor), 1);
+			iSurvivor = aClients.Get(Math_GetRandomInt(aClients.FindValue(aClients.Get(iSurvivor, 0)), iSurvivor), 1);
 		}
 	}
 
@@ -1223,7 +1223,7 @@ void GiveMelee(int client, const char[] sMeleeName) {
 	if (g_aMeleeScripts.FindString(sMeleeName) != -1)
 		strcopy(sScriptName, sizeof sScriptName, sMeleeName);
 	else
-		g_aMeleeScripts.GetString(GetRandomInt(0, g_aMeleeScripts.Length - 1), sScriptName, sizeof sScriptName);
+		g_aMeleeScripts.GetString(Math_GetRandomInt(0, g_aMeleeScripts.Length - 1), sScriptName, sizeof sScriptName);
 	
 	GivePlayerItem(client, sScriptName);
 }
@@ -1350,8 +1350,8 @@ int GetTempHealth(int client) {
 	if (!cvPainPillsDecay)
 		cvPainPillsDecay = FindConVar("pain_pills_decay_rate");
 
-	int health = RoundToFloor(GetEntPropFloat(client, Prop_Send, "m_healthBuffer") - (GetGameTime() - GetEntPropFloat(client, Prop_Send, "m_healthBufferTime")) * cvPainPillsDecay.FloatValue);
-	return health < 0 ? 0 : health;
+	int tempHealth = RoundToFloor(GetEntPropFloat(client, Prop_Send, "m_healthBuffer") - (GetGameTime() - GetEntPropFloat(client, Prop_Send, "m_healthBufferTime")) * cvPainPillsDecay.FloatValue);
+	return tempHealth < 0 ? 0 : tempHealth;
 }
 
 void InitData() {
@@ -1367,6 +1367,10 @@ void InitData() {
 	g_pDirector = hGameData.GetAddress("CDirector");
 	if (!g_pDirector)
 		SetFailState("Failed to find address: \"CDirector\" (%s)", PLUGIN_VERSION);
+
+	g_pSavedSurvivorBotsCount = hGameData.GetAddress("SavedSurvivorBotsCount");
+	if (!g_pSavedSurvivorBotsCount)
+		SetFailState("Failed to find address: \"SavedSurvivorBotsCount\"");
 
 	g_iOff_m_hWeaponHandle = hGameData.GetOffset("m_hWeaponHandle");
 	if (g_iOff_m_hWeaponHandle == -1)
@@ -1526,16 +1530,20 @@ void TakeOverBot(int client) {
 	SDKCall(g_hSDK_CTerrorPlayer_TakeOverBot, client, true);
 }
 
-bool TakeOverAllowed(int client, int bot) {
-	return !client || !GetEntData(client, g_iOff_m_isOutOfCheckpoint) && !GetEntProp(bot, Prop_Send, "m_isIncapacitated");
+bool TakeOverAllowed(int player, int client, int bot) {
+	return !client || (!GetEntData(player, g_iOff_m_isOutOfCheckpoint) && !GetEntData(client, g_iOff_m_isOutOfCheckpoint)) && !GetEntProp(bot, Prop_Send, "m_isIncapacitated");
 }
 
 bool OnEndScenario() {
-	return view_as<float>(LoadFromAddress(g_pDirector + view_as<Address>(g_iOff_RestartScenarioTimer + 8), NumberType_Int32)) > GetGameTime();
+	return view_as<float>(LoadFromAddress(g_pDirector + view_as<Address>(g_iOff_RestartScenarioTimer + 8), NumberType_Int32)) >= GetGameTime();
 }
 
 bool IsInTransition() {
 	return SDKCall(g_hSDK_CDirector_IsInTransition, g_pDirector);
+}
+
+bool RestoringSurBots() {
+	return IsInTransition() && LoadFromAddress(g_pSavedSurvivorBotsCount, NumberType_Int32);
 }
 
 void SetupDetours(GameData hGameData = null) {
@@ -1688,28 +1696,26 @@ void ClearRestoreWeapons(int client) {
 
 void GiveDefaultItems(int client) {
 	RemoveAllWeapons(client);
-
 	for (int i = 4; i >= 2; i--) {
 		if (!g_esWeapon[i].count)
 			continue;
 
-		GivePlayerItem(client, g_sWeaponName[i][g_esWeapon[i].allowed[GetRandomInt(0, g_esWeapon[i].count - 1)]]);
+		GivePlayerItem(client, g_sWeaponName[i][g_esWeapon[i].allowed[Math_GetRandomInt(0, g_esWeapon[i].count - 1)]]);
 	}
 
 	GiveSecondary(client);
-
 	switch (g_cvGiveType.IntValue) {
 		case 1:
 			GivePresetPrimary(client);
 		
 		case 2:
-			vGiveAveragePrimary(client);
+			GiveAveragePrimary(client);
 	}
 }
 
 void GiveSecondary(int client) {
 	if (g_esWeapon[1].count) {
-		int iRandom = g_esWeapon[1].allowed[GetRandomInt(0, g_esWeapon[1].count - 1)];
+		int iRandom = g_esWeapon[1].allowed[Math_GetRandomInt(0, g_esWeapon[1].count - 1)];
 		if (iRandom > 2)
 			GiveMelee(client, g_sWeaponName[1][iRandom]);
 		else
@@ -1719,7 +1725,7 @@ void GiveSecondary(int client) {
 
 void GivePresetPrimary(int client) {
 	if (g_esWeapon[0].count)
-		GivePlayerItem(client, g_sWeaponName[0][g_esWeapon[0].allowed[GetRandomInt(0, g_esWeapon[0].count - 1)]]);
+		GivePlayerItem(client, g_sWeaponName[0][g_esWeapon[0].allowed[Math_GetRandomInt(0, g_esWeapon[0].count - 1)]]);
 }
 
 bool IsWeaponTier1(int weapon) {
@@ -1732,7 +1738,7 @@ bool IsWeaponTier1(int weapon) {
 	return false;
 }
 
-void vGiveAveragePrimary(int client) {
+void GiveAveragePrimary(int client) {
 	int i = 1, tier, total, weapon;
 	if (g_bRoundStart) {
 		for (; i <= MaxClients; i++) {
@@ -1750,10 +1756,10 @@ void vGiveAveragePrimary(int client) {
 
 	switch (total > 0 ? RoundToNearest(float(tier) / float(total)) : 0) {
 		case 1:
-			GivePlayerItem(client, g_sWeaponName[0][GetRandomInt(0, 4)]);
+			GivePlayerItem(client, g_sWeaponName[0][Math_GetRandomInt(0, 4)]);
 
 		case 2:
-			GivePlayerItem(client, g_sWeaponName[0][GetRandomInt(5, 14)]);
+			GivePlayerItem(client, g_sWeaponName[0][Math_GetRandomInt(5, 14)]);
 	}
 }
 
@@ -1773,4 +1779,26 @@ void RemoveAllWeapons(int client) {
 		RemovePlayerItem(client, weapon);
 		RemoveEntity(weapon);
 	}
+}
+
+// https://github.com/bcserv/smlib/blob/transitional_syntax/scripting/include/smlib/math.inc
+/**
+ * Returns a random, uniform Integer number in the specified (inclusive) range.
+ * This is safe to use multiple times in a function.
+ * The seed is set automatically for each plugin.
+ * Rewritten by MatthiasVance, thanks.
+ *
+ * @param min			Min value used as lower border
+ * @param max			Max value used as upper border
+ * @return				Random Integer number between min and max
+ */
+int Math_GetRandomInt(int min, int max)
+{
+	int random = GetURandomInt();
+
+	if (random == 0) {
+		random++;
+	}
+
+	return RoundToCeil(float(random) / (float(2147483647) / float(max - min + 1))) + min - 1;
 }
