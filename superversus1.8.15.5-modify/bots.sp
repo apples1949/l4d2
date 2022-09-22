@@ -680,9 +680,9 @@ Action cmdBotSet(int client, int args) {
 Action Listener_spec_next(int client, char[] command, int argc) {
 	if (!g_esPlayer[client].notify || !(g_iJoinFlags & JOIN_MANUAL))
 		return Plugin_Continue;
-
+/*
 	if (IsInTransition())
-		return Plugin_Continue;
+		return Plugin_Continue;*/
 
 	if (!client || !IsClientInGame(client) || IsFakeClient(client))
 		return Plugin_Continue;
