@@ -15,7 +15,7 @@
 #define PLUGIN_NAME				"Control Zombies In Co-op"
 #define PLUGIN_AUTHOR			"sorallll"
 #define PLUGIN_DESCRIPTION		""
-#define PLUGIN_VERSION			"3.4.9"
+#define PLUGIN_VERSION			"3.5.0"
 #define PLUGIN_URL				"https://steamcommunity.com/id/sorallll"
 
 /*****************************************************************************************************/
@@ -1967,7 +1967,7 @@ void vTeleportToSurvivor(int client, bool bRandom = true) {
 			iSurvivor = aClients.Get(aClients.Length - 1, 1);
 		else {
 			iSurvivor = aClients.Length - 1;
-			iSurvivor = aClients.Get(GetRandomInt(aClients.FindValue(aClients.Get(iSurvivor, 0)), iSurvivor), 1);
+			iSurvivor = aClients.Get(Math_GetRandomInt(aClients.FindValue(aClients.Get(iSurvivor, 0)), iSurvivor), 1);
 		}
 	}
 
@@ -2011,7 +2011,7 @@ int iFindUselessSurBot(bool bAlive) {
 		aClients.Sort(Sort_Descending, Sort_Integer);
 
 		client = aClients.Length - 1;
-		client = aClients.Get(GetRandomInt(aClients.FindValue(aClients.Get(client, 0)), client), 1);
+		client = aClients.Get(Math_GetRandomInt(aClients.FindValue(aClients.Get(client, 0)), client), 1);
 	}
 
 	delete aClients;
@@ -2076,13 +2076,12 @@ int iTakeOverTank(int tank) {
 	if (!aClients.Length)
 		client = 0;
 	else {
-		SetRandomSeed(GetSysTickCount());
 		if (aClients.FindValue(0) != -1) {
 			aClients.Sort(Sort_Descending, Sort_Integer);
-			client = aClients.Get(GetRandomInt(aClients.FindValue(0), aClients.Length - 1), 1);
+			client = aClients.Get(Math_GetRandomInt(aClients.FindValue(0), aClients.Length - 1), 1);
 		}
-		else if (GetRandomFloat(0.0, 1.0) < g_fSurvivorChance)
-			client = aClients.Get(GetRandomInt(0, aClients.Length - 1), 1);
+		else if (Math_GetRandomFloat(0.0, 1.0) < g_fSurvivorChance)
+			client = aClients.Get(Math_GetRandomInt(0, aClients.Length - 1), 1);
 		else
 			client = 0;
 	}
@@ -2140,15 +2139,15 @@ bool bAllowSurTakeOver() {
 bool bIsPinned(int client) {
 	if (GetEntProp(client, Prop_Send, "m_isIncapacitated"))
 		return true;
-	if (GetEntPropEnt(client, Prop_Send, "m_pummelAttacker") > 0)
-		return true;
-	if (GetEntPropEnt(client, Prop_Send, "m_carryAttacker") > 0)
+	if (GetEntPropEnt(client, Prop_Send, "m_tongueOwner") > 0)
 		return true;
 	if (GetEntPropEnt(client, Prop_Send, "m_pounceAttacker") > 0)
 		return true;
 	if (GetEntPropEnt(client, Prop_Send, "m_jockeyAttacker") > 0)
 		return true;
-	if (GetEntPropEnt(client, Prop_Send, "m_tongueOwner") > 0)
+	if (GetEntPropEnt(client, Prop_Send, "m_carryAttacker") > 0)
+		return true;
+	if (GetEntPropEnt(client, Prop_Send, "m_pummelAttacker") > 0)
 		return true;
 	return false;
 }
@@ -2624,11 +2623,9 @@ bool bAttemptRespawnPZ(int client) {
 		}
 	}
 
-	SetRandomSeed(GetSysTickCount());
-
 	if (iCount >= g_iSILimit) {
 		CPrintToChat(client, "{olive}当前存活特感数量{default}-> {red}%d {olive}达到设置总数上限{default}-> {red}%d {olive}将以随机特感类型复活", iCount, g_iSILimit);
-		return bRespawnPZ(client, GetRandomInt(1, 6));
+		return bRespawnPZ(client, Math_GetRandomInt(1, 6));
 	}
 
 	int iTotalWeight;
@@ -2650,7 +2647,7 @@ bool bAttemptRespawnPZ(int client) {
 	}
 
 	iClass = -1;
-	float fRandom = GetRandomFloat(0.0, 1.0);
+	float fRandom = Math_GetRandomFloat(0.0, 1.0);
 	for (i = 0; i < 6; i++) {
 		if (iTempSpawnWeights[i] <= 0)
 			continue;
@@ -2664,7 +2661,7 @@ bool bAttemptRespawnPZ(int client) {
 
 	if (iClass == -1) {
 		CPrintToChat(client, "当前无满足要求的特感类型可供复活, 将以随机特感类型复活");
-		return bRespawnPZ(client, GetRandomInt(1, 6));
+		return bRespawnPZ(client, Math_GetRandomInt(1, 6));
 	}
 
 	return bRespawnPZ(client, iClass + 1);
@@ -3145,4 +3142,40 @@ void vSpawnablePZScan(bool bProtect) {
 			}
 		}
 	}
+}
+
+// https://github.com/bcserv/smlib/blob/transitional_syntax/scripting/include/smlib/math.inc
+/**
+ * Returns a random, uniform Integer number in the specified (inclusive) range.
+ * This is safe to use multiple times in a function.
+ * The seed is set automatically for each plugin.
+ * Rewritten by MatthiasVance, thanks.
+ *
+ * @param min			Min value used as lower border
+ * @param max			Max value used as upper border
+ * @return				Random Integer number between min and max
+ */
+int Math_GetRandomInt(int min, int max)
+{
+	int random = GetURandomInt();
+
+	if (random == 0) {
+		random++;
+	}
+
+	return RoundToCeil(float(random) / (float(2147483647) / float(max - min + 1))) + min - 1;
+}
+
+/**
+ * Returns a random, uniform Float number in the specified (inclusive) range.
+ * This is safe to use multiple times in a function.
+ * The seed is set automatically for each plugin.
+ *
+ * @param min			Min value used as lower border
+ * @param max			Max value used as upper border
+ * @return				Random Float number between min and max
+ */
+float Math_GetRandomFloat(float min, float max)
+{
+	return (GetURandomFloat() * (max  - min)) + min;
 }
