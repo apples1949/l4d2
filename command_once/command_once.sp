@@ -5,11 +5,8 @@
 #define PLUGIN_NAME				"Command Once"
 #define PLUGIN_AUTHOR			"sorallll"
 #define PLUGIN_DESCRIPTION		"在服务器首次OnConfigsExecuted()触发后执行所有使用该命令设置的内容"
-#define PLUGIN_VERSION			"1.0.3"
+#define PLUGIN_VERSION			"1.0.4"
 #define PLUGIN_URL				""
-
-#define DEBUG					0
-#define LOG_PATH				"addons/sourcemod/logs/command_once.log"
 
 ArrayList
 	g_aCmdList;
@@ -41,7 +38,7 @@ public void OnPluginStart() {
 
 Action cmdExec_Once(int client, int args) {
 	int invalid;
-	int count = iExecuteCmds(invalid);
+	int count = ExecuteCmds(invalid);
 	ReplyToCommand(client, "total: %d valid: %d invalid: %d", count, count - invalid, invalid);
 	return Plugin_Handled;
 }
@@ -63,11 +60,8 @@ Action cmdOnce(int args) {
 		return Plugin_Handled;
 
 	char cmd[64];
-	GetCmdArg(1, cmd, sizeof cmd);
-	if (g_aCmdList.FindString(cmd) != -1) {
-		//LogError("命令 \"%s\" 已存在", cmd);
+	if (!GetCmdArg(1, cmd, sizeof cmd))
 		return Plugin_Handled;
-	}
 
 	char value[255];
 	GetCmdArgString(value, sizeof value);
@@ -84,39 +78,23 @@ Action cmdOnce(int args) {
 public void OnConfigsExecuted() {
 	if (!g_bExecuted) {
 		g_bExecuted = true;
-		RequestFrame(OnNextFrame_Executed);
+		RequestFrame(NextFrame_Executed);
 	}
 }
 
 // https://forums.alliedmods.net/showthread.php?p=2607757
-void OnNextFrame_Executed() {
-	iExecuteCmds();
+void NextFrame_Executed() {
+	ExecuteCmds();
 }
 
-int iExecuteCmds(int &invalid = 0) {
+int ExecuteCmds(int &invalid = 0) {
 	esCmd command;
-	char result[254];
-	ConVar hndl;
-
 	ArrayList aCmdList = g_aCmdList.Clone();
 	int count = aCmdList.Length;
 	for (int i; i < count; i++) {
 		aCmdList.GetArray(i, command);
-		ServerCommandEx(result, sizeof result, "%s %s", command.cmd, command.value);
-		if (!result[0])
-			continue;
-
-		hndl = FindConVar(command.cmd);
-		if (!hndl) {
-			LogError("%s", result);
-			invalid++;
-		}
-		else
-			hndl.SetString(command.value, true, false);
-
-		#if DEBUG
-		LogToFile(LOG_PATH, "cmd: \"%s\" value: \"%s\"", command.cmd, command.value);
-		#endif
+		InsertServerCommand("%s %s", command.cmd, command.value);
+		ServerExecute();
 	}
 
 	delete aCmdList;
