@@ -5,7 +5,6 @@
 #include <clientprefs>
 #include <adminmenu>
 #include <dhooks>
-#include <left4dhooks>
 
 #define PLUGIN_VERSION "1.7.2"
 #define PLUGIN_NAME 	"Survivor Chat Select"
@@ -36,8 +35,7 @@ TopMenu
 	hTopMenu;
 
 Address
-	g_pDirector,
-	g_pSavedPlayersCount;
+	g_pDirector;
 
 ConVar
 	g_cvCookie,
@@ -127,7 +125,7 @@ public void OnPluginStart() {
 	HookEvent("player_spawn", 		Event_PlayerSpawn);
 
 	g_cvCookie = 		CreateConVar("l4d_scs_cookie", 			"0","保存玩家的模型角色喜好?", FCVAR_NOTIFY);
-	g_cvAutoModel = 		CreateConVar("l4d_scs_auto_model", 		"1","开关8人独立模型?", FCVAR_NOTIFY);
+	g_cvAutoModel = 	CreateConVar("l4d_scs_auto_model", 		"1","开关8人独立模型?", FCVAR_NOTIFY);
 	g_cvAdminsOnly = 	CreateConVar("l4d_csm_admins_only", 	"1","只允许管理员使用csm命令?", FCVAR_NOTIFY);
 	g_cvInTransition = 	CreateConVar("l4d_csm_in_transition", 	"1","启用8人独立模型后不对正在过渡的玩家设置?", FCVAR_NOTIFY);
 	g_hPrecacheAllSur = FindConVar("precache_all_survivors");
@@ -725,9 +723,7 @@ void OnSpawnPost(int client) {
 
 	/*if (!GetIdlePlayerOfBot(client))
 		RequestFrame(NextFrame_SpawnPost, GetClientUserId(client));*/
-
-	if (!IsInTransition() || !GetIdlePlayerOfBot(client))
-		RequestFrame(NextFrame_SpawnPost, GetClientUserId(client));
+	RequestFrame(NextFrame_SpawnPost, GetClientUserId(client));
 }
 
 void NextFrame_SpawnPost(int client) {
@@ -1005,10 +1001,6 @@ void InitGameData() {
 	if (!g_pDirector)
 		SetFailState("Failed to find address: \"CDirector\"");
 
-	g_pSavedPlayersCount = hGameData.GetAddress("SavedPlayersCount");
-	if (!g_pSavedPlayersCount)
-		SetFailState("Failed to find address: \"SavedPlayersCount\"");
-
 	g_iOff_m_isTransitioned = hGameData.GetOffset("m_isTransitioned");
 	if (g_iOff_m_isTransitioned == -1)
 		SetFailState("Failed to find offset: \"m_isTransitioned\"");
@@ -1025,12 +1017,8 @@ void InitGameData() {
 	delete hGameData;
 }
 
-bool IsInTransition() {
-	return SDKCall(g_hSDK_CDirector_IsInTransition, g_pDirector) && LoadFromAddress(g_pSavedPlayersCount, NumberType_Int32);
-}
-
 bool duringTransition(int client) {
-	return IsInTransition() && !GetEntData(client, g_iOff_m_isTransitioned);
+	return SDKCall(g_hSDK_CDirector_IsInTransition, g_pDirector) && !GetEntData(client, g_iOff_m_isTransitioned);
 }
 
 void SetupDetours(GameData hGameData = null) {
