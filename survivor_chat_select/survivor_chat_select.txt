@@ -36,20 +36,6 @@
 				}
 				"read"	"0"
 			}
-
-			"SavedPlayersCount"
-			{
-				"linux"
-				{
-					"signature"	"CTerrorPlayer::TransitionRestore"
-					"read"		"107"
-				}
-				"windows"
-				{
-					"signature"	"CTerrorPlayer::TransitionRestore"
-					"read"		"446"
-				}
-			}
 		}
 
 		"Offsets"
@@ -106,15 +92,6 @@
 				"linux"		"@_ZN16CTerrorGameRules14GetSurvivorSetEv"
 				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x8B\x2A\x8B\x2A\x2A\x53\x56\xBB\x2A\x2A\x2A\x2A\xFF"
 				/* ? ? ? ? ? ? ? ? ? ? 8B ? 8B ? ? 53 56 BB ? ? ? ? FF */
-			}
-
-			/* CTerrorPlayer::TransitionRestore(CTerrorPlayer *__hidden this) */
-			"CTerrorPlayer::TransitionRestore"
-			{
-				"library"	"server"
-				"linux"		"@_ZN13CTerrorPlayer17TransitionRestoreEv"
-				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x80\x2A\x2A\x2A\x2A\x2A\x2A\x75\x2A\x33\x2A\x5E\x8B\x2A\x5D\xC3"
-				/* ? ? ? ? ? ? ? 80 ? ? ? ? ? ? 75 ? 33 ? 5E 8B ? 5D C3 */
 			}
 		}
     }
