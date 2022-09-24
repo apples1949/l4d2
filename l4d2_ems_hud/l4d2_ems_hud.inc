@@ -1,45 +1,33 @@
+/**************************************************************************
+ *                                                                        *
+ *                   	L4D2 EMS HUD Functions							  *
+ *                   	   Author: sorallll								  *
+ *                         Version: 1.0.3                                 *
+ *                                                                        *
+ **************************************************************************/
+
 #if defined _l4d2_ems_hud_included
  #endinput
 #endif
 #define _l4d2_ems_hud_included
 
-public SharedPlugin __pl_l4d2_ems_hud = 
-{
-	name = "l4d2_ems_hud",
-	file = "l4d2_ems_hud.smx",
-#if defined REQUIRE_PLUGIN
-	required = 1,
-#else
-	required = 0,
-#endif
-};
+#define HUD_MAX         15
 
-#if !defined REQUIRE_PLUGIN
-public void __pl_l4d2_ems_hud_SetNTVOptional()
-{
-	MarkNativeAsOptional("HUDSetLayout");
-	MarkNativeAsOptional("HUDPlace");
-	MarkNativeAsOptional("HUDSlotIsUsed");
-}
-#endif
-
-enum SlotType {
-	HUD_LEFT_TOP = 0,
-	HUD_LEFT_BOT,
-	HUD_MID_TOP,
-	HUD_MID_BOT,
-	HUD_RIGHT_TOP,
-	HUD_RIGHT_BOT,
-	HUD_TICKER,
-	HUD_FAR_LEFT,
-	HUD_FAR_RIGHT,
-	HUD_MID_BOX,
-	HUD_SCORE_TITLE,
-	HUD_SCORE_1,
-	HUD_SCORE_2,
-	HUD_SCORE_3,
-	HUD_SCORE_4,      
-};
+#define HUD_LEFT_TOP	0
+#define HUD_LEFT_BOT	1
+#define HUD_MID_TOP		2
+#define HUD_MID_BOT		3
+#define HUD_RIGHT_TOP	4
+#define HUD_RIGHT_BOT	5
+#define HUD_TICKER		6
+#define HUD_FAR_LEFT	7
+#define HUD_FAR_RIGHT	8
+#define HUD_MID_BOX		9
+#define HUD_SCORE_TITLE	10
+#define HUD_SCORE_1		11
+#define HUD_SCORE_2		12
+#define HUD_SCORE_3		13
+#define HUD_SCORE_4		14
 
 // custom flags for background, time, alignment, which team, pre or postfix, etc
 #define HUD_FLAG_PRESTR			(1<<0)	//	do you want a string/value pair to start(pre) or end(post) with the static string (default is PRE)
@@ -69,14 +57,21 @@ enum SlotType {
 /**
  * Passes a table that defines your in-game HUD to the engine.
  *
- * @param SlotType		SlotType's slot.
+ * @param slot			HUD slot.
  * @param flags			flags(HUD_FLAG_BLINK)..
  * @param dataval		used for data of destination string buffer.
  * @param ...			Variable number of format parameters.
  * @noreturn
- * @error				Invalid SlotType.
+ * @error				Invalid Slot Type.
  */
-native void HUDSetLayout(SlotType slot, int flags, char[] dataval, any ...);
+stock void HUDSetLayout(int slot, int flags, const char[] dataval, any ...) {
+	static char buffer[128];
+	VFormat(buffer, sizeof buffer, dataval, 4);
+
+	GameRules_SetProp("m_bChallengeModeActive", true);
+	GameRules_SetProp("m_iScriptedHUDFlags", flags, _, slot, true);
+	GameRules_SetPropString("m_szScriptedHUDStringSet", buffer, true, slot);
+}
 
 /**
  * Note:HUDPlace(slot,x,y,w,h): moves the given HUD slot to the XY position specified, with new W and H.
@@ -90,38 +85,55 @@ native void HUDSetLayout(SlotType slot, int flags, char[] dataval, any ...);
 /**
  * Place a slot in game.
  *
- * @param SlotType		SlotType's slot.
+ * @param slot			HUD slot.
  * @param x				screen x position.
  * @param y				screen y position.
  * @param width			screen slot width.
  * @param height		screen slot height.
  * @noreturn
- * @error				Invalid SlotType.
+ * @error				Invalid Slot Type.
  */
-native void HUDPlace(SlotType slot, float x, float y, float width, float height);
+stock void HUDPlace(int slot, float x, float y, float width, float height) {
+	GameRules_SetPropFloat("m_fScriptedHUDPosX", x, slot, true);
+	GameRules_SetPropFloat("m_fScriptedHUDPosY", y, slot, true);
+	GameRules_SetPropFloat("m_fScriptedHUDWidth", width, slot, true);
+	GameRules_SetPropFloat("m_fScriptedHUDHeight", height, slot, true);
+}
 
 /**
  * Removes a slot from game.
  *
- * @param SlotType		SlotType's slot.
+ * @param slot			HUD slot.
  * @noreturn
- * @error				Invalid SlotType.
+ * @error				Invalid Slot Type.
  */
-native void RemoveHUD(SlotType slot);
+stock void RemoveHUD(int slot) {
+	GameRules_SetProp("m_iScriptedHUDInts", 0, _, slot, true);
+	GameRules_SetPropFloat("m_fScriptedHUDFloats", 0.0, slot, true);
+	GameRules_SetProp("m_iScriptedHUDFlags", 0, _, slot, true);
+	GameRules_SetPropFloat("m_fScriptedHUDPosX", 0.0, slot, true);
+	GameRules_SetPropFloat("m_fScriptedHUDPosY", 0.0, slot, true);
+	GameRules_SetPropFloat("m_fScriptedHUDWidth", 0.0, slot, true);
+	GameRules_SetPropFloat("m_fScriptedHUDHeight", 0.0, slot, true);
+	GameRules_SetPropString("m_szScriptedHUDStringSet", "", true, slot);
+}
 
 /**
  * Returns if a Slot is Used
  *
- * @param SlotType		SlotType's slot.
+ * @param slot			HUD slot.
  * @return				True if a Slot is Used, false otherwise.
- * @error				Invalid SlotType.
+ * @error				Invalid Slot Type.
  */
-native bool HUDSlotIsUsed(SlotType slot);
+stock bool HUDSlotIsUsed(int slot) {
+	char str[1];
+	return !!GameRules_GetPropString("m_szScriptedHUDStringSet", str, sizeof str, slot);
+}
 
 /**
  * Remove All slot from game.		
  */
 stock void RemoveAllHUD() {
-	for (int slot; slot < 15; slot++)
-		RemoveHUD(view_as<SlotType>(slot));
+	for (int slot; slot < HUD_MAX; slot++)
+		RemoveHUD(slot);
 }
