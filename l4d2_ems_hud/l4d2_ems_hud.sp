@@ -6,46 +6,8 @@
 #define PLUGIN_NAME				"L4D2 EMS HUD"
 #define PLUGIN_AUTHOR			"sorallll"
 #define PLUGIN_DESCRIPTION		""
-#define PLUGIN_VERSION			"1.0.1"
+#define PLUGIN_VERSION			"1.0.2"
 #define PLUGIN_URL				""
-
-enum SlotType
-{
-	HUD_LEFT_TOP = 0,
-	HUD_LEFT_BOT, 
-	HUD_MID_TOP,
-	HUD_MID_BOT,
-	HUD_RIGHT_TOP,
-	HUD_RIGHT_BOT, 
-	HUD_TICKER,
-	HUD_FAR_LEFT,    
-	HUD_FAR_RIGHT,    
-	HUD_MID_BOX,  
-	HUD_SCORE_TITLE,    
-	HUD_SCORE_1,
-	HUD_SCORE_2, 
-	HUD_SCORE_3,     
-	HUD_SCORE_4,         
-};
-
-// custom flags for background, time, alignment, which team, pre or postfix, etc
-#define HUD_FLAG_PRESTR			(1<<0)	//	do you want a string/value pair to start(pre) or end(post) with the static string (default is PRE)
-#define HUD_FLAG_POSTSTR 		(1<<1)	//	ditto
-#define HUD_FLAG_BEEP			(1<<2)	//	Makes a countdown timer blink
-#define HUD_FLAG_BLINK			(1<<3)  //	do you want this field to be blinking
-#define HUD_FLAG_AS_TIME		(1<<4)	//	to do..
-#define HUD_FLAG_COUNTDOWN_WARN	(1<<5)	//	auto blink when the timer gets under 10 seconds
-#define HUD_FLAG_NOBG	        (1<<6) 	//	dont draw the background box for this UI element
-#define HUD_FLAG_ALLOWNEGTIMER	(1<<7) 	//	by default Timers stop on 0:00 to avoid briefly going negative over network, this keeps that from happening
-#define HUD_FLAG_ALIGN_LEFT		(1<<8) 	//	Left justify this text
-#define HUD_FLAG_ALIGN_CENTER	(1<<9)	//	Center justify this text
-#define HUD_FLAG_ALIGN_RIGHT	(3<<8)	//	Right justify this text
-#define HUD_FLAG_TEAM_SURVIVORS	(1<<10) //	only show to the survivor team
-#define HUD_FLAG_TEAM_INFECTED	(1<<11) //	only show to the special infected team
-#define HUD_FLAG_TEAM_MASK		(3<<10) //	link HUD_FLAG_TEAM_SURVIVORS and  HUD_FLAG_TEAM_INFECTED
-#define HUD_FLAG_UNKNOWN1       (1<<12)	//	?
-#define HUD_FLAG_TEXT			(1<<13)	//	?
-#define HUD_FLAG_NOTVISIBLE		(1<<14) // if you want to keep the slot data but keep it from displaying
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max) {
 	if (GetEngineVersion() != Engine_Left4Dead2) 
@@ -75,7 +37,7 @@ any Native_HUDSetLayout(Handle plugin, int numParams) {
 	return 0;
 }
 
-// native void HUDPlace(SlotType slot, float x_pos, float y_pos, float width, float height);
+// native void HUDPlace(SlotType slot, float x, float y, float width, float height);
 any Native_HUDPlace(Handle plugin, int numParams) {
 	int slot = GetNativeCell(1);
 	if (slot < 0 || slot > 15)
@@ -116,9 +78,9 @@ void HUDSetLayout(int slot, int flags, const char[] str) {
 	GameRules_SetPropString("m_szScriptedHUDStringSet", str, true, slot);
 }
 
-void HUDPlace(int slot, float x_pos, float y_pos, float width, float height) {
-	GameRules_SetPropFloat("m_fScriptedHUDPosX", x_pos, slot, true);
-	GameRules_SetPropFloat("m_fScriptedHUDPosY", y_pos, slot, true);
+void HUDPlace(int slot, float x, float y, float width, float height) {
+	GameRules_SetPropFloat("m_fScriptedHUDPosX", x, slot, true);
+	GameRules_SetPropFloat("m_fScriptedHUDPosY", y, slot, true);
 	GameRules_SetPropFloat("m_fScriptedHUDWidth", width, slot, true);
 	GameRules_SetPropFloat("m_fScriptedHUDHeight", height, slot, true);
 }

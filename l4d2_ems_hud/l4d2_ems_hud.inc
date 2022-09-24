@@ -23,33 +23,32 @@ public void __pl_l4d2_ems_hud_SetNTVOptional()
 }
 #endif
 
-enum SlotType
-{
+enum SlotType {
 	HUD_LEFT_TOP = 0,
-	HUD_LEFT_BOT, 
+	HUD_LEFT_BOT,
 	HUD_MID_TOP,
 	HUD_MID_BOT,
 	HUD_RIGHT_TOP,
-	HUD_RIGHT_BOT, 
+	HUD_RIGHT_BOT,
 	HUD_TICKER,
-	HUD_FAR_LEFT,    
-	HUD_FAR_RIGHT,    
-	HUD_MID_BOX,  
-	HUD_SCORE_TITLE,    
+	HUD_FAR_LEFT,
+	HUD_FAR_RIGHT,
+	HUD_MID_BOX,
+	HUD_SCORE_TITLE,
 	HUD_SCORE_1,
-	HUD_SCORE_2, 
-	HUD_SCORE_3,     
-	HUD_SCORE_4,         
+	HUD_SCORE_2,
+	HUD_SCORE_3,
+	HUD_SCORE_4,      
 };
 
 // custom flags for background, time, alignment, which team, pre or postfix, etc
 #define HUD_FLAG_PRESTR			(1<<0)	//	do you want a string/value pair to start(pre) or end(post) with the static string (default is PRE)
-#define HUD_FLAG_POSTSTR 		(1<<1)	//	ditto
+#define HUD_FLAG_POSTSTR		(1<<1)	//	ditto
 #define HUD_FLAG_BEEP			(1<<2)	//	Makes a countdown timer blink
 #define HUD_FLAG_BLINK			(1<<3)  //	do you want this field to be blinking
 #define HUD_FLAG_AS_TIME		(1<<4)	//	to do..
 #define HUD_FLAG_COUNTDOWN_WARN	(1<<5)	//	auto blink when the timer gets under 10 seconds
-#define HUD_FLAG_NOBG	        (1<<6) 	//	dont draw the background box for this UI element
+#define HUD_FLAG_NOBG			(1<<6) 	//	dont draw the background box for this UI element
 #define HUD_FLAG_ALLOWNEGTIMER	(1<<7) 	//	by default Timers stop on 0:00 to avoid briefly going negative over network, this keeps that from happening
 #define HUD_FLAG_ALIGN_LEFT		(1<<8) 	//	Left justify this text
 #define HUD_FLAG_ALIGN_CENTER	(1<<9)	//	Center justify this text
@@ -57,53 +56,55 @@ enum SlotType
 #define HUD_FLAG_TEAM_SURVIVORS	(1<<10) //	only show to the survivor team
 #define HUD_FLAG_TEAM_INFECTED	(1<<11) //	only show to the special infected team
 #define HUD_FLAG_TEAM_MASK		(3<<10) //	link HUD_FLAG_TEAM_SURVIVORS and  HUD_FLAG_TEAM_INFECTED
-#define HUD_FLAG_UNKNOWN1       (1<<12)	//	?
+#define HUD_FLAG_UNKNOWN1		(1<<12)	//	?
 #define HUD_FLAG_TEXT			(1<<13)	//	?
-#define HUD_FLAG_NOTVISIBLE		(1<<14) // if you want to keep the slot data but keep it from displaying
+#define HUD_FLAG_NOTVISIBLE		(1<<14) //	if you want to keep the slot data but keep it from displaying
 
-/*
-Passes a table that defines your in-game HUD to the engine. 
-From there on, you can modify the table to cause changes. 
-Though often you wont, you will instead use a dataval entry to define a simple lambda that 
-returns the up-to-date value to the HUD system.
+/**
+ * Passes a table that defines your in-game HUD to the engine.
+ * From there on, you can modify the table to cause changes.
+ * Though often you wont, you will instead use a dataval entry to define a simple lambda that
+ * returns the up-to-date value to the HUD system.
 */
-/** 
- * Passes a table that defines your in-game HUD to the engine. 
+/**
+ * Passes a table that defines your in-game HUD to the engine.
  *
- * @param SlotType:slot	SlotType's slot.
+ * @param SlotType		SlotType's slot.
  * @param flags			flags(HUD_FLAG_BLINK)..
  * @param dataval		used for data of destination string buffer.
  * @param ...			Variable number of format parameters.
  * @noreturn
- * @error				Invalid SlotType:slot or flags or null dataval.
+ * @error				Invalid SlotType.
  */
 native void HUDSetLayout(SlotType slot, int flags, char[] dataval, any ...);
 
-/*Note:HUDPlace(slot,x,y,w,h): moves the given HUD slot to the XY position specified, with new W and H. 
-This is for doing occasional highlight/make a point type things, 
-or small changes to layout w/o having to build a new .res to put in a VPK.
-We suspect if you want to do a super fancy HUD you will want to create your own hudscriptedmode.res file, 
-just making sure to use the same element naming conventions so you can still talk to them from script. 
-x,y,w,h are all 0.0-1.0 screen relative coordinates (actually, a bit smaller than the screen, but anyway). 
-So a box near middle might be set as (0.4,0.45,0.2,0.1) or so.*/
-/** 
+/**
+ * Note:HUDPlace(slot,x,y,w,h): moves the given HUD slot to the XY position specified, with new W and H.
+ * This is for doing occasional highlight/make a point type things,
+ * or small changes to layout w/o having to build a new .res to put in a VPK.
+ * We suspect if you want to do a super fancy HUD you will want to create your own hudscriptedmode.res file,
+ * just making sure to use the same element naming conventions so you can still talk to them from script.
+ * x,y,w,h are all 0.0-1.0 screen relative coordinates (actually, a bit smaller than the screen, but anyway).
+ * So a box near middle might be set as (0.4,0.45,0.2,0.1) or so.
+ */
+/**
  * Place a slot in game.
  *
- * @param SlotType:slot	SlotType's slot.
- * @param x_pos			screen x position.
- * @param x_pos			screen y position.
- * @param x_pos			screen slot width.
- * @param x_pos			screen slot height.
+ * @param SlotType		SlotType's slot.
+ * @param x				screen x position.
+ * @param y				screen y position.
+ * @param width			screen slot width.
+ * @param height		screen slot height.
  * @noreturn
- * @error				Invalid SlotType:slot or not in 0.0-1.0.
+ * @error				Invalid SlotType.
  */
-native void HUDPlace(SlotType slot, float x_pos, float y_pos, float width, float height);
+native void HUDPlace(SlotType slot, float x, float y, float width, float height);
 
 /**
  * Returns if a Slot is Used
  *
- * @param SlotType:slot	SlotType's slot.
+ * @param SlotType		SlotType's slot.
  * @return				True if a Slot is Used, false otherwise.
- * @error				Invalid SlotType:slot.
+ * @error				Invalid SlotType.
  */
 native bool HUDSlotIsUsed(SlotType slot);
