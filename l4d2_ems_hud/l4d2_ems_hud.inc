@@ -101,6 +101,15 @@ native void HUDSetLayout(SlotType slot, int flags, char[] dataval, any ...);
 native void HUDPlace(SlotType slot, float x, float y, float width, float height);
 
 /**
+ * Removes a slot from game.
+ *
+ * @param SlotType		SlotType's slot.
+ * @noreturn
+ * @error				Invalid SlotType.
+ */
+native void RemoveHUD(SlotType slot);
+
+/**
  * Returns if a Slot is Used
  *
  * @param SlotType		SlotType's slot.
@@ -108,3 +117,11 @@ native void HUDPlace(SlotType slot, float x, float y, float width, float height)
  * @error				Invalid SlotType.
  */
 native bool HUDSlotIsUsed(SlotType slot);
+
+/**
+ * Remove All slot from game.		
+ */
+stock void RemoveAllHUD() {
+	for (int slot; slot < 15; slot++)
+		RemoveHUD(view_as<SlotType>(slot));
+}

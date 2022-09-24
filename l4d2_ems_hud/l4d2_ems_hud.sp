@@ -6,7 +6,7 @@
 #define PLUGIN_NAME				"L4D2 EMS HUD"
 #define PLUGIN_AUTHOR			"sorallll"
 #define PLUGIN_DESCRIPTION		""
-#define PLUGIN_VERSION			"1.0.2"
+#define PLUGIN_VERSION			"1.0.3"
 #define PLUGIN_URL				""
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max) {
@@ -15,6 +15,7 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 
 	CreateNative("HUDSetLayout", Native_HUDSetLayout);
 	CreateNative("HUDPlace", Native_HUDPlace);
+	CreateNative("RemoveHUD", Native_RemoveHUD);
 	CreateNative("HUDSlotIsUsed", Native_HUDSlotIsUsed);
 
 	RegPluginLibrary("l4d2_ems_hud");
@@ -44,6 +45,16 @@ any Native_HUDPlace(Handle plugin, int numParams) {
 		ThrowNativeError(SP_ERROR_PARAM, "Invalid SlotType");
 
 	HUDPlace(slot, GetNativeCell(2), GetNativeCell(3), GetNativeCell(4), GetNativeCell(5));
+	return 0;
+}
+
+// native void RemoveHUD(SlotType slot);
+any Native_RemoveHUD(Handle plugin, int numParams) {
+	int slot = GetNativeCell(1);
+	if (slot < 0 || slot > 15)
+		ThrowNativeError(SP_ERROR_PARAM, "Invalid SlotType");
+
+	RemoveHUD(slot);
 	return 0;
 }
 
@@ -84,6 +95,18 @@ void HUDPlace(int slot, float x, float y, float width, float height) {
 	GameRules_SetPropFloat("m_fScriptedHUDWidth", width, slot, true);
 	GameRules_SetPropFloat("m_fScriptedHUDHeight", height, slot, true);
 }
+
+void RemoveHUD(int slot) {
+	GameRules_SetProp("m_iScriptedHUDInts", 0, _, slot, true);
+	GameRules_SetPropFloat("m_fScriptedHUDFloats", 0.0, slot, true);
+	GameRules_SetProp("m_iScriptedHUDFlags", 0, _, slot, true);
+	GameRules_SetPropFloat("m_fScriptedHUDPosX", 0.0, slot, true);
+	GameRules_SetPropFloat("m_fScriptedHUDPosY", 0.0, slot, true);
+	GameRules_SetPropFloat("m_fScriptedHUDWidth", 0.0, slot, true);
+	GameRules_SetPropFloat("m_fScriptedHUDHeight", 0.0, slot, true);
+	GameRules_SetPropString("m_szScriptedHUDStringSet", "", true, slot);
+}
+
 /*
 public void OnGameFrame() {
 	static const char str[] = "test";
