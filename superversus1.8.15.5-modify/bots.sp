@@ -6,7 +6,7 @@
 #define PLUGIN_NAME				"bots(coop)"
 #define PLUGIN_AUTHOR			"DDRKhat, Marcus101RR, Merudo, Lux, Shadowysn, sorallll"
 #define PLUGIN_DESCRIPTION		"coop"
-#define PLUGIN_VERSION			"1.10.9"
+#define PLUGIN_VERSION			"1.11.0"
 #define PLUGIN_URL				"https://forums.alliedmods.net/showthread.php?p=2405322#post2405322"
 
 #define GAMEDATA 		"bots"
@@ -645,7 +645,7 @@ Action cmdGoIdle(int client, int args) {
 }
 
 void GoAFKTimer(int client, float flDuration) {
-	static int m_GoAFKTimer;
+	static int m_GoAFKTimer = -1;
 	if (m_GoAFKTimer == -1)
 		m_GoAFKTimer = FindSendPropInfo("CTerrorPlayer", "m_lookatPlayer") - 12;
 
