@@ -1,17 +1,14 @@
-/**************************************************************************
- *                                                                        *
- *                   	L4D2 EMS HUD Functions							  *
- *                   	   Author: sorallll								  *
- *                         Version: 1.0.3                                 *
- *                                                                        *
- **************************************************************************/
-
 #if defined _l4d2_ems_hud_included
  #endinput
 #endif
 #define _l4d2_ems_hud_included
 
-#define HUD_MAX         15
+// ====================================================================================================
+// "L4D2 EMS HUD Functions" by "sorallll"
+//	Version: 1.0.4
+// ====================================================================================================
+
+#include <sdktools>
 
 #define HUD_LEFT_TOP	0
 #define HUD_LEFT_BOT	1
@@ -29,6 +26,8 @@
 #define HUD_SCORE_3		13
 #define HUD_SCORE_4		14
 
+#define MAX_SIZE_HUD	15
+
 // custom flags for background, time, alignment, which team, pre or postfix, etc
 #define HUD_FLAG_PRESTR			(1<<0)	//	do you want a string/value pair to start(pre) or end(post) with the static string (default is PRE)
 #define HUD_FLAG_POSTSTR		(1<<1)	//	ditto
@@ -43,10 +42,18 @@
 #define HUD_FLAG_ALIGN_RIGHT	(3<<8)	//	Right justify this text
 #define HUD_FLAG_TEAM_SURVIVORS	(1<<10) //	only show to the survivor team
 #define HUD_FLAG_TEAM_INFECTED	(1<<11) //	only show to the special infected team
-#define HUD_FLAG_TEAM_MASK		(3<<10) //	link HUD_FLAG_TEAM_SURVIVORS and  HUD_FLAG_TEAM_INFECTED
+#define HUD_FLAG_TEAM_MASK		(3<<10) //	link HUD_FLAG_TEAM_SURVIVORS and HUD_FLAG_TEAM_INFECTED
 #define HUD_FLAG_UNKNOWN1		(1<<12)	//	?
 #define HUD_FLAG_TEXT			(1<<13)	//	?
 #define HUD_FLAG_NOTVISIBLE		(1<<14) //	if you want to keep the slot data but keep it from displaying
+
+/**
+ * 启用HUD绘制.
+ * 在OnMapStart()函数内部启用即可.	
+ */
+stock void EnableHUD() {
+	GameRules_SetProp("m_bChallengeModeActive", true, _, _, true);
+}
 
 /**
  * Passes a table that defines your in-game HUD to the engine.
@@ -58,17 +65,16 @@
  * Passes a table that defines your in-game HUD to the engine.
  *
  * @param slot			HUD slot.
- * @param flags			flags(HUD_FLAG_BLINK)..
+ * @param flags			flags(出于某些未知原因需要添加HUD_FLAG_TEXT falg才能正常绘制)..
  * @param dataval		used for data of destination string buffer.
  * @param ...			Variable number of format parameters.
  * @noreturn
- * @error				Invalid Slot Type.
+ * @error				Invalid HUD slot.
  */
 stock void HUDSetLayout(int slot, int flags, const char[] dataval, any ...) {
 	static char buffer[128];
 	VFormat(buffer, sizeof buffer, dataval, 4);
 
-	GameRules_SetProp("m_bChallengeModeActive", true);
 	GameRules_SetProp("m_iScriptedHUDFlags", flags, _, slot, true);
 	GameRules_SetPropString("m_szScriptedHUDStringSet", buffer, true, slot);
 }
@@ -91,7 +97,7 @@ stock void HUDSetLayout(int slot, int flags, const char[] dataval, any ...) {
  * @param width			screen slot width.
  * @param height		screen slot height.
  * @noreturn
- * @error				Invalid Slot Type.
+ * @error				Invalid HUD slot.
  */
 stock void HUDPlace(int slot, float x, float y, float width, float height) {
 	GameRules_SetPropFloat("m_fScriptedHUDPosX", x, slot, true);
@@ -105,7 +111,7 @@ stock void HUDPlace(int slot, float x, float y, float width, float height) {
  *
  * @param slot			HUD slot.
  * @noreturn
- * @error				Invalid Slot Type.
+ * @error				Invalid HUD slot.
  */
 stock void RemoveHUD(int slot) {
 	GameRules_SetProp("m_iScriptedHUDInts", 0, _, slot, true);
@@ -123,7 +129,7 @@ stock void RemoveHUD(int slot) {
  *
  * @param slot			HUD slot.
  * @return				True if a Slot is Used, false otherwise.
- * @error				Invalid Slot Type.
+ * @error				Invalid HUD slot.
  */
 stock bool HUDSlotIsUsed(int slot) {
 	char str[1];
@@ -131,9 +137,9 @@ stock bool HUDSlotIsUsed(int slot) {
 }
 
 /**
- * Remove All slot from game.		
+ * Remove All slot from game.
  */
 stock void RemoveAllHUD() {
-	for (int slot; slot < HUD_MAX; slot++)
+	for (int slot; slot < MAX_SIZE_HUD; slot++)
 		RemoveHUD(slot);
 }
