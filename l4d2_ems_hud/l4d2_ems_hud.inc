@@ -5,7 +5,7 @@
 
 // ====================================================================================================
 // "L4D2 EMS HUD Functions" by "sorallll"
-//	Version: 1.0.4
+//	Version: 1.0.5
 // ====================================================================================================
 
 #include <sdktools>
@@ -72,11 +72,11 @@ stock void EnableHUD() {
  * @error				Invalid HUD slot.
  */
 stock void HUDSetLayout(int slot, int flags, const char[] dataval, any ...) {
-	static char buffer[128];
-	VFormat(buffer, sizeof buffer, dataval, 4);
+	static char str[128];
+	VFormat(str, sizeof str, dataval, 4);
 
 	GameRules_SetProp("m_iScriptedHUDFlags", flags, _, slot, true);
-	GameRules_SetPropString("m_szScriptedHUDStringSet", buffer, true, slot);
+	GameRules_SetPropString("m_szScriptedHUDStringSet", str, true, slot);
 }
 
 /**
@@ -116,7 +116,7 @@ stock void HUDPlace(int slot, float x, float y, float width, float height) {
 stock void RemoveHUD(int slot) {
 	GameRules_SetProp("m_iScriptedHUDInts", 0, _, slot, true);
 	GameRules_SetPropFloat("m_fScriptedHUDFloats", 0.0, slot, true);
-	GameRules_SetProp("m_iScriptedHUDFlags", 0, _, slot, true);
+	GameRules_SetProp("m_iScriptedHUDFlags", HUD_FLAG_NOTVISIBLE, _, slot, true);
 	GameRules_SetPropFloat("m_fScriptedHUDPosX", 0.0, slot, true);
 	GameRules_SetPropFloat("m_fScriptedHUDPosY", 0.0, slot, true);
 	GameRules_SetPropFloat("m_fScriptedHUDWidth", 0.0, slot, true);
@@ -132,7 +132,7 @@ stock void RemoveHUD(int slot) {
  * @error				Invalid HUD slot.
  */
 stock bool HUDSlotIsUsed(int slot) {
-	char str[1];
+	static char str[128];
 	return !!GameRules_GetPropString("m_szScriptedHUDStringSet", str, sizeof str, slot);
 }
 
