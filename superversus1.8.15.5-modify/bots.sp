@@ -446,7 +446,7 @@ Action aJoinTeam2(int client) {
 
 	bool newBot;
 	if (!findBot) {
-		if ((findBot= SpawnSurBot()) == -1) {
+		if ((findBot = SpawnSurBot()) == -1) {
 			ChangeClientTeam(client, TEAM_SURVIVOR);
 			if (!IsPlayerAlive(client)) {
 				if (canRespawn)
