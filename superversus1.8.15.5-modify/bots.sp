@@ -6,7 +6,7 @@
 #define PLUGIN_NAME				"bots(coop)"
 #define PLUGIN_AUTHOR			"DDRKhat, Marcus101RR, Merudo, Lux, Shadowysn, sorallll"
 #define PLUGIN_DESCRIPTION		"coop"
-#define PLUGIN_VERSION			"1.11.0"
+#define PLUGIN_VERSION			"1.11.1"
 #define PLUGIN_URL				"https://forums.alliedmods.net/showthread.php?p=2405322#post2405322"
 
 #define GAMEDATA 		"bots"
@@ -466,7 +466,7 @@ Action aJoinTeam2(int client) {
 	bool takeOver;
 	if (canRespawn) {
 		if (!IsPlayerAlive(findBot)) {
-			RoundRespawn(client);
+			RoundRespawn(findBot);
 			takeOver = TakeOverAllowed(client, TeleportToSurvivor(findBot), findBot);
 		}
 		else
@@ -477,18 +477,22 @@ Action aJoinTeam2(int client) {
 			TakeOverBot(client);
 	}
 	else {
-		SetHumanSpec(findBot, client);
 		if (IsPlayerAlive(findBot)) {
 			if (newBot) {
 				TeleportToSurvivor(findBot); //传送旁观位置
-				SDKCall(g_hSDK_CCSPlayer_State_Transition, findBot, 6);
+				State_Transition(findBot, 6);
+				SetHumanSpec(findBot, client);
 				TakeOverBot(client);
 				PrintToChat(client, "\x05重复加入默认为\x01-> \x04死亡状态\x01.");
 			}
-			else if (TakeOverAllowed(client, findBot, findBot))
-				TakeOverBot(client);
+			else {
+				SetHumanSpec(findBot, client);
+				if (TakeOverAllowed(client, findBot, findBot))
+					TakeOverBot(client);
+			}
 		}
 		else {
+			SetHumanSpec(findBot, client);
 			TakeOverBot(client);
 			PrintToChat(client, "\x05重复加入默认为\x01-> \x04死亡状态\x01.");
 		}
@@ -559,10 +563,10 @@ void TakeOverBotMenu(int client) {
 
 // L4D2_Adrenaline_Recovery (https://github.com/LuxLuma/L4D2_Adrenaline_Recovery)
 char[] GetModelName(int client) {
-	char sModel[31];
+	char Model[31];
 	int charIndex;
-	GetClientModel(client, sModel, sizeof sModel);
-	switch (sModel[29]) {
+	GetClientModel(client, Model, sizeof Model);
+	switch (Model[29]) {
 		case 'b'://nick
 			charIndex = 0;
 		case 'd'://rochelle
@@ -583,8 +587,8 @@ char[] GetModelName(int client) {
 			charIndex = 8;
 	}
 
-	strcopy(sModel, sizeof sModel, charIndex == 8 ? "未知" : g_sSurvivorNames[charIndex]);
-	return sModel;
+	strcopy(Model, sizeof Model, charIndex == 8 ? "未知" : g_sSurvivorNames[charIndex]);
+	return Model;
 }
 
 int TakeOverBot_MenuHandler(Menu menu, MenuAction action, int param1, int param2) {
@@ -995,9 +999,9 @@ void Event_BotPlayerReplace(Event event, const char[] name, bool dontBroadcast) 
 	int bot = GetClientOfUserId(event.GetInt("bot"));
 	SetEntProp(player, Prop_Send, "m_survivorCharacter", GetEntProp(bot, Prop_Send, "m_survivorCharacter"));
 
-	char sModel[PLATFORM_MAX_PATH];
-	GetClientModel(bot, sModel, sizeof sModel);
-	SetEntityModel(player, sModel);
+	char Model[PLATFORM_MAX_PATH];
+	GetClientModel(bot, Model, sizeof Model);
+	SetEntityModel(player, Model);
 }
 
 void Event_FinaleVehicleLeaving(Event event, const char[] name, bool dontBroadcast) {
@@ -1525,6 +1529,10 @@ void TakeOverBot(int client) {
 	SDKCall(g_hSDK_CTerrorPlayer_TakeOverBot, client, true);
 }
 
+void State_Transition(int client, int state) {
+	SDKCall(g_hSDK_CCSPlayer_State_Transition, client, state);
+}
+
 bool TakeOverAllowed(int player, int client, int bot) {
 	return !client || (!GetEntData(player, g_iOff_m_isOutOfCheckpoint) && !GetEntData(client, g_iOff_m_isOutOfCheckpoint)) && !GetEntProp(bot, Prop_Send, "m_isIncapacitated");
 }
@@ -1625,10 +1633,10 @@ MRESReturn DD_CBasePlayer_SetModel_Post(int pThis, DHookParam hParams) {
 		return MRES_Ignored;
 	}
 	
-	char sModel[PLATFORM_MAX_PATH];
-	hParams.GetString(1, sModel, sizeof sModel);
-	if (StrContains(sModel, "models/survivors/survivor_", false) == 0)
-		strcopy(g_esPlayer[pThis].model, sizeof esPlayer::model, sModel);
+	char Model[PLATFORM_MAX_PATH];
+	hParams.GetString(1, Model, sizeof Model);
+	if (StrContains(Model, "models/survivors/survivor_", false) == 0)
+		strcopy(g_esPlayer[pThis].model, sizeof esPlayer::model, Model);
 
 	return MRES_Ignored;
 }
