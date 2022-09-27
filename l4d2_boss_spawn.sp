@@ -530,7 +530,7 @@ Action tmrCheckFlow(Handle timer)
 					continue;
 
 				witch = iSpawnWitch(iHighest);
-				if (witch < 1)
+				if (witch == -1)
 					continue;
 				
 				g_aWitches.Push(EntIndexToEntRef(witch));
@@ -554,7 +554,6 @@ int iSpawnTank(int client)
 	if (client)
 		bSuccess = L4D_GetRandomPZSpawnPosition(client, 7, 10, vecPos);//7: does not find spawn point in some places for witch
 
-	g_iPreferredDirection = SPAWN_LARGE_VOLUME;
 	if (!bSuccess)
 		bSuccess = L4D_GetRandomPZSpawnPosition(client, 8, 10, vecPos);
 
@@ -606,7 +605,21 @@ int iSpawnWitch(int client)
 
 	g_bInSpawnTime = false;
 	if (bSuccess)
-		return L4D2_SpawnWitch(vecPos, NULL_VECTOR);
+		return CreateWitch(vecPos);
 
-	return 0;
+	return -1;
+}
+
+int CreateWitch(const float vPos[3]) {
+	int witch = CreateEntityByName("witch");
+	if (witch != -1) {
+		SetAbsOrigin(witch, vPos);
+
+		static float vAng[3];
+		vAng[1] = GetRandomFloat(-179.0, 179.0);
+		SetAbsAngles(witch, vAng);
+		DispatchSpawn(witch);
+	}
+	
+	return -1;
 }
