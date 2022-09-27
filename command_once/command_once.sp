@@ -5,8 +5,8 @@
 #define PLUGIN_NAME				"Command Once"
 #define PLUGIN_AUTHOR			"sorallll"
 #define PLUGIN_DESCRIPTION		"在服务器首次OnConfigsExecuted()触发后执行所有使用该命令设置的内容"
-#define PLUGIN_VERSION			"1.0.4"
-#define PLUGIN_URL				""
+#define PLUGIN_VERSION			"1.0.5"
+#define PLUGIN_URL				"https://github.com/umlka/l4d2/tree/main/command_once"
 
 ArrayList
 	g_aCmdList;
@@ -37,9 +37,8 @@ public void OnPluginStart() {
 }
 
 Action cmdExec_Once(int client, int args) {
-	int invalid;
-	int count = ExecuteCmds(invalid);
-	ReplyToCommand(client, "total: %d valid: %d invalid: %d", count, count - invalid, invalid);
+	ExecuteCmdList();
+	ReplyToCommand(client, "已执行 %d 条命令", g_aCmdList.Length);
 	return Plugin_Handled;
 }
 
@@ -84,10 +83,10 @@ public void OnConfigsExecuted() {
 
 // https://forums.alliedmods.net/showthread.php?p=2607757
 void NextFrame_Executed() {
-	ExecuteCmds();
+	ExecuteCmdList();
 }
 
-int ExecuteCmds(int &invalid = 0) {
+void ExecuteCmdList() {
 	esCmd command;
 	ArrayList aCmdList = g_aCmdList.Clone();
 	int count = aCmdList.Length;
@@ -98,5 +97,4 @@ int ExecuteCmds(int &invalid = 0) {
 	}
 
 	delete aCmdList;
-	return count;
 }
