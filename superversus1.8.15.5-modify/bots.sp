@@ -6,7 +6,7 @@
 #define PLUGIN_NAME				"bots(coop)"
 #define PLUGIN_AUTHOR			"DDRKhat, Marcus101RR, Merudo, Lux, Shadowysn, sorallll"
 #define PLUGIN_DESCRIPTION		"coop"
-#define PLUGIN_VERSION			"1.11.1"
+#define PLUGIN_VERSION			"1.11.2"
 #define PLUGIN_URL				"https://forums.alliedmods.net/showthread.php?p=2405322#post2405322"
 
 #define GAMEDATA 		"bots"
@@ -37,7 +37,8 @@ ArrayList
 
 Address
 	g_pDirector,
-	g_pStatsCondition;
+	g_pStatsCondition,
+	g_pSavedSurvivorBotsCount;
 
 ConVar
 	g_cvBotsLimit,
@@ -302,7 +303,7 @@ public void OnPluginStart() {
 	CreateConVar("bots_version", PLUGIN_VERSION, "bots(coop) plugin version.", FCVAR_NOTIFY|FCVAR_DONTRECORD);
 
 	g_cvBotsLimit = 			CreateConVar("bots_limit", 				"4", 		"开局Bot的数量", CVAR_FLAGS, true, 1.0, true, 31.0);
-	g_cvJoinFlags = 			CreateConVar("bots_join_flags", 		"3", 		"加入生还者的方法. \n0=插件不进行处理, 1=输入!join手动加入, 2=进服后插件自动加入, 3=手动+自动", CVAR_FLAGS);
+	g_cvJoinFlags = 			CreateConVar("bots_join_flags", 		"3", 		"额外玩家加入生还者的方法. \n0=插件不进行处理, 1=输入!join手动加入, 2=进服后插件自动加入, 3=手动+自动", CVAR_FLAGS);
 	g_cvRespawn = 				CreateConVar("bots_join_respawn", 		"1", 		"玩家第一次进服时如果没有存活的Bot可以接管是否复活. \n0=否, 1=是.", CVAR_FLAGS);
 	g_cvSpecLimit = 			CreateConVar("bots_spec_limit", 		"1", 		"当完全旁观玩家达到多少个时禁止使用sm_spec命令.", CVAR_FLAGS);
 	g_cvSpecNotify = 			CreateConVar("bots_spec_notify", 		"3", 		"完全旁观玩家点击鼠标左键时, 提示加入生还者的方式 \n0=不提示, 1=聊天栏, 2=屏幕中央, 3=弹出菜单.", CVAR_FLAGS);
@@ -685,7 +686,7 @@ Action Listener_spec_next(int client, char[] command, int argc) {
 	if (!g_esPlayer[client].notify || !(g_iJoinFlags & JOIN_MANUAL))
 		return Plugin_Continue;
 /*
-	if (IsInTransition())
+	if (RestoringBots())
 		return Plugin_Continue;*/
 
 	if (!client || !IsClientInGame(client) || IsFakeClient(client))
@@ -831,7 +832,7 @@ public void OnClientDisconnect(int client) {
 Action tmrBotsUpdate(Handle timer) {
 	g_hBotsTimer = null;
 
-	if (!IsInTransition())
+	if (!RestoringBots())
 		SpawnCheck();
 	else
 		g_hBotsTimer = CreateTimer(1.0, tmrBotsUpdate);
@@ -957,7 +958,7 @@ Action tmrJoinTeam2(Handle timer, int client) {
 	if (!(g_iJoinFlags & JOIN_AUTOMATIC) || !(client = GetClientOfUserId(client)) || !IsClientInGame(client) || IsFakeClient(client) || GetClientTeam(client) > TEAM_SPECTATOR || GetBotOfIdlePlayer(client)) 
 		return Plugin_Stop;
 
-	if (!g_bRoundStart || IsInTransition() || GetClientTeam(client) <= TEAM_NOTEAM)
+	if (!g_bRoundStart || RestoringBots() || GetClientTeam(client) <= TEAM_NOTEAM)
 		return Plugin_Continue;
 
 	aJoinTeam2(client);
@@ -1213,22 +1214,22 @@ void GetMeleeStringTable() {
 	int table = FindStringTable("meleeweapons");
 	if (table != INVALID_STRING_TABLE) {
 		int num = GetStringTableNumStrings(table);
-		char sMeleeName[64];
+		char meleeName[64];
 		for (int i; i < num; i++) {
-			ReadStringTable(table, i, sMeleeName, sizeof sMeleeName);
-			g_aMeleeScripts.PushString(sMeleeName);
+			ReadStringTable(table, i, meleeName, sizeof meleeName);
+			g_aMeleeScripts.PushString(meleeName);
 		}
 	}
 }
 
-void GiveMelee(int client, const char[] sMeleeName) {
-	char sScriptName[64];
-	if (g_aMeleeScripts.FindString(sMeleeName) != -1)
-		strcopy(sScriptName, sizeof sScriptName, sMeleeName);
+void GiveMelee(int client, const char[] meleeName) {
+	char scriptName[64];
+	if (g_aMeleeScripts.FindString(meleeName) != -1)
+		strcopy(scriptName, sizeof scriptName, meleeName);
 	else
-		g_aMeleeScripts.GetString(Math_GetRandomInt(0, g_aMeleeScripts.Length - 1), sScriptName, sizeof sScriptName);
+		g_aMeleeScripts.GetString(Math_GetRandomInt(0, g_aMeleeScripts.Length - 1), scriptName, sizeof scriptName);
 	
-	GivePlayerItem(client, sScriptName);
+	GivePlayerItem(client, scriptName);
 }
 
 void DisplayTeamPanel(int client) {
@@ -1270,7 +1271,7 @@ void DisplayTeamPanel(int client) {
 	if (!cvSurvivorMaxInc)
 		cvSurvivorMaxInc = FindConVar("survivor_max_incapacitated_count");
 
-	int iSurvivorMaxInc = cvSurvivorMaxInc.IntValue;
+	int survivorMaxInc = cvSurvivorMaxInc.IntValue;
 	for (i = 1; i <= MaxClients; i++) {
 		if (!IsClientInGame(i) || GetClientTeam(i) != TEAM_SURVIVOR)
 			continue;
@@ -1284,7 +1285,7 @@ void DisplayTeamPanel(int client) {
 		 {
 			if (GetEntProp(i, Prop_Send, "m_isIncapacitated"))
 				Format(text, sizeof text, "倒地 - %d HP - %s", GetClientHealth(i) + GetTempHealth(i), text);
-			else if (GetEntProp(i, Prop_Send, "m_currentReviveCount") >= iSurvivorMaxInc)
+			else if (GetEntProp(i, Prop_Send, "m_currentReviveCount") >= survivorMaxInc)
 				Format(text, sizeof text, "黑白 - %d HP - %s", GetClientHealth(i) + GetTempHealth(i), text);
 			else
 				Format(text, sizeof text, "%dHP - %s", GetClientHealth(i) + GetTempHealth(i), text);
@@ -1370,6 +1371,10 @@ void InitData() {
 	g_pDirector = hGameData.GetAddress("CDirector");
 	if (!g_pDirector)
 		SetFailState("Failed to find address: \"CDirector\" (%s)", PLUGIN_VERSION);
+
+	g_pSavedSurvivorBotsCount = hGameData.GetAddress("SavedSurvivorBotsCount");
+	if (!g_pSavedSurvivorBotsCount)
+		SetFailState("Failed to find address: \"SavedSurvivorBotsCount\"");
 
 	g_iOff_m_hWeaponHandle = hGameData.GetOffset("m_hWeaponHandle");
 	if (g_iOff_m_hWeaponHandle == -1)
@@ -1541,8 +1546,8 @@ bool OnEndScenario() {
 	return view_as<float>(LoadFromAddress(g_pDirector + view_as<Address>(g_iOff_RestartScenarioTimer + 8), NumberType_Int32)) >= GetGameTime();
 }
 
-bool IsInTransition() {
-	return SDKCall(g_hSDK_CDirector_IsInTransition, g_pDirector);
+bool RestoringBots() {
+	return SDKCall(g_hSDK_CDirector_IsInTransition, g_pDirector) && LoadFromAddress(g_pSavedSurvivorBotsCount, NumberType_Int32);
 }
 
 void SetupDetours(GameData hGameData = null) {
