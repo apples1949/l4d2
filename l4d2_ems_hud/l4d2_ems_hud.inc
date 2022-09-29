@@ -5,7 +5,7 @@
 
 // ====================================================================================================
 // "L4D2 EMS HUD Functions" by "sorallll"
-//	Version: 1.0.5
+//	Version: 1.0.6
 // ====================================================================================================
 
 #include <sdktools>
@@ -49,7 +49,9 @@
 
 /**
  * 启用HUD绘制.
- * 在OnMapStart()函数内部启用即可.	
+ * 在OnMapStart()函数内部启用即可.
+ * 游戏自身的方法是在CScriptHud::HUDSetLayout(CScriptHud *, int)内部调用CScriptHud::HUDFrameUpdate(CScriptHud *__hidden this)更新HUD数据.
+ * m_bChallengeModeActive设置为true, CDirectorChallengeMode::UpdateChallengeMode(CDirectorChallengeMode *__hidden this)内部会一直调用CScriptHud::HUDFrameUpdate(CScriptHud *__hidden this).
  */
 stock void EnableHUD() {
 	GameRules_SetProp("m_bChallengeModeActive", true, _, _, true);
@@ -57,15 +59,10 @@ stock void EnableHUD() {
 
 /**
  * Passes a table that defines your in-game HUD to the engine.
- * From there on, you can modify the table to cause changes.
- * Though often you wont, you will instead use a dataval entry to define a simple lambda that
- * returns the up-to-date value to the HUD system.
-*/
-/**
- * Passes a table that defines your in-game HUD to the engine.
+ * CScriptHud::HUDSetLayout(CScriptHud *, int).
  *
  * @param slot			HUD slot.
- * @param flags			flags(出于某些未知原因需要添加HUD_FLAG_TEXT falg才能正常绘制)..
+ * @param flags			flags(出于某些未知原因需要添加HUD_FLAG_TEXT flag才能正常绘制)..
  * @param dataval		used for data of destination string buffer.
  * @param ...			Variable number of format parameters.
  * @noreturn
@@ -80,16 +77,8 @@ stock void HUDSetLayout(int slot, int flags, const char[] dataval, any ...) {
 }
 
 /**
- * Note:HUDPlace(slot,x,y,w,h): moves the given HUD slot to the XY position specified, with new W and H.
- * This is for doing occasional highlight/make a point type things,
- * or small changes to layout w/o having to build a new .res to put in a VPK.
- * We suspect if you want to do a super fancy HUD you will want to create your own hudscriptedmode.res file,
- * just making sure to use the same element naming conventions so you can still talk to them from script.
- * x,y,w,h are all 0.0-1.0 screen relative coordinates (actually, a bit smaller than the screen, but anyway).
- * So a box near middle might be set as (0.4,0.45,0.2,0.1) or so.
- */
-/**
  * Place a slot in game.
+ * CScriptHud::HUDSetPosition(CScriptHud *__hidden this, int, float, float, float, float).
  *
  * @param slot			HUD slot.
  * @param x				screen x position.
@@ -107,7 +96,21 @@ stock void HUDPlace(int slot, float x, float y, float width, float height) {
 }
 
 /**
+ * 重置HUD背景框状态.
+ * 在添加或者移除HUD_FLAG_NOBG flag后需要先使用此函数隐藏HUD来刷新状态.
+ * CScriptHud::Reset(CScriptHud *__hidden this).
+ *
+ * @param slot			HUD slot.
+ * @noreturn
+ * @error				Invalid HUD slot.
+ */
+stock void ResetHUD(int slot) {
+	GameRules_SetProp("m_iScriptedHUDFlags", HUD_FLAG_NOTVISIBLE, _, slot, true);
+}
+
+/**
  * Removes a slot from game.
+ * CTerrorGameRules::ResetScriptedHUD(CTerrorGameRules *__hidden this).
  *
  * @param slot			HUD slot.
  * @noreturn
