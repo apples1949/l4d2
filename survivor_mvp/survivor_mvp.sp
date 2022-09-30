@@ -490,6 +490,7 @@ void PrintTankStatistics(int tank) {
 	SortIntegers(dataSort, count, Sort_Descending);
 	int clawLen = IntToString(count ? dataSort[0] : 0, str, sizeof str);
 
+	count = 0;
 	int percent;
 	for (i = 0; i < length; i++) {
 		client = aClients.Get(i, 1);
@@ -501,6 +502,7 @@ void PrintTankStatistics(int tank) {
 	SortIntegers(dataSort, count, Sort_Descending);
 	int percLen = IntToString(count ? dataSort[0] : 0, str, sizeof str);
 
+	count = 0;
 	for (i = 0; i < length; i++) {
 		client = aClients.Get(i, 1);
 		dataSort[count++] = g_esData[tank].tankRock[client];
@@ -509,6 +511,7 @@ void PrintTankStatistics(int tank) {
 	SortIntegers(dataSort, count, Sort_Descending);
 	int rockLen = IntToString(count ? dataSort[0] : 0, str, sizeof str);
 
+	count = 0;
 	for (i = 0; i < length; i++) {
 		client = aClients.Get(i, 1);
 		dataSort[count++] = g_esData[tank].tankHittable[client];
