@@ -385,7 +385,6 @@ void PrintStatistics() {
 	SortIntegers(dataSort, count, Sort_Descending);
 	int teamRFLen = IntToString(count ? dataSort[0] : 0, str, sizeof str);
 
-	int curLen;
 	int numSpace;
 	char buffer[254];
 
@@ -399,37 +398,32 @@ void PrintStatistics() {
 		teamFF = g_esData[client].teamFF;
 		teamRF = g_esData[client].teamRF;
 
-		strcopy(buffer, sizeof buffer, "\x04★ \x01特感: ");
-		curLen = 2 * killSILen - 2 * IntToString(killSI, str, sizeof str);
-		numSpace = curLen / 2;
+		Format(buffer, sizeof buffer, "%s", "\x04★ \x01特感: ");
+		numSpace = killSILen - IntToString(killSI, str, sizeof str);
 		AppendSpaceChar(buffer, sizeof buffer, numSpace);
 		Format(buffer, sizeof buffer, "%s\x05%s", buffer, str);
 		AppendSpaceChar(buffer, sizeof buffer, numSpace);
 	
 		Format(buffer, sizeof buffer, "%s%s", buffer, " \x01爆头: ");
-		curLen = 2 * headSILen - 2 * IntToString(headSI, str, sizeof str);
-		numSpace = curLen / 2;
+		numSpace = headSILen - IntToString(headSI, str, sizeof str);
 		AppendSpaceChar(buffer, sizeof buffer, numSpace);
 		Format(buffer, sizeof buffer, "%s\x05%s", buffer, str);
 		AppendSpaceChar(buffer, sizeof buffer, numSpace);
 
 		Format(buffer, sizeof buffer, "%s%s", buffer, " \x01丧尸: ");
-		curLen = 2 * killCILen - 2 * IntToString(killCI, str, sizeof str);
-		numSpace = curLen / 2;
+		numSpace = killCILen - IntToString(killCI, str, sizeof str);
 		AppendSpaceChar(buffer, sizeof buffer, numSpace);
 		Format(buffer, sizeof buffer, "%s\x05%s", buffer, str);
 		AppendSpaceChar(buffer, sizeof buffer, numSpace);
 
 		Format(buffer, sizeof buffer, "%s%s", buffer, " \x01友伤: ");
-		curLen = 2 * teamFFLen - 2 * IntToString(teamFF, str, sizeof str);
-		numSpace = curLen / 2;
+		numSpace = teamFFLen - IntToString(teamFF, str, sizeof str);
 		AppendSpaceChar(buffer, sizeof buffer, numSpace);
 		Format(buffer, sizeof buffer, "%s\x05%s", buffer, str);
 		AppendSpaceChar(buffer, sizeof buffer, numSpace);
 
 		Format(buffer, sizeof buffer, "%s%s", buffer, " \x01被黑: ");
-		curLen = 2 * teamRFLen - 2 * IntToString(teamRF, str, sizeof str);
-		numSpace = curLen / 2;
+		numSpace = teamRFLen - IntToString(teamRF, str, sizeof str);
 		AppendSpaceChar(buffer, sizeof buffer, numSpace);
 		Format(buffer, sizeof buffer, "%s\x05%s", buffer, str);
 		AppendSpaceChar(buffer, sizeof buffer, numSpace);
@@ -501,8 +495,9 @@ void PrintTankStatistics(int tank) {
 	SortIntegers(dataSort, count, Sort_Descending);
 	int clawLen = IntToString(count ? dataSort[0] : 0, str, sizeof str);
 
-	count = 0;
 	int percent;
+
+	count = 0;
 	for (i = 0; i < length; i++) {
 		client = aClients.Get(i, 1);
 		damage = aClients.Get(i, 0);
@@ -535,7 +530,6 @@ void PrintTankStatistics(int tank) {
 	FormatEx(name, sizeof name, "[%s] %N", IsFakeClient(tank) ? "AI" : "PZ", tank);
 	CPrintToChatAll("{default}[{red}%s{default}] {olive}%N {default}伤害承受: {red}%d", IsFakeClient(tank) ? "AI" : "PZ", tank, g_esData[tank].totalTankDmg);
 
-	int curLen;
 	int numSpace;
 	char buffer[254];
 	for (i = 0; i < length; i++) {
@@ -543,37 +537,32 @@ void PrintTankStatistics(int tank) {
 		damage = aClients.Get(i, 0);
 		percent = RoundToNearest(float(damage) / float(g_esData[tank].totalTankDmg) * 100.0);
 
-		strcopy(buffer, sizeof buffer, "{green}★ {default}[");
-		curLen = 2 * dmgLen - 2 * IntToString(damage, str, sizeof str);
-		numSpace = curLen / 2;
+		Format(buffer, sizeof buffer, "%s", "{green}★ {default}[");
+		numSpace = dmgLen - IntToString(damage, str, sizeof str);
 		AppendSpaceChar(buffer, sizeof buffer, numSpace);
 		Format(buffer, sizeof buffer, "%s{red}%s", buffer, str);
 		AppendSpaceChar(buffer, sizeof buffer, numSpace);
 	
 		Format(buffer, sizeof buffer, "%s%s", buffer, "{default}] (");
-		curLen = 2 * percLen - 2 * IntToString(percent, str, sizeof str);
-		numSpace = curLen / 2;
+		numSpace = percLen - IntToString(percent, str, sizeof str);
 		AppendSpaceChar(buffer, sizeof buffer, numSpace);
 		Format(buffer, sizeof buffer, "%s{red}%s%%", buffer, str);
 		AppendSpaceChar(buffer, sizeof buffer, numSpace);
 
 		Format(buffer, sizeof buffer, "%s%s", buffer, "{default}) 吃拳: ");
-		curLen = 2 * clawLen - 2 * IntToString(g_esData[tank].tankClaw[client], str, sizeof str);
-		numSpace = curLen / 2;
+		numSpace = clawLen - IntToString(g_esData[tank].tankClaw[client], str, sizeof str);
 		AppendSpaceChar(buffer, sizeof buffer, numSpace);
 		Format(buffer, sizeof buffer, "%s{red}%s", buffer, str);
 		AppendSpaceChar(buffer, sizeof buffer, numSpace);
 
 		Format(buffer, sizeof buffer, "%s%s", buffer, " {default}吃饼: ");
-		curLen = 2 * rockLen - 2 * IntToString(g_esData[tank].tankRock[client], str, sizeof str);
-		numSpace = curLen / 2;
+		numSpace = rockLen - IntToString(g_esData[tank].tankRock[client], str, sizeof str);
 		AppendSpaceChar(buffer, sizeof buffer, numSpace);
 		Format(buffer, sizeof buffer, "%s{red}%s", buffer, str);
 		AppendSpaceChar(buffer, sizeof buffer, numSpace);
 
 		Format(buffer, sizeof buffer, "%s%s", buffer, " {default}吃铁: ");
-		curLen = 2 * hitLen - 2 * IntToString(g_esData[tank].tankHittable[client], str, sizeof str);
-		numSpace = curLen / 2;
+		numSpace = hitLen - IntToString(g_esData[tank].tankHittable[client], str, sizeof str);
 		AppendSpaceChar(buffer, sizeof buffer, numSpace);
 		Format(buffer, sizeof buffer, "%s{red}%s", buffer, str);
 		AppendSpaceChar(buffer, sizeof buffer, numSpace);
@@ -591,9 +580,9 @@ bool IsActive(int tank, int client) {
 	return g_esData[tank].tankDmg[client] > 0 || g_esData[tank].tankClaw[client] > 0 || g_esData[tank].tankRock[client] > 0 || g_esData[tank].tankHittable[client] > 0;
 }
 
-void AppendSpaceChar(char[] str, int maxlength, int numSpace) {
+void AppendSpaceChar(char[] buffer, int maxlength, int numSpace) {
 	for (int i; i < numSpace; i++)
-		Format(str, maxlength, "%s%s", str, " ");
+		StrCat(buffer, maxlength, " ");
 }
 
 int SortSIDamage(int elem1, int elem2, const int[] array, Handle hndl) {
