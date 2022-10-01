@@ -5,6 +5,12 @@
 #include <colors>
 #include <left4dhooks>
 
+#define PLUGIN_NAME				"击杀排行统计"
+#define PLUGIN_AUTHOR			"白色幽灵 WhiteGT, sorallll"
+#define PLUGIN_DESCRIPTION		"击杀排行统计"
+#define PLUGIN_VERSION			"0.7"
+#define PLUGIN_URL				""
+
 Handle
 	g_hTimer;
 
@@ -68,11 +74,11 @@ esData
 	g_esData[MAXPLAYERS + 1];
 
 public Plugin myinfo = {
-	name = "击杀排行统计",
-	description = "击杀排行统计",
-	author = "白色幽灵 WhiteGT",
-	version = "0.6",
-	url = ""
+	name = PLUGIN_NAME,
+	author = PLUGIN_AUTHOR,
+	description = PLUGIN_DESCRIPTION,
+	version = PLUGIN_VERSION,
+	url = PLUGIN_URL
 };
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max) {
@@ -95,7 +101,7 @@ public void OnPluginStart() {
 	HookEvent("tank_spawn", Event_TankSpawn);
 	HookEvent("player_incapacitated_start", Event_PlayerIncapacitatedStart);
 	
-	RegConsoleCmd("sm_mvp", cmdDisplay, "Show Mvp");
+	RegConsoleCmd("sm_mvp", cmdShowMvp, "Show Mvp");
 
 	if (g_bLateLoad && L4D_HasAnySurvivorLeftSafeArea())
 		L4D_OnFirstSurvivorLeftSafeArea_Post(0);
@@ -113,7 +119,7 @@ void CvarChanged(ConVar convar, const char[] oldValue, const char[] newValue) {
 		g_hTimer = CreateTimer(g_fPrintTime, tmrPrintStatistics);
 }
 
-Action cmdDisplay(int client, int args) {
+Action cmdShowMvp(int client, int args) {
 	if (!client || !IsClientInGame(client))
 		return Plugin_Handled;
 
@@ -388,9 +394,9 @@ void PrintStatistics() {
 		teamFF = g_esData[client].teamFF;
 		teamRF = g_esData[client].teamRF;
 
+		strcopy(buffer, sizeof buffer, "\x04★ \x01特感: ");
 		curLen = 2 * killSILen - 2 * IntToString(killSI, str, sizeof str);
 		spaceCount = RoundToCeil(curLen / 2.0);
-		strcopy(buffer, sizeof buffer, "\x04★ \x01特感: ");
 		AppendSpaceChar(buffer, sizeof buffer, spaceCount);
 		Format(buffer, sizeof buffer, "%s\x05%s", buffer, str);
 		AppendSpaceChar(buffer, sizeof buffer, spaceCount);
@@ -532,9 +538,9 @@ void PrintTankStatistics(int tank) {
 		damage = aClients.Get(i, 0);
 		percent = RoundToNearest(float(damage) / float(g_esData[tank].totalTankDmg) * 100.0);
 
+		strcopy(buffer, sizeof buffer, "{green}★ {default}[");
 		curLen = 2 * dmgLen - 2 * IntToString(damage, str, sizeof str);
 		spaceCount = RoundToCeil(curLen / 2.0);
-		strcopy(buffer, sizeof buffer, "{green}★ {default}[");
 		AppendSpaceChar(buffer, sizeof buffer, spaceCount);
 		Format(buffer, sizeof buffer, "%s{red}%s", buffer, str);
 		AppendSpaceChar(buffer, sizeof buffer, spaceCount);
@@ -545,7 +551,7 @@ void PrintTankStatistics(int tank) {
 		AppendSpaceChar(buffer, sizeof buffer, spaceCount);
 		Format(buffer, sizeof buffer, "%s{red}%s%%", buffer, str);
 		AppendSpaceChar(buffer, sizeof buffer, spaceCount);
-	
+
 		Format(buffer, sizeof buffer, "%s%s", buffer, "{default}) 吃拳: ");
 		curLen = 2 * clawLen - 2 * IntToString(g_esData[tank].tankClaw[client], str, sizeof str);
 		spaceCount = RoundToCeil(curLen / 2.0);
