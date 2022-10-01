@@ -1,7 +1,6 @@
 #pragma semicolon 1
 #pragma newdecls required
 #include <sourcemod>
-#include <sdktools>
 #include <colors>
 #include <left4dhooks>
 
@@ -92,14 +91,14 @@ public void OnPluginStart() {
 
 	//AutoExecConfig(true,"l4d_mvp");
 
-	HookEvent("round_end", Event_RoundEnd, EventHookMode_PostNoCopy);
-	HookEvent("round_start", Event_RoundStart, EventHookMode_PostNoCopy);
-	HookEvent("map_transition", Event_MapTransition);
-	HookEvent("player_hurt", Event_PlayerHurt);
-	HookEvent("player_death", Event_PlayerDeath, EventHookMode_Pre);
-	HookEvent("infected_death", Event_InfectedDeath);
-	HookEvent("tank_spawn", Event_TankSpawn);
-	HookEvent("player_incapacitated_start", Event_PlayerIncapacitatedStart);
+	HookEvent("round_end",					Event_RoundEnd,			EventHookMode_PostNoCopy);
+	HookEvent("round_start",				Event_RoundStart,		EventHookMode_PostNoCopy);
+	HookEvent("map_transition",				Event_MapTransition);
+	HookEvent("player_hurt",				Event_PlayerHurt);
+	HookEvent("player_death",				Event_PlayerDeath,		EventHookMode_Pre);
+	HookEvent("infected_death",				Event_InfectedDeath);
+	HookEvent("tank_spawn",					Event_TankSpawn);
+	HookEvent("player_incapacitated_start",	Event_PlayerIncapacitatedStart);
 	
 	RegConsoleCmd("sm_mvp", cmdShowMvp, "Show Mvp");
 
