@@ -2,15 +2,18 @@
 #pragma newdecls required
 #include <sourcemod>
 #include <sdkhooks>
-#include <clientprefs>
 #include <adminmenu>
+#include <clientprefs>
 #include <left4dhooks>
 
-#define PLUGIN_VERSION "1.7.3"
-#define PLUGIN_NAME 	"Survivor Chat Select"
-#define PLUGIN_PREFIX	"\x01[\x04SCS\x01]"
+#define PLUGIN_PREFIX			"\x01[\x04SCS\x01]"
+#define PLUGIN_NAME				"Survivor Chat Select"
+#define PLUGIN_AUTHOR			"DeatChaos25, Mi123456 & Merudo, Lux, SilverShot"
+#define PLUGIN_DESCRIPTION		"Select a survivor character by typing their name into the chat."
+#define PLUGIN_VERSION			"1.7.3"
+#define PLUGIN_URL				"https://forums.alliedmods.net/showthread.php?p=2399163#post2399163"
 
-#define GAMEDATA		"survivor_chat_select"
+#define GAMEDATA				"survivor_chat_select"
 
 #define	 NICK		0, 0
 #define	 ROCHELLE	1, 1
@@ -85,11 +88,11 @@ static const char
 
 public Plugin myinfo = {
 	name = PLUGIN_NAME,
-	author = "DeatChaos25, Mi123456 & Merudo, Lux, SilverShot",
-	description = "Select a survivor character by typing their name into the chat.",
+	author = PLUGIN_AUTHOR,
+	description = PLUGIN_DESCRIPTION,
 	version = PLUGIN_VERSION,
-	url = "https://forums.alliedmods.net/showthread.php?p=2399163#post2399163"
-}
+	url = PLUGIN_URL
+};
 
 public void OnPluginStart() {
 	InitGameData();
