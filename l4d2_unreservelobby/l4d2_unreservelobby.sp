@@ -34,8 +34,8 @@ Action cmdUnreserve(int client, int args) {
 	if (g_bUnreserved)
 		ReplyToCommand(client, "[UL] Server has already been unreserved.");
 	else {
-		L4D_LobbyUnreserve();
 		g_bUnreserved = true;
+		L4D_LobbyUnreserve();
 		SetAllowLobby(0);
 		ReplyToCommand(client, "[UL] Lobby reservation has been removed.");
 	}
