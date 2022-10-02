@@ -347,7 +347,7 @@ void PrintStatistics() {
 	}
 
 	SortIntegers(dataSort, count, Sort_Descending);
-	int killSILen = IntToString(count ? dataSort[0] : 0, str, sizeof str);
+	int killSILen = !count ? 1 : IntToString(dataSort[0], str, sizeof str);
 
 	count = 0;
 	for (i = 0; i < infoMax; i++) {
@@ -356,7 +356,7 @@ void PrintStatistics() {
 	}
 
 	SortIntegers(dataSort, count, Sort_Descending);
-	int headSILen = IntToString(count ? dataSort[0] : 0, str, sizeof str);
+	int headSILen = !count ? 1 : IntToString(dataSort[0], str, sizeof str);
 
 	count = 0;
 	for (i = 0; i < infoMax; i++) {
@@ -365,7 +365,7 @@ void PrintStatistics() {
 	}
 
 	SortIntegers(dataSort, count, Sort_Descending);
-	int killCILen = IntToString(count ? dataSort[0] : 0, str, sizeof str);
+	int killCILen = !count ? 1 : IntToString(dataSort[0], str, sizeof str);
 
 	count = 0;
 	for (i = 0; i < infoMax; i++) {
@@ -374,7 +374,7 @@ void PrintStatistics() {
 	}
 
 	SortIntegers(dataSort, count, Sort_Descending);
-	int teamFFLen = IntToString(count ? dataSort[0] : 0, str, sizeof str);
+	int teamFFLen = !count ? 1 : IntToString(dataSort[0], str, sizeof str);
 
 	count = 0;
 	for (i = 0; i < infoMax; i++) {
@@ -383,8 +383,9 @@ void PrintStatistics() {
 	}
 
 	SortIntegers(dataSort, count, Sort_Descending);
-	int teamRFLen = IntToString(count ? dataSort[0] : 0, str, sizeof str);
+	int teamRFLen = !count ? 1 : IntToString(dataSort[0], str, sizeof str);
 
+	int len;
 	int numSpace;
 	char buffer[254];
 
@@ -398,37 +399,47 @@ void PrintStatistics() {
 		teamFF = g_esData[client].teamFF;
 		teamRF = g_esData[client].teamRF;
 
-		Format(buffer, sizeof buffer, "%s", "\x04★ \x01特感: ");
+		strcopy(buffer, sizeof buffer, "\x04★ \x01特感: ");
 		numSpace = killSILen - IntToString(killSI, str, sizeof str);
 		AppendSpaceChar(buffer, sizeof buffer, numSpace);
-		Format(buffer, sizeof buffer, "%s\x05%s", buffer, str);
+		len = strlen(buffer);
+		Format(buffer[len], sizeof buffer - len, "\x05%s", str);
 		AppendSpaceChar(buffer, sizeof buffer, numSpace);
 	
-		Format(buffer, sizeof buffer, "%s%s", buffer, " \x01爆头: ");
+		len = strlen(buffer);
+		strcopy(buffer[len], sizeof buffer - len, " \x01爆头: ");
 		numSpace = headSILen - IntToString(headSI, str, sizeof str);
 		AppendSpaceChar(buffer, sizeof buffer, numSpace);
-		Format(buffer, sizeof buffer, "%s\x05%s", buffer, str);
+		len = strlen(buffer);
+		Format(buffer[len], sizeof buffer - len, "\x05%s", str);
 		AppendSpaceChar(buffer, sizeof buffer, numSpace);
 
-		Format(buffer, sizeof buffer, "%s%s", buffer, " \x01丧尸: ");
+		len = strlen(buffer);
+		strcopy(buffer[len], sizeof buffer - len, " \x01丧尸: ");
 		numSpace = killCILen - IntToString(killCI, str, sizeof str);
 		AppendSpaceChar(buffer, sizeof buffer, numSpace);
-		Format(buffer, sizeof buffer, "%s\x05%s", buffer, str);
+		len = strlen(buffer);
+		Format(buffer[len], sizeof buffer - len, "\x05%s", str);
 		AppendSpaceChar(buffer, sizeof buffer, numSpace);
 
-		Format(buffer, sizeof buffer, "%s%s", buffer, " \x01友伤: ");
+		len = strlen(buffer);
+		strcopy(buffer[len], sizeof buffer - len, " \x01友伤: ");
 		numSpace = teamFFLen - IntToString(teamFF, str, sizeof str);
 		AppendSpaceChar(buffer, sizeof buffer, numSpace);
-		Format(buffer, sizeof buffer, "%s\x05%s", buffer, str);
+		len = strlen(buffer);
+		Format(buffer[len], sizeof buffer - len, "\x05%s", str);
 		AppendSpaceChar(buffer, sizeof buffer, numSpace);
 
-		Format(buffer, sizeof buffer, "%s%s", buffer, " \x01被黑: ");
+		len = strlen(buffer);
+		strcopy(buffer[len], sizeof buffer - len, " \x01被黑: ");
 		numSpace = teamRFLen - IntToString(teamRF, str, sizeof str);
 		AppendSpaceChar(buffer, sizeof buffer, numSpace);
-		Format(buffer, sizeof buffer, "%s\x05%s", buffer, str);
+		len = strlen(buffer);
+		Format(buffer[len], sizeof buffer - len, "\x05%s", str);
 		AppendSpaceChar(buffer, sizeof buffer, numSpace);
 
-		Format(buffer, sizeof buffer, "%s  \x05%N", buffer, client);
+		len = strlen(buffer);
+		Format(buffer[len], sizeof buffer - len, " \x05%N", client);
 
 		PrintToChatAll("%s", buffer);
 	}
@@ -493,7 +504,7 @@ void PrintTankStatistics(int tank) {
 	}
 
 	SortIntegers(dataSort, count, Sort_Descending);
-	int clawLen = IntToString(count ? dataSort[0] : 0, str, sizeof str);
+	int clawLen = !count ? 1 : IntToString(dataSort[0], str, sizeof str);
 
 	int percent;
 
@@ -506,7 +517,7 @@ void PrintTankStatistics(int tank) {
 	}
 
 	SortIntegers(dataSort, count, Sort_Descending);
-	int percLen = IntToString(count ? dataSort[0] : 0, str, sizeof str);
+	int percLen = !count ? 1 : IntToString(dataSort[0], str, sizeof str);
 
 	count = 0;
 	for (i = 0; i < length; i++) {
@@ -515,7 +526,7 @@ void PrintTankStatistics(int tank) {
 	}
 
 	SortIntegers(dataSort, count, Sort_Descending);
-	int rockLen = IntToString(count ? dataSort[0] : 0, str, sizeof str);
+	int rockLen = !count ? 1 : IntToString(dataSort[0], str, sizeof str);
 
 	count = 0;
 	for (i = 0; i < length; i++) {
@@ -524,12 +535,13 @@ void PrintTankStatistics(int tank) {
 	}
 
 	SortIntegers(dataSort, count, Sort_Descending);
-	int hitLen = IntToString(count ? dataSort[0] : 0, str, sizeof str);
+	int hitLen = !count ? 1 : IntToString(dataSort[0], str, sizeof str);
 
 	char name[MAX_NAME_LENGTH];
 	FormatEx(name, sizeof name, "[%s] %N", IsFakeClient(tank) ? "AI" : "PZ", tank);
 	CPrintToChatAll("{default}[{red}%s{default}] {olive}%N {default}伤害承受: {red}%d", IsFakeClient(tank) ? "AI" : "PZ", tank, g_esData[tank].totalTankDmg);
 
+	int len;
 	int numSpace;
 	char buffer[254];
 	for (i = 0; i < length; i++) {
@@ -537,37 +549,47 @@ void PrintTankStatistics(int tank) {
 		damage = aClients.Get(i, 0);
 		percent = RoundToNearest(float(damage) / float(g_esData[tank].totalTankDmg) * 100.0);
 
-		Format(buffer, sizeof buffer, "%s", "{green}★ {default}[");
+		strcopy(buffer, sizeof buffer, "{green}★ {default}[");
 		numSpace = dmgLen - IntToString(damage, str, sizeof str);
 		AppendSpaceChar(buffer, sizeof buffer, numSpace);
-		Format(buffer, sizeof buffer, "%s{red}%s", buffer, str);
+		len = strlen(buffer);
+		Format(buffer[len], sizeof buffer - len, "{red}%s", str);
 		AppendSpaceChar(buffer, sizeof buffer, numSpace);
 	
-		Format(buffer, sizeof buffer, "%s%s", buffer, "{default}] (");
+		len = strlen(buffer);
+		strcopy(buffer[len], sizeof buffer - len, "{default}] (");
 		numSpace = percLen - IntToString(percent, str, sizeof str);
 		AppendSpaceChar(buffer, sizeof buffer, numSpace);
-		Format(buffer, sizeof buffer, "%s{red}%s%%", buffer, str);
+		len = strlen(buffer);
+		Format(buffer[len], sizeof buffer - len, "{red}%s%%", str);
 		AppendSpaceChar(buffer, sizeof buffer, numSpace);
 
-		Format(buffer, sizeof buffer, "%s%s", buffer, "{default}) 吃拳: ");
+		len = strlen(buffer);
+		strcopy(buffer[len], sizeof buffer - len, "{default}) 吃拳: ");
 		numSpace = clawLen - IntToString(g_esData[tank].tankClaw[client], str, sizeof str);
 		AppendSpaceChar(buffer, sizeof buffer, numSpace);
-		Format(buffer, sizeof buffer, "%s{red}%s", buffer, str);
+		len = strlen(buffer);
+		Format(buffer[len], sizeof buffer - len, "{red}%s", str);
 		AppendSpaceChar(buffer, sizeof buffer, numSpace);
 
-		Format(buffer, sizeof buffer, "%s%s", buffer, " {default}吃饼: ");
+		len = strlen(buffer);
+		strcopy(buffer[len], sizeof buffer - len, " {default}吃饼: ");
 		numSpace = rockLen - IntToString(g_esData[tank].tankRock[client], str, sizeof str);
 		AppendSpaceChar(buffer, sizeof buffer, numSpace);
-		Format(buffer, sizeof buffer, "%s{red}%s", buffer, str);
+		len = strlen(buffer);
+		Format(buffer[len], sizeof buffer - len, "{red}%s", str);
 		AppendSpaceChar(buffer, sizeof buffer, numSpace);
 
-		Format(buffer, sizeof buffer, "%s%s", buffer, " {default}吃铁: ");
+		len = strlen(buffer);
+		strcopy(buffer[len], sizeof buffer - len, " {default}吃铁: ");
 		numSpace = hitLen - IntToString(g_esData[tank].tankHittable[client], str, sizeof str);
 		AppendSpaceChar(buffer, sizeof buffer, numSpace);
-		Format(buffer, sizeof buffer, "%s{red}%s", buffer, str);
+		len = strlen(buffer);
+		Format(buffer[len], sizeof buffer - len, "{red}%s", str);
 		AppendSpaceChar(buffer, sizeof buffer, numSpace);
 
-		Format(buffer, sizeof buffer, "%s {olive}%N", buffer, client);
+		len = strlen(buffer);
+		Format(buffer[len], sizeof buffer - len, " {olive}%N", client);
 
 
 		CPrintToChatAll("%s", buffer);
@@ -581,8 +603,11 @@ bool IsActive(int tank, int client) {
 }
 
 void AppendSpaceChar(char[] buffer, int maxlength, int numSpace) {
-	for (int i; i < numSpace; i++)
-		StrCat(buffer, maxlength, " ");
+	int len;
+	for (int i; i < numSpace; i++) {
+		len = strlen(buffer);
+		strcopy(buffer[len], maxlength - len, " ");
+	}
 }
 
 int SortSIDamage(int elem1, int elem2, const int[] array, Handle hndl) {
