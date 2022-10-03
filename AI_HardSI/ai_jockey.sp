@@ -29,35 +29,35 @@ public Plugin myinfo = {
 };
 
 public void OnPluginStart() {
-	g_hJockeyStumbleRadius = CreateConVar("ai_jockey_stumble_radius", "50.0", "Stumble radius of a client landing a ride");
-	g_hHopActivationProximity = CreateConVar("ai_hop_activation_proximity", "800.0", "How close a client will approach before it starts hopping");
-	g_hJockeyLeapRange = FindConVar("z_jockey_leap_range");
-	g_hJockeyLeapAgain = FindConVar("z_jockey_leap_again_timer");
+	g_hJockeyStumbleRadius =	CreateConVar("ai_jockey_stumble_radius",	"50.0",		"Stumble radius of a client landing a ride");
+	g_hHopActivationProximity =	CreateConVar("ai_hop_activation_proximity",	"800.0",	"How close a client will approach before it starts hopping");
+	g_hJockeyLeapRange =		FindConVar("z_jockey_leap_range");
+	g_hJockeyLeapAgain =		FindConVar("z_jockey_leap_again_timer");
 
-	g_hJockeyLeapRange.AddChangeHook(vCvarChanged);
-	g_hJockeyLeapAgain.AddChangeHook(vCvarChanged);
-	g_hJockeyStumbleRadius.AddChangeHook(vCvarChanged);
-	g_hHopActivationProximity.AddChangeHook(vCvarChanged);
+	g_hJockeyLeapRange.AddChangeHook(CvarChanged);
+	g_hJockeyLeapAgain.AddChangeHook(CvarChanged);
+	g_hJockeyStumbleRadius.AddChangeHook(CvarChanged);
+	g_hHopActivationProximity.AddChangeHook(CvarChanged);
 
-	HookEvent("round_end", Event_RoundEnd, EventHookMode_PostNoCopy);
-	HookEvent("player_spawn", Event_PlayerSpawn);
-	HookEvent("player_shoved", Event_PlayerShoved);
-	HookEvent("jockey_ride", Event_JockeyRide, EventHookMode_Pre);
+	HookEvent("round_end",		Event_RoundEnd,		EventHookMode_PostNoCopy);
+	HookEvent("player_spawn",	Event_PlayerSpawn);
+	HookEvent("player_shoved",	Event_PlayerShoved);
+	HookEvent("jockey_ride",	Event_JockeyRide,	EventHookMode_Pre);
 }
 
 public void OnConfigsExecuted() {
-	vGetCvars();
+	GetCvars();
 }
 
-void vCvarChanged(ConVar convar, const char[] oldValue, const char[] newValue) {
-	vGetCvars();
+void CvarChanged(ConVar convar, const char[] oldValue, const char[] newValue) {
+	GetCvars();
 }
 
-void vGetCvars() {
-	g_fJockeyLeapRange = g_hJockeyLeapRange.FloatValue;
-	g_fJockeyLeapAgain = g_hJockeyLeapAgain.FloatValue;
-	g_fJockeyStumbleRadius = g_hJockeyStumbleRadius.FloatValue;
-	g_fHopActivationProximity = g_hHopActivationProximity.FloatValue;
+void GetCvars() {
+	g_fJockeyLeapRange =		g_hJockeyLeapRange.FloatValue;
+	g_fJockeyLeapAgain =		g_hJockeyLeapAgain.FloatValue;
+	g_fJockeyStumbleRadius =	g_hJockeyStumbleRadius.FloatValue;
+	g_fHopActivationProximity =	g_hHopActivationProximity.FloatValue;
 }
 
 public void OnMapEnd() {
@@ -76,16 +76,16 @@ void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast) {
 
 void Event_PlayerShoved(Event event, const char[] name, bool dontBroadcast) {
 	int client = GetClientOfUserId(event.GetInt("userid"));
-	if (bIsBotJockey(client))
+	if (IsBotJockey(client))
 		g_fLeapAgainTime[client] = GetGameTime() + g_fJockeyLeapAgain;
 }
 
-bool bIsBotJockey(int client) {
+bool IsBotJockey(int client) {
 	return client && IsClientInGame(client) && IsFakeClient(client) && GetClientTeam(client) == 3 && GetEntProp(client, Prop_Send, "m_zombieClass") == 5;
 }
 
 void Event_JockeyRide(Event event, const char[] name, bool dontBroadcast) {	
-	if (g_fJockeyStumbleRadius <= 0.0 || !L4D_IsCoopMode())
+	if (g_fJockeyStumbleRadius <= 0.0 || !L4D2_IsGenericCooperativeMode())
 		return;
 
 	int attacker = GetClientOfUserId(event.GetInt("userid"));
@@ -96,16 +96,16 @@ void Event_JockeyRide(Event event, const char[] name, bool dontBroadcast) {
 	if (!victim || !IsClientInGame(victim))
 		return;
 	
-	vStumbleByStanders(victim, attacker);
+	StumbleByStanders(victim, attacker);
 }
 
-void vStumbleByStanders(int iPinnedSur, int iPinner) {
+void StumbleByStanders(int iPinnedSur, int iPinner) {
 	static int i;
 	static float vPos[3];
 	static float vDir[3];
 	GetClientAbsOrigin(iPinnedSur, vPos);
 	for (i = 1; i <= MaxClients; i++) {
-		if (i == iPinnedSur || i == iPinner || !IsClientInGame(i) || GetClientTeam(i) != 2 || !IsPlayerAlive(i) || bIsPinned(i))
+		if (i == iPinnedSur || i == iPinner || !IsClientInGame(i) || GetClientTeam(i) != 2 || !IsPlayerAlive(i) || IsPinned(i))
 			continue;
 		
 		GetClientAbsOrigin(i, vDir);
@@ -117,16 +117,16 @@ void vStumbleByStanders(int iPinnedSur, int iPinner) {
 	}
 }
 
-bool bIsPinned(int client) {
-	if (GetEntPropEnt(client, Prop_Send, "m_pummelAttacker") > 0)
-		return true;
-	if (GetEntPropEnt(client, Prop_Send, "m_carryAttacker") > 0)
+bool IsPinned(int client) {
+	if (GetEntPropEnt(client, Prop_Send, "m_tongueOwner") > 0)
 		return true;
 	if (GetEntPropEnt(client, Prop_Send, "m_pounceAttacker") > 0)
 		return true;
 	if (GetEntPropEnt(client, Prop_Send, "m_jockeyAttacker") > 0)
 		return true;
-	if (GetEntPropEnt(client, Prop_Send, "m_tongueOwner") > 0)
+	if (GetEntPropEnt(client, Prop_Send, "m_carryAttacker") > 0)
+		return true;
+	if (GetEntPropEnt(client, Prop_Send, "m_pummelAttacker") > 0)
 		return true;
 	return false;
 }
@@ -136,12 +136,12 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 	if (!IsClientInGame(client) || !IsFakeClient(client) || GetClientTeam(client) != 3 || !IsPlayerAlive(client) || GetEntProp(client, Prop_Send, "m_zombieClass") != 5 || GetEntProp(client, Prop_Send, "m_isGhost") || !GetEntProp(client, Prop_Send, "m_hasVisibleThreats"))
 		return Plugin_Continue;
 
-	static float fNearest;
-	fNearest = fNearestSurDistance(client);
-	if (fNearest > g_fHopActivationProximity)
+	static float nearestSurDist;
+	nearestSurDist = NearestSurDistance(client);
+	if (nearestSurDist > g_fHopActivationProximity)
 		return Plugin_Continue;
 
-	if (bIsGrounded(client)) {
+	if (IsGrounded(client)) {
 		static float vAng[3];
 		if (g_bDoNormalJump[client]) {
 			if (buttons & IN_FORWARD) {
@@ -163,7 +163,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 		else {
 			static float fGameTime;
 			if (g_fLeapAgainTime[client] < (fGameTime = GetGameTime())) {
-				if (fNearest < g_fJockeyLeapRange) {
+				if (nearestSurDist < g_fJockeyLeapRange) {
 					switch (Math_GetRandomInt(0, 1)) {
 						case 0:
 							buttons |= IN_FORWARD;
@@ -172,7 +172,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 							buttons |= IN_BACK;
 					}
 
-					if (Math_GetRandomInt(0, 1) && bWithinViewAngle(client, 60.0)) {
+					if (Math_GetRandomInt(0, 1) && WithinViewAngle(client, 60.0)) {
 						vAng = angles;
 						vAng[0] = Math_GetRandomFloat(-30.0, -10.0);
 						TeleportEntity(client, NULL_VECTOR, vAng, NULL_VECTOR);
@@ -193,83 +193,82 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 	return Plugin_Continue;
 }
 
-bool bIsGrounded(int client) {
-	int iEnt = GetEntPropEnt(client, Prop_Send, "m_hGroundEntity");
-	return iEnt != -1 && IsValidEntity(iEnt);
-	//return GetEntityFlags(client) & FL_ONGROUND != 0;
+bool IsGrounded(int client) {
+	int ent = GetEntPropEnt(client, Prop_Send, "m_hGroundEntity");
+	return ent != -1 && IsValidEntity(ent);
 }
 
-bool bIsAliveSur(int client) {
+bool IsAliveSur(int client) {
 	return client > 0 && client <= MaxClients && IsClientInGame(client) && GetClientTeam(client) == 2 && IsPlayerAlive(client);
 }
 
-float fNearestSurDistance(int client) {
+float NearestSurDistance(int client) {
 	static int i;
-	static int iCount;
+	static int count;
 	static float vPos[3];
 	static float vTar[3];
 	static float fDists[MAXPLAYERS + 1];
 	
-	iCount = 0;
+	count = 0;
 	GetClientAbsOrigin(client, vPos);
 	for (i = 1; i <= MaxClients; i++) {
 		if (i != client && IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i)) {
 			GetClientAbsOrigin(i, vTar);
-			fDists[iCount++] = GetVectorDistance(vPos, vTar);
+			fDists[count++] = GetVectorDistance(vPos, vTar);
 		}
 	}
 
-	if (!iCount)
+	if (!count)
 		return -1.0;
 
-	SortFloats(fDists, iCount, Sort_Ascending);
+	SortFloats(fDists, count, Sort_Ascending);
 	return fDists[0];
 }
 
-bool bWithinViewAngle(int client, float fOffsetThreshold) {
-	static int iTarget;
-	iTarget = GetClientAimTarget(client);
-	if (!bIsAliveSur(iTarget))
+bool WithinViewAngle(int client, float offsetThreshold) {
+	static int target;
+	target = GetClientAimTarget(client);
+	if (!IsAliveSur(target))
 		return true;
 	
 	static float vSrc[3];
 	static float vTar[3];
 	static float vAng[3];
-	GetClientEyePosition(iTarget, vSrc);
+	GetClientEyePosition(target, vSrc);
 	GetClientEyePosition(client, vTar);
-	if (bIsVisibleTo(vSrc, vTar)) {
-		GetClientEyeAngles(iTarget, vAng);
-		return PointWithinViewAngle(vSrc, vTar, vAng, GetFOVDotProduct(fOffsetThreshold));
+	if (IsVisibleTo(vSrc, vTar)) {
+		GetClientEyeAngles(target, vAng);
+		return PointWithinViewAngle(vSrc, vTar, vAng, GetFOVDotProduct(offsetThreshold));
 	}
 
 	return false;
 }
 
 // credits = "AtomicStryker"
-bool bIsVisibleTo(const float vPos[3], const float vTarget[3]) {
+bool IsVisibleTo(const float vPos[3], const float vTarget[3]) {
 	static float vAngles[3], vLookAt[3];
 	MakeVectorFromPoints(vPos, vTarget, vLookAt); // compute vector from start to target
 	GetVectorAngles(vLookAt, vAngles); // get angles from vector for trace
 
 	// execute Trace
 	static Handle hTrace;
-	static bool bIsVisible;
+	static bool isVisible;
 
-	bIsVisible = false;
-	hTrace = TR_TraceRayFilterEx(vPos, vAngles, MASK_ALL, RayType_Infinite, bTraceEntityFilter);
+	isVisible = false;
+	hTrace = TR_TraceRayFilterEx(vPos, vAngles, MASK_ALL, RayType_Infinite, TraceEntityFilter);
 	if (TR_DidHit(hTrace)) {
 		static float vStart[3];
 		TR_GetEndPosition(vStart, hTrace); // retrieve our trace endpoint
 
 		if ((GetVectorDistance(vPos, vStart, false) + 25.0) >= GetVectorDistance(vPos, vTarget))
-			bIsVisible = true; // if trace ray length plus tolerance equal or bigger absolute distance, you hit the target
+			isVisible = true; // if trace ray length plus tolerance equal or bigger absolute distance, you hit the target
 	}
 
 	delete hTrace;
-	return bIsVisible;
+	return isVisible;
 }
 
-bool bTraceEntityFilter(int entity, int contentsMask) {
+bool TraceEntityFilter(int entity, int contentsMask) {
 	if (entity <= MaxClients)
 		return false;
 
