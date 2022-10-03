@@ -40,7 +40,7 @@ public void OnPluginStart() {
 	g_hPounceVerticalAngle = 		CreateConVar("ai_pounce_vertical_angle",			"7.0",		"Vertical angle to which AI hunter pounces will be restricted");
 	g_hPounceAngleMean = 			CreateConVar("ai_pounce_angle_mean",				"10.0",		"Mean angle produced by Gaussian RNG");
 	g_hPounceAngleStd = 			CreateConVar("ai_pounce_angle_std",					"20.0",		"One standard deviation from mean as produced by Gaussian RNG");
-	g_hStraightPounceProximity =	CreateConVar("ai_straight_pounce_proximity",		"350.0",	"Distance to nearest survivor at which hunter will consider pouncing straight");
+	g_hStraightPounceProximity =	CreateConVar("ai_straight_pounce_proximity",		"200.0",	"Distance to nearest survivor at which hunter will consider pouncing straight");
 	g_hAimOffsetSensitivityHunter =	CreateConVar("ai_aim_offset_sensitivity_hunter",	"180.0",	"If the hunter has a target, it will not straight pounce if the target's aim on the horizontal axis is within this radius", _, true, 0.0, true, 180.0);
 	g_hWallDetectionDistance = 		CreateConVar("ai_wall_detection_distance",			"-1.0",		"How far in front of himself infected bot will check for a wall. Use '-1' to disable feature");
 	g_hLungeInterval = 				FindConVar("z_lunge_interval");
@@ -180,7 +180,7 @@ void Hunter_OnPounce(int client) {
 		ent = GetEntPropEnt(client, Prop_Send, "m_customAbility");
 		AngleLunge(ent, Math_GetRandomInt(0, 1) ? 45.0 : 315.0);
 	}
-	else {	
+	else {
 		if (IsBeingWatched(client, g_fAimOffsetSensitivityHunter) && NearestSurDistance(client, vPos) > g_fStraightPounceProximity) {
 			ent = GetEntPropEnt(client, Prop_Send, "m_customAbility");
 			AngleLunge(ent, GaussianRNG(g_fPounceAngleMean, g_fPounceAngleStd));
