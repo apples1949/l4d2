@@ -79,7 +79,7 @@ void CvarChanged(ConVar convar, const char[] oldValue, const char[] newValue) {
 void TweakSettings() {
 	FindConVar("z_pounce_crouch_delay").SetFloat(0.0);
 	FindConVar("z_pounce_silence_range").SetFloat(999999.0);
-	FindConVar("hunter_pounce_ready_range").SetFloat(2000.0);
+	FindConVar("hunter_pounce_ready_range").SetFloat(1000.0);
 	FindConVar("hunter_pounce_max_loft_angle").SetFloat(0.0);
 	FindConVar("hunter_committed_attack_range").SetFloat(600.0);
 	FindConVar("hunter_leap_away_give_up_range").SetFloat(0.0);
