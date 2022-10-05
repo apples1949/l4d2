@@ -52,7 +52,7 @@ ArrayList
 	g_aRandomNextMap;
 
 char
-	g_sNextMap[128];
+	g_sNextMap[64];
 
 bool
 	g_bUMHooked,
@@ -116,7 +116,7 @@ any Native_SetNextMap(Handle plugin, int numParams) {
 public void OnPluginStart() {
 	g_smNextMap = new StringMap();
 	g_smTranslation = new StringMap();
-	g_aRandomNextMap = new ArrayList(ByteCountToCells(128));
+	g_aRandomNextMap = new ArrayList(ByteCountToCells(64));
 	g_umDisconnectToLobby = GetUserMessageId("DisconnectToLobby");
 	HookUserMessage(GetUserMessageId("StatsCrawlMsg"), umStatsCrawlMsg, false, umStatsCrawlMsgPost);
 	CreateConVar("map_changer_version", PLUGIN_VERSION, "Map Changer plugin version.", FCVAR_NOTIFY|FCVAR_DONTRECORD);
@@ -127,6 +127,8 @@ public void OnPluginStart() {
 	g_cvFinaleChangeType.AddChangeHook(CvarChanged);
 	g_cvFinaleFailureCount.AddChangeHook(CvarChanged);
 	g_cvFinaleRandomNextMap.AddChangeHook(CvarChanged);
+
+	//AutoExecConfig(true);
 
 	HookEvent("round_end", 				Event_RoundEnd, 		EventHookMode_PostNoCopy);
 	HookEvent("finale_win", 			Event_FinaleWin,		EventHookMode_PostNoCopy);
@@ -146,7 +148,7 @@ Action cmdSetNext(int client, int args) {
 		return Plugin_Handled;
 	}
 
-	char map[128];
+	char map[64];
 	GetCmdArg(1, map, sizeof map);
 	if (!IsMapValidEx(map)) {
 		ReplyToCommand(client, "无效的地图名.");
@@ -187,7 +189,7 @@ void ParseNextMapData() {
 	g_smNextMap.Clear();
 	g_smTranslation.Clear();
 	if (kv.ImportFromFile(path)) {
-		char buffer[128];
+		char buffer[64];
 		for (int i; i < sizeof g_sValveMaps; i++) {
 			if (kv.JumpToKey(g_sValveMaps[i][FINAL], true)) {
 				kv.GetString("map", buffer, sizeof buffer, g_sValveMaps[i][FIRST]);
@@ -232,7 +234,7 @@ public void OnMapStart() {
 		InitRandomNextMapArray();
 
 	if (L4D_IsFirstMapInScenario()) {
-		char map[128];
+		char map[64];
 		GetCurrentMap(map, sizeof map);
 		StringToLowerCase(map);
 		int idx = g_aRandomNextMap.FindString(map);
@@ -322,11 +324,11 @@ void FinaleMapChange() {
 	if (IsMapValidEx(g_sNextMap))
 		ChangeLevel(g_sNextMap);
 	else {
-		char nextMap[128];
+		char nextMap[64];
 		if (g_bFinaleRandomNextMap)
 			GetRandomStandard(nextMap, sizeof nextMap);
 		else {
-			char map[128];
+			char map[64];
 			GetCurrentMap(map, sizeof map);
 			if (!GetNextStandard(map, nextMap, sizeof nextMap)) {
 				int Id = FindMapId(map, FINAL);
@@ -339,7 +341,7 @@ void FinaleMapChange() {
 }
 
 bool GetNextStandard(const char[] map, char[] nextMap, int maxlength) {
-	char buffer[128];
+	char buffer[64];
 	strcopy(buffer, sizeof buffer, map);
 	StringToLowerCase(buffer);
 	if (!g_smNextMap.GetString(buffer, buffer, sizeof buffer))
@@ -350,7 +352,7 @@ bool GetNextStandard(const char[] map, char[] nextMap, int maxlength) {
 }
 
 void GetRandomStandard(char[] nextMap, int maxlength) {
-	char buffer[128];
+	char buffer[64];
 	int idx = Math_GetRandomInt(0, g_aRandomNextMap.Length - 1);
 	g_aRandomNextMap.GetString(idx, buffer, sizeof buffer);
 	strcopy(nextMap, maxlength, buffer);
