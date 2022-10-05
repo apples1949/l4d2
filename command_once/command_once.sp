@@ -5,7 +5,7 @@
 #define PLUGIN_NAME				"Command Once"
 #define PLUGIN_AUTHOR			"sorallll"
 #define PLUGIN_DESCRIPTION		"在服务器首次OnConfigsExecuted()触发后执行所有使用该命令设置的内容"
-#define PLUGIN_VERSION			"1.0.5"
+#define PLUGIN_VERSION			"1.0.6"
 #define PLUGIN_URL				"https://github.com/umlka/l4d2/tree/main/command_once"
 
 ArrayList
@@ -13,11 +13,6 @@ ArrayList
 
 bool
 	g_bExecuted;
-
-enum struct esCmd {
-	char cmd[64];
-	char value[255];
-}
 
 public Plugin myinfo = {
 	name = PLUGIN_NAME,
@@ -28,12 +23,11 @@ public Plugin myinfo = {
 };
 
 public void OnPluginStart() {
-	g_aCmdList = new ArrayList(sizeof esCmd);
 	CreateConVar("command_once_version", PLUGIN_VERSION, "Command Once plugin version.", FCVAR_NOTIFY|FCVAR_DONTRECORD);
 
+	RegServerCmd("cmd_once", 		cmdOnce, "在服务器首次OnConfigsExecuted()触发后执行所有使用该命令设置的内容");
 	RegAdminCmd("sm_exec_once", 	cmdExec_Once,	ADMFLAG_RCON,	"手动执行");
 	RegAdminCmd("sm_reset_once",	cmdReset_Once,	ADMFLAG_RCON,	"重置命令");
-	RegServerCmd("cmd_once", cmdOnce, "在服务器首次OnConfigsExecuted()触发后执行所有使用该命令设置的内容");
 }
 
 Action cmdExec_Once(int client, int args) {
@@ -58,19 +52,11 @@ Action cmdOnce(int args) {
 	if (g_bExecuted)
 		return Plugin_Handled;
 
-	char cmd[64];
-	if (!GetCmdArg(1, cmd, sizeof cmd))
+	char command[255];
+	if (!GetCmdArgString(command, sizeof command))
 		return Plugin_Handled;
 
-	char value[255];
-	GetCmdArgString(value, sizeof value);
-	strcopy(value, sizeof value, value[strlen(cmd)]);
-	TrimString(value);
-
-	esCmd command;
-	strcopy(command.cmd, sizeof command.cmd, cmd);
-	strcopy(command.value, sizeof command.value, value);
-	g_aCmdList.PushArray(command);
+	g_aCmdList.PushString(command);
 	return Plugin_Handled;
 }
 
@@ -81,18 +67,18 @@ public void OnConfigsExecuted() {
 	}
 }
 
-// https://forums.alliedmods.net/showthread.php?p=2607757
+// [ANY] Command and ConVar - Buffer Overflow Fixer (https://forums.alliedmods.net/showthread.php?p=2607757)
 void NextFrame_Executed() {
 	ExecuteCmdList();
 }
 
 void ExecuteCmdList() {
-	esCmd command;
+	char command[255];
 	ArrayList aCmdList = g_aCmdList.Clone();
 	int count = aCmdList.Length;
 	for (int i; i < count; i++) {
-		aCmdList.GetArray(i, command);
-		InsertServerCommand("%s %s", command.cmd, command.value);
+		aCmdList.GetString(i, command, sizeof command);
+		InsertServerCommand("%s", command);
 		ServerExecute();
 	}
 
