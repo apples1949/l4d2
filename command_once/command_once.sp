@@ -23,6 +23,7 @@ public Plugin myinfo = {
 };
 
 public void OnPluginStart() {
+	g_aCmdList = new ArrayList(ByteCountToCells(255));
 	CreateConVar("command_once_version", PLUGIN_VERSION, "Command Once plugin version.", FCVAR_NOTIFY|FCVAR_DONTRECORD);
 
 	RegServerCmd("cmd_once", 		cmdOnce, "在服务器首次OnConfigsExecuted()触发后执行所有使用该命令设置的内容");
