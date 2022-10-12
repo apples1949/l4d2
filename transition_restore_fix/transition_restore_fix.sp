@@ -65,7 +65,7 @@ public void OnPluginStart() {
 	g_cvKeepIdentity = CreateConVar("restart_keep_identity", "1", "Whether to keep the current character and model after the mission lost and restarts? (0=restore to pre-transition identity, 1=game default)", FCVAR_NOTIFY);
 	g_cvPrecacheAllSur = FindConVar("precache_all_survivors");
 
-	g_cvKeepIdentity.AddChangeHook(vCvarChanged);
+	g_cvKeepIdentity.AddChangeHook(CvarChanged);
 
 	AutoExecConfig(true, "transition_restore_fix");
 }
@@ -79,7 +79,7 @@ public void OnConfigsExecuted() {
 	ToggleDetour(g_cvKeepIdentity.BoolValue);
 }
 
-void vCvarChanged(ConVar convar, const char[] oldValue, const char[] newValue) {
+void CvarChanged(ConVar convar, const char[] oldValue, const char[] newValue) {
 	ToggleDetour(g_cvKeepIdentity.BoolValue);
 }
 
