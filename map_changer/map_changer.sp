@@ -100,7 +100,7 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 	return APLRes_Success;
 }
 
-any Native_SetNextMap(Handle plugin, int numParams) {
+int Native_SetNextMap(Handle plugin, int numParams) {
 	int maxlength;
 	GetNativeStringLength(1, maxlength);
 	maxlength += 1;
