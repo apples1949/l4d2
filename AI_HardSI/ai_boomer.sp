@@ -239,59 +239,19 @@ void GetSurDistance(int client, float &curTargetDist, float &nearestSurDist) {
 	}
 
 	static int i;
-	static int count;
-	static float fDists[MAXPLAYERS + 1];
+	static float dist;
 
-	count = 0;
+	nearestSurDist = -1.0;
 	GetClientAbsOrigin(client, vPos);
 	for (i = 1; i <= MaxClients; i++) {
 		if (i != client && IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i)) {
 			GetClientAbsOrigin(i, vTar);
-			fDists[count++] = GetVectorDistance(vPos, vTar);
+			dist = GetVectorDistance(vPos, vTar);
+			if (dist < nearestSurDist)
+				nearestSurDist = dist;
 		}
 	}
-
-	if (!count)
-		nearestSurDist = -1.0;
-	else {
-		SortFloats(fDists, count, Sort_Ascending);
-		nearestSurDist = fDists[0];
-	}
 }
-/*
-float CurTargetDistance(int client) {
-	if (!IsAliveSur(g_iCurTarget[client]))
-		return -1.0;
-
-	static float vPos[3];
-	static float vTar[3];
-	GetClientAbsOrigin(client, vPos);
-	GetClientAbsOrigin(g_iCurTarget[client], vTar);
-	return GetVectorDistance(vPos, vTar);
-}
-
-float NearestSurDistance(int client) {
-	static int i;
-	static int count;
-	static float vPos[3];
-	static float vTar[3];
-	static float fDists[MAXPLAYERS + 1];
-	
-	count = 0;
-	GetClientAbsOrigin(client, vPos);
-	for (i = 1; i <= MaxClients; i++) {
-		if (i != client && IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i)) {
-			GetClientAbsOrigin(i, vTar);
-			fDists[count++] = GetVectorDistance(vPos, vTar);
-		}
-	}
-
-	if (!count)
-		return -1.0;
-
-	SortFloats(fDists, count, Sort_Ascending);
-	return fDists[0];
-}*/
 
 #define PLAYER_HEIGHT 72.0
 void Boomer_OnVomit(int client) {

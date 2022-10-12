@@ -153,23 +153,21 @@ public Action OnPlayerRunCmd(int client, int &buttons) {
 
 float NearestSurDistance(int client, const float vPos[3]) {
 	static int i;
-	static int count;
 	static float vTar[3];
-	static float fDistance[MAXPLAYERS + 1];
+	static float dist;
+	static float minDist;
 
-	count = 0;
+	minDist = -1.0;
 	for (i = 1; i <= MaxClients; i++) {
 		if (i != client && IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i)) {
 			GetClientAbsOrigin(i, vTar);
-			fDistance[count++] = GetVectorDistance(vPos, vTar);
+			dist = GetVectorDistance(vPos, vTar);
+			if (dist < minDist)
+				minDist = dist;
 		}
 	}
 
-	if (!count)
-		return -1.0;
-
-	SortFloats(fDistance, count, Sort_Ascending);
-	return fDistance[0];
+	return minDist;
 }
 
 void Hunter_OnPounce(int client) {

@@ -178,23 +178,21 @@ bool TraceEntityFilter(int entity, int contentsMask) {
 
 float NearestSurDistance(int client) {
 	static int i;
-	static int count;
 	static float vPos[3];
 	static float vTar[3];
-	static float fDists[MAXPLAYERS + 1];
-	
-	count = 0;
+	static float dist;
+	static float minDist;
+
+	minDist = -1.0;
 	GetClientAbsOrigin(client, vPos);
 	for (i = 1; i <= MaxClients; i++) {
 		if (i != client && IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i)) {
 			GetClientAbsOrigin(i, vTar);
-			fDists[count++] = GetVectorDistance(vPos, vTar);
+			dist = GetVectorDistance(vPos, vTar);
+			if (dist < minDist)
+				minDist = dist;
 		}
 	}
 
-	if (!count)
-		return -1.0;
-
-	SortFloats(fDists, count, Sort_Ascending);
-	return fDists[0];
+	return minDist;
 }

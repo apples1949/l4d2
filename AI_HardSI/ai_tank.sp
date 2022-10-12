@@ -289,23 +289,17 @@ void GetSurDistance(int client, float &curTargetDist, float &nearestSurDist) {
 	}
 
 	static int i;
-	static int count;
-	static float fDists[MAXPLAYERS + 1];
+	static float dist;
 
-	count = 0;
+	nearestSurDist = -1.0;
 	GetClientAbsOrigin(client, vPos);
 	for (i = 1; i <= MaxClients; i++) {
 		if (i != client && IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i)) {
 			GetClientAbsOrigin(i, vTar);
-			fDists[count++] = GetVectorDistance(vPos, vTar);
+			dist = GetVectorDistance(vPos, vTar);
+			if (dist < nearestSurDist)
+				nearestSurDist = dist;
 		}
-	}
-
-	if (!count)
-		nearestSurDist = -1.0;
-	else {
-		SortFloats(fDists, count, Sort_Ascending);
-		nearestSurDist = fDists[0];
 	}
 }
 
