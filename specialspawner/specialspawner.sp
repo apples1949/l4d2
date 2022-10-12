@@ -771,11 +771,11 @@ void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast) {
 
 Action tmrUpdate(Handle timer) {
 	g_hUpdateTimer = null;
-	SetMaxSpecialsCount();
+	SetSpawnCount();
 	return Plugin_Continue;
 }
 
-void SetMaxSpecialsCount() {
+void SetSpawnCount() {
 	int count;
 	int limit;
 	int spawnSize;
@@ -1026,7 +1026,7 @@ void ExecuteSpawnQueue(int totalSI, bool retry) {
 	delete aList;
 	g_bInSpawnTime = true;
 	//g_cvSpawnRange.IntValue = retry ? 1000 : 1500;
-	g_iDirection = g_bFinaleStarted ? SPAWN_NEAR_IT_VICTIM : ((!find || !retry) ? SPAWN_LARGE_VOLUME/*SPAWN_SPECIALS_ANYWHERE*/ : SPAWN_IN_FRONT_OF_SURVIVORS);
+	g_iDirection = g_bFinaleStarted ? SPAWN_NEAR_IT_VICTIM : (retry ? SPAWN_NO_PREFERENCE : (!find ? SPAWN_LARGE_VOLUME/*SPAWN_SPECIALS_ANYWHERE*/ : SPAWN_IN_FRONT_OF_SURVIVORS));
 
 	count = 0;
 	find = false;
