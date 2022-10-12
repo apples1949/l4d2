@@ -5,7 +5,7 @@
 #include <sdktools>
 #include <left4dhooks>
 
-#define DEBUG 		0
+#define DEBUG		0
 #define BENCHMARK	0
 #if BENCHMARK
 	#include <profiler>
@@ -19,7 +19,7 @@
 #define SI_JOCKEY		4
 #define SI_CHARGER		5
 
-#define SPAWN_NO_PREFERENCE					   -1
+#define SPAWN_NO_PREFERENCE						-1
 #define SPAWN_ANYWHERE							0
 #define SPAWN_BEHIND_SURVIVORS					1
 #define SPAWN_NEAR_IT_VICTIM					2
@@ -85,11 +85,11 @@ static const char
 int
 	g_iSILimit,
 	g_iSpawnSize,
+	g_iDirection,
 	g_iSpawnLimits[6],
 	g_iSpawnWeights[6],
 	g_iSpawnTimeMode,
 	g_iTankStatusAction,
-	g_iPreferredDirection,
 	g_iSILimitCache = -1,
 	g_iSpawnLimitsCache[6] = {	
 		-1,
@@ -149,45 +149,45 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 }
 
 public void OnPluginStart() {
-	g_cvSILimit	= 					CreateConVar("ss_si_limit", 			"12", 						"同时存在的最大特感数量", _, true, 1.0, true, 32.0);
-	g_cvSpawnSize = 				CreateConVar("ss_spawn_size", 			"4", 						"一次产生多少只特感", _, true, 1.0, true, 32.0);
-	g_cvSpawnLimits[SI_SMOKER] = 	CreateConVar("ss_smoker_limit",			"2", 						"同时存在的最大smoker数量", _, true, 0.0, true, 32.0);
+	g_cvSILimit	= 					CreateConVar("ss_si_limit",				"12",						"同时存在的最大特感数量", _, true, 1.0, true, 32.0);
+	g_cvSpawnSize = 				CreateConVar("ss_spawn_size",			"4",						"一次产生多少只特感", _, true, 1.0, true, 32.0);
+	g_cvSpawnLimits[SI_SMOKER] = 	CreateConVar("ss_smoker_limit",			"2",						"同时存在的最大smoker数量", _, true, 0.0, true, 32.0);
 	g_cvSpawnLimits[SI_BOOMER] = 	CreateConVar("ss_boomer_limit",			"2",						"同时存在的最大boomer数量", _, true, 0.0, true, 32.0);
-	g_cvSpawnLimits[SI_HUNTER] = 	CreateConVar("ss_hunter_limit",			"4", 						"同时存在的最大hunter数量", _, true, 0.0, true, 32.0);
-	g_cvSpawnLimits[SI_SPITTER] = 	CreateConVar("ss_spitter_limit",		"2", 						"同时存在的最大spitter数量", _, true, 0.0, true, 32.0);
-	g_cvSpawnLimits[SI_JOCKEY] = 	CreateConVar("ss_jockey_limit",			"4", 						"同时存在的最大jockey数量", _, true, 0.0, true, 32.0);
-	g_cvSpawnLimits[SI_CHARGER] = 	CreateConVar("ss_charger_limit", 		"4", 						"同时存在的最大charger数量", _, true, 0.0, true, 32.0);
+	g_cvSpawnLimits[SI_HUNTER] = 	CreateConVar("ss_hunter_limit",			"4",						"同时存在的最大hunter数量", _, true, 0.0, true, 32.0);
+	g_cvSpawnLimits[SI_SPITTER] = 	CreateConVar("ss_spitter_limit",		"2",						"同时存在的最大spitter数量", _, true, 0.0, true, 32.0);
+	g_cvSpawnLimits[SI_JOCKEY] = 	CreateConVar("ss_jockey_limit",			"4",						"同时存在的最大jockey数量", _, true, 0.0, true, 32.0);
+	g_cvSpawnLimits[SI_CHARGER] = 	CreateConVar("ss_charger_limit",		"4",						"同时存在的最大charger数量", _, true, 0.0, true, 32.0);
 
-	g_cvSpawnWeights[SI_SMOKER] = 	CreateConVar("ss_smoker_weight", 		"100", 						"smoker产生比重", _, true, 0.0);
-	g_cvSpawnWeights[SI_BOOMER] = 	CreateConVar("ss_boomer_weight", 		"200", 						"boomer产生比重", _, true, 0.0);
-	g_cvSpawnWeights[SI_HUNTER] = 	CreateConVar("ss_hunter_weight", 		"100", 						"hunter产生比重", _, true, 0.0);
-	g_cvSpawnWeights[SI_SPITTER] = 	CreateConVar("ss_spitter_weight", 		"200",						"spitter产生比重", _, true, 0.0);
-	g_cvSpawnWeights[SI_JOCKEY] = 	CreateConVar("ss_jockey_weight", 		"100", 						"jockey产生比重", _, true, 0.0);
-	g_cvSpawnWeights[SI_CHARGER] = 	CreateConVar("ss_charger_weight", 		"100", 						"charger产生比重", _, true, 0.0);
-	g_cvScaleWeights = 				CreateConVar("ss_scale_weights", 		"1",						"缩放相应特感的产生比重 [0 = 关闭 | 1 = 开启](开启后,总比重越大的越容易先刷出来, 动态控制特感刷出顺序)", _, true, 0.0, true, 1.0);
-	g_cvSpawnTimeMin = 				CreateConVar("ss_time_min", 			"10.0", 					"特感的最小产生时间", _, true, 0.1);
-	g_cvSpawnTimeMax = 				CreateConVar("ss_time_max", 			"15.0", 					"特感的最大产生时间", _, true, 1.0);
-	g_cvSpawnTimeMode = 			CreateConVar("ss_time_mode", 			"1", 						"特感的刷新时间模式[0 = 随机 | 1 = 递增(杀的越快刷的越快) | 2 = 递减(杀的越慢刷的越快)]", _, true, 0.0, true, 2.0);
+	g_cvSpawnWeights[SI_SMOKER] =	CreateConVar("ss_smoker_weight",		"100",						"smoker产生比重", _, true, 0.0);
+	g_cvSpawnWeights[SI_BOOMER] =	CreateConVar("ss_boomer_weight",		"200",						"boomer产生比重", _, true, 0.0);
+	g_cvSpawnWeights[SI_HUNTER] =	CreateConVar("ss_hunter_weight",		"100",						"hunter产生比重", _, true, 0.0);
+	g_cvSpawnWeights[SI_SPITTER] =	CreateConVar("ss_spitter_weight",		"200",						"spitter产生比重", _, true, 0.0);
+	g_cvSpawnWeights[SI_JOCKEY] =	CreateConVar("ss_jockey_weight",		"100",						"jockey产生比重", _, true, 0.0);
+	g_cvSpawnWeights[SI_CHARGER] =	CreateConVar("ss_charger_weight",		"100",						"charger产生比重", _, true, 0.0);
+	g_cvScaleWeights =				CreateConVar("ss_scale_weights",		"1",						"缩放相应特感的产生比重 [0 = 关闭 | 1 = 开启](开启后,总比重越大的越容易先刷出来, 动态控制特感刷出顺序)", _, true, 0.0, true, 1.0);
+	g_cvSpawnTimeMin =				CreateConVar("ss_time_min",				"10.0",						"特感的最小产生时间", _, true, 0.1);
+	g_cvSpawnTimeMax =				CreateConVar("ss_time_max",				"15.0",						"特感的最大产生时间", _, true, 1.0);
+	g_cvSpawnTimeMode =				CreateConVar("ss_time_mode",			"1",						"特感的刷新时间模式[0 = 随机 | 1 = 递增(杀的越快刷的越快) | 2 = 递减(杀的越慢刷的越快)]", _, true, 0.0, true, 2.0);
 
-	g_cvBaseLimit = 				CreateConVar("ss_base_limit", 			"4", 						"生还者团队不超过4人时有多少个特感", _, true, 0.0, true, 32.0);
-	g_cvExtraLimit = 				CreateConVar("ss_extra_limit", 			"1", 						"生还者团队每增加一人可增加多少个特感", _, true, 0.0, true, 32.0);
-	g_cvBaseSize = 					CreateConVar("ss_base_size", 			"4", 						"生还者团队不超过4人时一次产生多少只特感", _, true, 0.0, true, 32.0);
-	g_cvExtraSize = 				CreateConVar("ss_extra_size", 			"2", 						"生还者团队每增加多少玩家人一次多产生一只特感", _, true, 1.0, true, 32.0);
-	g_cvTankStatusAction = 			CreateConVar("ss_tankstatus_action", 	"1", 						"坦克产生后是否对当前刷特参数进行修改, 坦克死完后恢复?[0 = 忽略(保持原有的刷特状态) | 1 = 自定义]", _, true, 0.0, true, 1.0);
-	g_cvTankStatusLimits = 			CreateConVar("ss_tankstatus_limits", 	"2;1;4;1;4;4", 				"坦克产生后每种特感数量的自定义参数");
-	g_cvTankStatusWeights = 		CreateConVar("ss_tankstatus_weights",	"100;400;100;200;100;100",	"坦克产生后每种特感比重的自定义参数");
-	g_cvSuicideTime = 				CreateConVar("ss_suicide_time", 		"25.0", 					"特感自动处死时间", _, true, 1.0);
-	g_cvRushDistance = 				CreateConVar("ss_rush_distance", 		"1500.0", 					"路程超过多少算跑图(最前面的玩家路程减去最后面的玩家路程, 忽略倒地玩家)", _, true, 0.0);
+	g_cvBaseLimit =					CreateConVar("ss_base_limit",			"4",						"生还者团队不超过4人时有多少个特感", _, true, 0.0, true, 32.0);
+	g_cvExtraLimit =				CreateConVar("ss_extra_limit",			"1",						"生还者团队每增加一人可增加多少个特感", _, true, 0.0, true, 32.0);
+	g_cvBaseSize =					CreateConVar("ss_base_size",			"4",						"生还者团队不超过4人时一次产生多少只特感", _, true, 0.0, true, 32.0);
+	g_cvExtraSize =					CreateConVar("ss_extra_size",			"2",						"生还者团队每增加多少玩家人一次多产生一只特感", _, true, 1.0, true, 32.0);
+	g_cvTankStatusAction =			CreateConVar("ss_tankstatus_action",	"1",						"坦克产生后是否对当前刷特参数进行修改, 坦克死完后恢复?[0 = 忽略(保持原有的刷特状态) | 1 = 自定义]", _, true, 0.0, true, 1.0);
+	g_cvTankStatusLimits =			CreateConVar("ss_tankstatus_limits",	"2;1;4;1;4;4",				"坦克产生后每种特感数量的自定义参数");
+	g_cvTankStatusWeights =			CreateConVar("ss_tankstatus_weights",	"100;400;100;200;100;100",	"坦克产生后每种特感比重的自定义参数");
+	g_cvSuicideTime =				CreateConVar("ss_suicide_time",			"25.0",						"特感自动处死时间", _, true, 1.0);
+	g_cvRushDistance =				CreateConVar("ss_rush_distance",		"1500.0",					"路程超过多少算跑图(最前面的玩家路程减去最后面的玩家路程, 忽略倒地玩家)", _, true, 0.0);
 
-	g_cvSpawnRangeMin = 			CreateConVar("ss_spawnrange_min", 		"100.0", 					"特感最小生成距离", _, true, 0.0);
-	g_cvSpawnRangeMax = 			CreateConVar("ss_spawnrange_max", 		"1500.0", 					"特感最大生成距离", _, true, 0.0);
+	g_cvSpawnRangeMin =				CreateConVar("ss_spawnrange_min",		"100.0",					"特感最小生成距离", _, true, 0.0);
+	g_cvSpawnRangeMax =				CreateConVar("ss_spawnrange_max",		"1500.0",					"特感最大生成距离", _, true, 0.0);
 
 	g_cvSafeSpawnRange = FindConVar("z_safe_spawn_range");
 	g_cvSpawnRange = FindConVar("z_spawn_range");
 	
-	//g_cvSpawnRange.Flags &= ~FCVAR_NOTIFY;
+	g_cvSpawnRange.Flags &= ~FCVAR_NOTIFY;
 	g_cvDiscardRange = FindConVar("z_discard_range");
-	//g_cvDiscardRange.Flags &= ~FCVAR_NOTIFY;
+	g_cvDiscardRange.Flags &= ~FCVAR_NOTIFY;
 
 	g_cvSpawnSize.AddChangeHook(CvarChanged_Limits);
 	for (int i; i < 6; i++) {
@@ -214,21 +214,21 @@ public void OnPluginStart() {
 
 	//AutoExecConfig(true);
 
-	HookEvent("round_end", 				Event_RoundEnd, 	EventHookMode_PostNoCopy);
-	HookEvent("finale_vehicle_leaving", Event_RoundEnd, 	EventHookMode_PostNoCopy);
-	HookEvent("round_start", 			Event_RoundStart, 	EventHookMode_PostNoCopy);
-	HookEvent("player_hurt", 			Event_PlayerHurt);
-	HookEvent("player_team", 			Event_PlayerTeam);
-	HookEvent("player_spawn", 			Event_PlayerSpawn);
-	HookEvent("player_death", 			Event_PlayerDeath, 	EventHookMode_Pre);
+	HookEvent("round_end",				Event_RoundEnd,		EventHookMode_PostNoCopy);
+	HookEvent("finale_vehicle_leaving", Event_RoundEnd,		EventHookMode_PostNoCopy);
+	HookEvent("round_start",			Event_RoundStart,	EventHookMode_PostNoCopy);
+	HookEvent("player_hurt",			Event_PlayerHurt);
+	HookEvent("player_team",			Event_PlayerTeam);
+	HookEvent("player_spawn",			Event_PlayerSpawn);
+	HookEvent("player_death",			Event_PlayerDeath,	EventHookMode_Pre);
 
-	RegAdminCmd("sm_weight", 		cmdSetWeight, 	ADMFLAG_RCON, "设置特感生成比重");
-	RegAdminCmd("sm_limit", 		cmdSetLimit, 	ADMFLAG_RCON, "设置特感生成数量");
-	RegAdminCmd("sm_timer", 		cmdSetTimer, 	ADMFLAG_RCON, "设置特感生成时间");
+	RegAdminCmd("sm_weight",		cmdSetWeight,	ADMFLAG_RCON, "设置特感生成比重");
+	RegAdminCmd("sm_limit",			cmdSetLimit,	ADMFLAG_RCON, "设置特感生成数量");
+	RegAdminCmd("sm_timer",			cmdSetTimer,	ADMFLAG_RCON, "设置特感生成时间");
 
-	RegAdminCmd("sm_resetspawn", 	cmdResetSpawn, 	ADMFLAG_RCON, "处死所有特感并重新开始生成计时");
-	RegAdminCmd("sm_forcetimer", 	cmdForceTimer, 	ADMFLAG_RCON, "开始生成计时");
-	RegAdminCmd("sm_type", 			cmdType, 		ADMFLAG_ROOT, "随机轮换模式");
+	RegAdminCmd("sm_resetspawn",	cmdResetSpawn,	ADMFLAG_RCON, "处死所有特感并重新开始生成计时");
+	RegAdminCmd("sm_forcetimer",	cmdForceTimer,	ADMFLAG_RCON, "开始生成计时");
+	RegAdminCmd("sm_type",			cmdType,		ADMFLAG_ROOT, "随机轮换模式");
 
 	HookEntityOutput("trigger_finale", "FinaleStart", OnFinaleStart);
 
@@ -271,7 +271,7 @@ public Action L4D_OnGetScriptValueInt(const char[] key, int &retVal) {
 	if (strcmp(key, "MaxSpecials", false) == 0 || strcmp(key, "cm_MaxSpecials", false) == 0)
 		value = g_iSILimit;
 	else if (strcmp(key, "PreferredSpecialDirection", false) == 0)
-		value = g_iPreferredDirection;
+		value = g_iDirection;
 
 	if (value != retVal) {
 		retVal = value;
@@ -302,31 +302,31 @@ public void L4D_OnFirstSurvivorLeftSafeArea_Post(int client) {
 Action tmrForceSuicide(Handle timer) {
 	static int i;
 	static int victim;
-	static int class;
-	static float fEngineTime;
+	static int zombieClass;
+	static float engineTime;
 
-	fEngineTime = GetEngineTime();
+	engineTime = GetEngineTime();
 	for (i = 1; i <= MaxClients; i++) {
 		if (!IsClientInGame(i) || !IsFakeClient(i) || GetClientTeam(i) != 3 || !IsPlayerAlive(i))
 			continue;
 
-		class = GetEntProp(i, Prop_Send, "m_zombieClass");
-		if (class < 1 || class > 6)
+		zombieClass = GetEntProp(i, Prop_Send, "m_zombieClass");
+		if (zombieClass < 1 || zombieClass > 6)
 			continue;
 
 		if (GetEntProp(i, Prop_Send, "m_hasVisibleThreats")) {
-			g_fActionTimes[i] = fEngineTime;
+			g_fActionTimes[i] = engineTime;
 			continue;
 		}
 
-		victim = GetSurVictim(i, class);
+		victim = GetSurVictim(i, zombieClass);
 		if (victim > 0) {
 			if (GetEntProp(victim, Prop_Send, "m_isIncapacitated"))
 				KillInactiveSI(i);
 			else
-				g_fActionTimes[i] = fEngineTime;
+				g_fActionTimes[i] = engineTime;
 		}
-		else if (fEngineTime - g_fActionTimes[i] > g_fSuicideTime)
+		else if (engineTime - g_fActionTimes[i] > g_fSuicideTime)
 			KillInactiveSI(i);
 	}
 
@@ -343,8 +343,8 @@ void KillInactiveSI(int client) {
 		CreateTimer(1.0, tmrRetrySpawn, true);
 }
 
-int GetSurVictim(int client, int class) {
-	switch (class) {
+int GetSurVictim(int client, int zombieClass) {
+	switch (zombieClass) {
 		case 1:
 			return GetEntPropEnt(client, Prop_Send, "m_tongueVictim");
 
@@ -355,13 +355,13 @@ int GetSurVictim(int client, int class) {
 			return GetEntPropEnt(client, Prop_Send, "m_jockeyVictim");
 
 		case 6: {
-			class = GetEntPropEnt(client, Prop_Send, "m_pummelVictim");
-			if (class > 0)
-				return class;
+			zombieClass = GetEntPropEnt(client, Prop_Send, "m_pummelVictim");
+			if (zombieClass > 0)
+				return zombieClass;
 
-			class = GetEntPropEnt(client, Prop_Send, "m_carryVictim");
-			if (class > 0)
-				return class;
+			zombieClass = GetEntPropEnt(client, Prop_Send, "m_carryVictim");
+			if (zombieClass > 0)
+				return zombieClass;
 		}
 	}
 
@@ -960,7 +960,7 @@ Action tmrSpawnSpecial(Handle timer) {
 	return Plugin_Continue;
 }
 
-void ExecuteSpawnQueue(int totalSI, bool bRetry) {
+void ExecuteSpawnQueue(int totalSI, bool retry) {
 	if (totalSI >= g_iSILimit)
 		return;
 
@@ -1011,7 +1011,7 @@ void ExecuteSpawnQueue(int totalSI, bool bRetry) {
 
 	aList.Sort(Sort_Descending, Sort_Float);
 
-	bool bFind;
+	bool find;
 	int client = aList.Get(0, 1);
 	flow = aList.Get(0, 0);
 	float lastFlow = aList.Get(count - 1, 0);
@@ -1020,24 +1020,24 @@ void ExecuteSpawnQueue(int totalSI, bool bRetry) {
 		PrintToServer("[SS] Rusher -> %N", client);
 		#endif
 
-		bFind = true;
+		find = true;
 	}
 
 	delete aList;
 	g_bInSpawnTime = true;
-	//g_cvSpawnRange.IntValue = bRetry ? 1000 : 1500;
-	g_iPreferredDirection = g_bFinaleStarted ? SPAWN_NEAR_IT_VICTIM : ((!bFind || !bRetry) ? SPAWN_LARGE_VOLUME/*SPAWN_SPECIALS_ANYWHERE*/ : SPAWN_IN_FRONT_OF_SURVIVORS);
+	//g_cvSpawnRange.IntValue = retry ? 1000 : 1500;
+	g_iDirection = g_bFinaleStarted ? SPAWN_NEAR_IT_VICTIM : ((!find || !retry) ? SPAWN_LARGE_VOLUME/*SPAWN_SPECIALS_ANYWHERE*/ : SPAWN_IN_FRONT_OF_SURVIVORS);
 
 	count = 0;
-	bFind = false;
+	find = false;
 	float vPos[3];
 	for (i = 0; i < spawnSize; i++) {
 		index = aQueue.Get(i) + 1;
 		if (L4D_GetRandomPZSpawnPosition(client, index, 10, vPos))
-			bFind = true;
+			find = true;
 
 		vPos[2] += 20.0;
-		if (bFind && L4D2_SpawnSpecial(index, vPos, NULL_VECTOR) > 0)
+		if (find && L4D2_SpawnSpecial(index, vPos, NULL_VECTOR) > 0)
 			count++;
 
 		vPos[2] -= 20.0;
@@ -1050,7 +1050,7 @@ void ExecuteSpawnQueue(int totalSI, bool bRetry) {
 	PrintToServer("[SS] ProfilerTime: %f", g_profiler.Time);
 	#endif
 
-	if (bRetry) {
+	if (retry) {
 		if (!count) {
 			#if DEBUG
 			PrintToServer("[SS] Retry spawn SI! spawned:%d failed:%d", count, aQueue.Length - count);
@@ -1068,9 +1068,9 @@ void ExecuteSpawnQueue(int totalSI, bool bRetry) {
 	delete aQueue;
 }
 
-Action tmrRetrySpawn(Handle timer, bool bRetry) {
+Action tmrRetrySpawn(Handle timer, bool retry) {
 	g_hRetryTimer = null;
-	ExecuteSpawnQueue(GetTotalSI(), bRetry);
+	ExecuteSpawnQueue(GetTotalSI(), retry);
 	return Plugin_Continue;
 }
 
