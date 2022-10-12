@@ -162,7 +162,7 @@ float NearestSurDistance(int client, const float vPos[3]) {
 		if (i != client && IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i)) {
 			GetClientAbsOrigin(i, vTar);
 			dist = GetVectorDistance(vPos, vTar);
-			if (dist < minDist)
+			if (minDist == -1.0 || dist < minDist)
 				minDist = dist;
 		}
 	}

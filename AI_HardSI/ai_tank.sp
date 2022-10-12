@@ -297,7 +297,7 @@ void GetSurDistance(int client, float &curTargetDist, float &nearestSurDist) {
 		if (i != client && IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i)) {
 			GetClientAbsOrigin(i, vTar);
 			dist = GetVectorDistance(vPos, vTar);
-			if (dist < nearestSurDist)
+			if (nearestSurDist == -1.0 || dist < nearestSurDist)
 				nearestSurDist = dist;
 		}
 	}
