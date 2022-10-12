@@ -58,7 +58,7 @@ public Plugin myinfo = {
 };
 
 public void OnPluginStart() {
-	vInitGameData();
+	InitGameData();
 	g_aUsedBotData = new ArrayList();
 
 	CreateConVar("transition_restore_fix_version", PLUGIN_VERSION, "Transition Restore Fix plugin version.", FCVAR_NOTIFY|FCVAR_DONTRECORD);
@@ -76,17 +76,17 @@ public void OnPluginEnd() {
 }
 
 public void OnConfigsExecuted() {
-	vToggleDetour(g_cvKeepIdentity.BoolValue);
+	ToggleDetour(g_cvKeepIdentity.BoolValue);
 }
 
 void vCvarChanged(ConVar convar, const char[] oldValue, const char[] newValue) {
-	vToggleDetour(g_cvKeepIdentity.BoolValue);
+	ToggleDetour(g_cvKeepIdentity.BoolValue);
 }
 
-void vToggleDetour(bool bEnable) {
-	static bool bEnabled;
-	if (!bEnabled && bEnable) {
-		bEnabled = true;
+void ToggleDetour(bool enable) {
+	static bool enabled;
+	if (!enabled && enable) {
+		enabled = true;
 
 		if (!g_ddCDirector_Restart.Enable(Hook_Pre, DD_CDirector_Restart_Pre))
 			SetFailState("Failed to detour pre: \"DD::CDirector::Restart\"");
@@ -94,8 +94,8 @@ void vToggleDetour(bool bEnable) {
 		if (!g_ddCDirector_Restart.Enable(Hook_Post, DD_CDirector_Restart_Post))
 			SetFailState("Failed to detour post: \"DD::CDirector::Restart\"");
 	}
-	else if (bEnabled && !bEnable) {
-		bEnabled = false;
+	else if (enabled && !enable) {
+		enabled = false;
 
 		if (!g_ddCDirector_Restart.Disable(Hook_Pre, DD_CDirector_Restart_Pre))
 			SetFailState("Failed to disable detour pre: \"DD::CDirector::Restart\"");
@@ -109,11 +109,11 @@ public void OnMapStart() {
 	g_cvPrecacheAllSur.SetInt(1);
 }
 
-void vInitGameData() {
-	char sPath[PLATFORM_MAX_PATH];
-	BuildPath(Path_SM, sPath, sizeof sPath, "gamedata/%s.txt", GAMEDATA);
-	if (!FileExists(sPath))
-		SetFailState("\n==========\nMissing required file: \"%s\".\n==========", sPath);
+void InitGameData() {
+	char buffer[PLATFORM_MAX_PATH];
+	BuildPath(Path_SM, buffer, sizeof buffer, "gamedata/%s.txt", GAMEDATA);
+	if (!FileExists(buffer))
+		SetFailState("\n==========\nMissing required file: \"%s\".\n==========", buffer);
 
 	GameData hGameData = new GameData(GAMEDATA);
 	if (!hGameData)
@@ -159,13 +159,13 @@ void vInitGameData() {
 	if (!(g_hSDK_CDirector_IsInTransition = EndPrepSDKCall()))
 		SetFailState("Failed to create SDKCall: \"CDirector::IsInTransition\"");
 
-	vInitPatchs(hGameData);
-	vSetupDetours(hGameData);
+	InitPatchs(hGameData);
+	SetupDetours(hGameData);
 
 	delete hGameData;
 }
 
-void vInitPatchs(GameData hGameData = null) {
+void InitPatchs(GameData hGameData = null) {
 	g_mpRestoreByUserId = MemoryPatch.CreateFromConf(hGameData, "CTerrorPlayer::TransitionRestore::RestoreByUserId");
 	if (!g_mpRestoreByUserId.Validate())
 		SetFailState("Failed to verify patch: \"CTerrorPlayer::TransitionRestore::RestoreByUserId\"");
@@ -179,7 +179,7 @@ void vInitPatchs(GameData hGameData = null) {
 	}
 }
 
-void vSetupDetours(GameData hGameData = null) {
+void SetupDetours(GameData hGameData = null) {
 	g_ddCDirector_Restart = DynamicDetour.FromConf(hGameData, "DD::CDirector::Restart");
 	if (!g_ddCDirector_Restart)
 		SetFailState("Failed to create DynamicDetour: \"DD::CDirector::Restart\"");
@@ -354,16 +354,16 @@ Address pFindPlayerDataByUserId(int userid) {
 	if (!pSavedPlayers)
 		return Address_Null;
 
-	Address pThis;
+	Address ptr;
 	char userID[12];
 	for (int i; i < iSavedPlayersCount; i++) {
-		pThis = view_as<Address>(LoadFromAddress(pSavedPlayers + view_as<Address>(4 * i), NumberType_Int32));
-		if (!pThis)
+		ptr = view_as<Address>(LoadFromAddress(pSavedPlayers + view_as<Address>(4 * i), NumberType_Int32));
+		if (!ptr)
 			continue;
 
-		SDKCall(g_hSDK_KeyValues_GetString, pThis, userID, sizeof userID, "userID", "0");
+		SDKCall(g_hSDK_KeyValues_GetString, ptr, userID, sizeof userID, "userID", "0");
 		if (StringToInt(userID) == userid)
-			return pThis;
+			return ptr;
 	}
 
 	return Address_Null;
@@ -380,33 +380,33 @@ Address pFindBotDataByModelName(const char[] sModel) {
 	if (!pSavedLevelRestartSurvivorBots)
 		return Address_Null;
 
-	Address pThis;
+	Address ptr;
 	char teamNumber[4];
 	char ModelName[PLATFORM_MAX_PATH];
 	ArrayList aKeyValues = new ArrayList(2);
 	for (int i; i < iSavedLevelRestartSurvivorBotsCount; i++) {
-		pThis = view_as<Address>(LoadFromAddress(pSavedLevelRestartSurvivorBots + view_as<Address>(4 * i), NumberType_Int32));
-		if (!pThis)
+		ptr = view_as<Address>(LoadFromAddress(pSavedLevelRestartSurvivorBots + view_as<Address>(4 * i), NumberType_Int32));
+		if (!ptr)
 			continue;
 
-		SDKCall(g_hSDK_KeyValues_GetString, pThis, teamNumber, sizeof teamNumber, "teamNumber", "0");
+		SDKCall(g_hSDK_KeyValues_GetString, ptr, teamNumber, sizeof teamNumber, "teamNumber", "0");
 		if (StringToInt(teamNumber) != 2)
 			continue;
 
-		SDKCall(g_hSDK_KeyValues_GetString, pThis, ModelName, sizeof ModelName, "ModelName", "");
-		aKeyValues.Set(aKeyValues.Push(g_aUsedBotData.FindValue(pThis) == -1 ? (strcmp(ModelName, sModel, false) == 0 ? 0 : 1) : strcmp(ModelName, sModel, false) == 0 ? 2 : 3), pThis, 1);
+		SDKCall(g_hSDK_KeyValues_GetString, ptr, ModelName, sizeof ModelName, "ModelName", "");
+		aKeyValues.Set(aKeyValues.Push(g_aUsedBotData.FindValue(ptr) == -1 ? (strcmp(ModelName, sModel, false) == 0 ? 0 : 1) : strcmp(ModelName, sModel, false) == 0 ? 2 : 3), ptr, 1);
 	}
 
 	if (!aKeyValues.Length)
-		pThis = Address_Null;
+		ptr = Address_Null;
 	else {
 		aKeyValues.Sort(Sort_Ascending, Sort_Integer);
 
-		pThis = aKeyValues.Get(0, 1);
+		ptr = aKeyValues.Get(0, 1);
 		if (aKeyValues.Get(0, 0) < 2)
-			g_aUsedBotData.Push(pThis);
+			g_aUsedBotData.Push(ptr);
 	}
 
 	delete aKeyValues;
-	return pThis;
+	return ptr;
 }
