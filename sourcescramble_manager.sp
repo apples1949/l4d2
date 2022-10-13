@@ -62,12 +62,12 @@ Action cmdList(int args) {
 Action cmdPatch(int args) {
 	switch (args) {
 		case 0:
-			ssmPatch(NULL_STRING, NULL_STRING, true);
+			TogglePatch(NULL_STRING, NULL_STRING, true);
 
 		case 1: {
 			char buffer[PLATFORM_MAX_PATH];
 			GetCmdArg(1, buffer, sizeof buffer);
-			ssmPatch(buffer, NULL_STRING, true);
+			TogglePatch(buffer, NULL_STRING, true);
 		}
 
 		case 2: {
@@ -75,7 +75,7 @@ Action cmdPatch(int args) {
 			char name[PLATFORM_MAX_PATH];
 			GetCmdArg(1, file, sizeof file);
 			GetCmdArg(2, name, sizeof name);
-			ssmPatch(file, name, true);
+			TogglePatch(file, name, true);
 		}
 	}
 
@@ -85,12 +85,12 @@ Action cmdPatch(int args) {
 Action cmdUnpatch(int args) {
 	switch (args) {
 		case 0:
-			ssmPatch(NULL_STRING, NULL_STRING, false);
+			TogglePatch(NULL_STRING, NULL_STRING, false);
 
 		case 1: {
 			char buffer[PLATFORM_MAX_PATH];
 			GetCmdArg(1, buffer, sizeof buffer);
-			ssmPatch(buffer, NULL_STRING, false);
+			TogglePatch(buffer, NULL_STRING, false);
 		}
 
 		case 2: {
@@ -98,7 +98,7 @@ Action cmdUnpatch(int args) {
 			char name[PLATFORM_MAX_PATH];
 			GetCmdArg(1, file, sizeof file);
 			GetCmdArg(2, name, sizeof name);
-			ssmPatch(file, name, false);
+			TogglePatch(file, name, false);
 		}
 	}
 
@@ -183,7 +183,7 @@ SMCResult smcPatchMemConfigEntry(SMCParser smc, const char[] key, const char[] v
 	return SMCParse_Continue;
 }
 
-void ssmPatch(const char[] file, const char[] name, bool enable) {
+void TogglePatch(const char[] file, const char[] name, bool enable) {
 	Patchs patch;
 	int maxPatch = g_Patchs.Length;
 
@@ -201,21 +201,16 @@ void ssmPatch(const char[] file, const char[] name, bool enable) {
 		}
 
 		if (!patch.patched && enable) {
+			patch.patch.Enable();
 			patch.patched = true;
-			TogglePatch(patch.patch, true, patch.file, patch.name);
+			PrintToServer("[sourcescramble] Enabled patch \"%s\" from \"%s\" at address: 0x%08X", patch.name, patch.file, patch.patch.Address);
 		}
 		else if (patch.patched && !enable) {
+			patch.patch.Disable();
 			patch.patched = false;
-			TogglePatch(patch.patch, false, patch.file, patch.name);
+			PrintToServer("[sourcescramble] Disabled patch \"%s\" from \"%s\" at address: 0x%08X", patch.name, patch.file, patch.patch.Address);
 		}
 
 		g_Patchs.SetArray(i, patch, sizeof Patchs);
 	}
-}
-
-void TogglePatch(MemoryPatch patch, bool enable, const char[] file, const char[] name) {
-	if (!enable)
-		patch.Disable();
-	else if (patch.Enable())
-		PrintToServer("[sourcescramble] Enabled patch \"%s\" from \"%s\" at address: 0x%08X", name, file, patch.Address);
 }
