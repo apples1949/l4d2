@@ -1,15 +1,19 @@
 #pragma semicolon 1
 #pragma newdecls required
 #include <sourcemod>
-#include <sdktools>
 #include <left4dhooks>
 
-#define PLUGIN_VERSION 	"2.7"
-#define CVAR_FLAGS		FCVAR_NOTIFY
-#define SOUND_COUNTDOWN "buttons/blip1.wav"
-#define SOUND_MOVEOUT 	"ui/survival_teamrec.wav"
-#define SOUND_BREAK1	"physics/metal/metal_box_break1.wav"
-#define SOUND_BREAK2	"physics/metal/metal_box_break2.wav"
+#define PLUGIN_NAME				"L4D2 Door Lock"
+#define PLUGIN_AUTHOR			"Glide Loading, sorallll"
+#define PLUGIN_DESCRIPTION		"Saferoom Door locked until all players loaded and infected are ready to spawn"
+#define PLUGIN_VERSION			"2.7"
+#define PLUGIN_URL				"http://forums.alliedmods.net/showpost.php?p=1373587&postcount=136"
+
+#define CVAR_FLAGS				FCVAR_NOTIFY
+#define SOUND_COUNTDOWN			"buttons/blip1.wav"
+#define SOUND_MOVEOUT			"ui/survival_teamrec.wav"
+#define SOUND_BREAK1			"physics/metal/metal_box_break1.wav"
+#define SOUND_BREAK2			"physics/metal/metal_box_break2.wav"
 
 Handle
 	g_hTimer;
@@ -52,11 +56,11 @@ int
 	g_iTimeout[MAXPLAYERS + 1];
 
 public Plugin myinfo = {
-	name = "L4D2 Door Lock",
-	author = "Glide Loading",
-	description = "Saferoom Door locked until all players loaded and infected are ready to spawn",
+	name = PLUGIN_NAME,
+	author = PLUGIN_AUTHOR,
+	description = PLUGIN_DESCRIPTION,
 	version = PLUGIN_VERSION,
-	url = "http://forums.alliedmods.net/showpost.php?p=1373587&postcount=136"
+	url = PLUGIN_URL
 };
 
 public void OnPluginStart() {
