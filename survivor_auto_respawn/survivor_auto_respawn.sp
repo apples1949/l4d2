@@ -142,12 +142,12 @@ stock void CSayText2(int client, int author, const char[] szMessage) {
 #define PLUGIN_NAME				"Survivor Auto Respawn"
 #define PLUGIN_AUTHOR			"sorallll"
 #define PLUGIN_DESCRIPTION		"自动复活"
-#define PLUGIN_VERSION			"1.3.7"
+#define PLUGIN_VERSION			"1.3.8"
 #define PLUGIN_URL				"https://steamcommunity.com/id/sorallll"
 
-#define GAMEDATA	"survivor_auto_respawn"
-#define CVAR_FLAGS	FCVAR_NOTIFY
-#define MAX_SLOTS	5
+#define GAMEDATA				"survivor_auto_respawn"
+#define CVAR_FLAGS				FCVAR_NOTIFY
+#define MAX_SLOTS				5
 
 Handle
 	g_hSDK_CTerrorPlayer_RoundRespawn;
@@ -415,7 +415,7 @@ public void OnPluginStart() {
 	for (int i; i < MAX_SLOTS; i++)
 		g_esWeapon[i].cFlags.AddChangeHook(CvarChanged_Weapon);
 		
-	AutoExecConfig(true, "survivor_auto_respawn");
+	AutoExecConfig(true);
 
 	RegConsoleCmd("sm_respawn", cmdRespawn, "复活");
 }
@@ -502,14 +502,14 @@ void Toggle(bool enable) {
 	if (!enabled && enable) {
 		enabled = true;
 
-		HookEvent("round_end", Event_RoundEnd, EventHookMode_PostNoCopy);
-		HookEvent("map_transition", Event_RoundEnd, EventHookMode_PostNoCopy);
-		HookEvent("finale_vehicle_leaving", Event_RoundEnd, EventHookMode_PostNoCopy);
-		HookEvent("round_start", Event_RoundStart, EventHookMode_PostNoCopy);
-		HookEvent("player_spawn", Event_PlayerSpawn);
-		HookEvent("player_death", Event_PlayerDeath, EventHookMode_Pre);
-		HookEvent("player_bot_replace", Event_PlayerBotReplace);
-		HookEvent("bot_player_replace", Event_BotPlayerReplace);
+		HookEvent("round_end",				Event_RoundEnd,		EventHookMode_PostNoCopy);
+		HookEvent("map_transition",			Event_RoundEnd,		EventHookMode_PostNoCopy);
+		HookEvent("finale_vehicle_leaving",	Event_RoundEnd,		EventHookMode_PostNoCopy);
+		HookEvent("round_start",			Event_RoundStart,	EventHookMode_PostNoCopy);
+		HookEvent("player_spawn",			Event_PlayerSpawn);
+		HookEvent("player_death",			Event_PlayerDeath,	EventHookMode_Pre);
+		HookEvent("player_bot_replace",		Event_PlayerBotReplace);
+		HookEvent("bot_player_replace",		Event_BotPlayerReplace);
 
 		AddCommandListener(CommandListener_SpecNext, "spec_next");
 
@@ -517,14 +517,14 @@ void Toggle(bool enable) {
 	else if (enabled && !enable) {
 		enabled = false;
 		
-		UnhookEvent("round_end", Event_RoundEnd, EventHookMode_PostNoCopy);
-		UnhookEvent("map_transition", Event_RoundEnd, EventHookMode_PostNoCopy);
-		UnhookEvent("finale_vehicle_leaving", Event_RoundEnd, EventHookMode_PostNoCopy);
-		UnhookEvent("round_start", Event_RoundStart, EventHookMode_PostNoCopy);
-		UnhookEvent("player_spawn", Event_PlayerSpawn);
-		UnhookEvent("player_death", Event_PlayerDeath, EventHookMode_Pre);
-		UnhookEvent("player_bot_replace", Event_PlayerBotReplace);
-		UnhookEvent("bot_player_replace", Event_BotPlayerReplace);
+		UnhookEvent("round_end",				Event_RoundEnd,		EventHookMode_PostNoCopy);
+		UnhookEvent("map_transition",			Event_RoundEnd,		EventHookMode_PostNoCopy);
+		UnhookEvent("finale_vehicle_leaving",	Event_RoundEnd,		EventHookMode_PostNoCopy);
+		UnhookEvent("round_start",				Event_RoundStart,	EventHookMode_PostNoCopy);
+		UnhookEvent("player_spawn",				Event_PlayerSpawn);
+		UnhookEvent("player_death",				Event_PlayerDeath,	EventHookMode_Pre);
+		UnhookEvent("player_bot_replace",		Event_PlayerBotReplace);
+		UnhookEvent("bot_player_replace",		Event_BotPlayerReplace);
 
 		RemoveCommandListener(CommandListener_SpecNext, "spec_next");
 
@@ -569,9 +569,11 @@ public void OnClientDisconnect_Post(int client) {
 
 public void OnMapEnd() {
 	g_iMaxRespawned = 0;
+	float time = GetEngineTime() + 3600.0;
 	for (int i = 1; i <= MaxClients; i++) {
-		g_esPlayer[i].respawned = 0;
+		g_fCmdCooldown[i] = time;
 		delete g_esPlayer[i].timer;
+		g_esPlayer[i].respawned = 0;
 	}
 }
 
@@ -580,8 +582,10 @@ void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast) {
 }
 
 void Event_RoundStart(Event event, const char[] name, bool dontBroadcast) {
-	for (int i = 1; i <= MaxClients; i++)
+	for (int i = 1; i <= MaxClients; i++) {
+		g_fCmdCooldown[i] = 0.0;
 		delete g_esPlayer[i].timer;
+	}
 }
 
 void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast) {
