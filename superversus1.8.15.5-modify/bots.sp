@@ -1478,14 +1478,14 @@ void InitPatchs(GameData hGameData = null) {
 }
 
 // [L4D1 & L4D2] SM Respawn Improved (https://forums.alliedmods.net/showthread.php?t=323220)
-void StatsConditionPatch(bool bPatch) {
-	static bool bPatched;
-	if (!bPatched && bPatch) {
-		bPatched = true;
+void StatsConditionPatch(bool patch) {
+	static bool patched;
+	if (!patched && patch) {
+		patched = true;
 		StoreToAddress(g_pStatsCondition, 0xEB, NumberType_Int8);
 	}
-	else if (bPatched && !bPatch) {
-		bPatched = false;
+	else if (patched && !patch) {
+		patched = false;
 		StoreToAddress(g_pStatsCondition, 0x75, NumberType_Int8);
 	}
 }
