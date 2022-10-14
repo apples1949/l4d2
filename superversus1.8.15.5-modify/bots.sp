@@ -302,18 +302,18 @@ public void OnPluginStart() {
 	HookUserMessage(GetUserMessageId("SayText2"), umSayText2, true);
 	CreateConVar("bots_version", PLUGIN_VERSION, "bots(coop) plugin version.", FCVAR_NOTIFY|FCVAR_DONTRECORD);
 
-	g_cvBotsLimit = 			CreateConVar("bots_limit", 				"4", 		"开局Bot的数量", CVAR_FLAGS, true, 1.0, true, 31.0);
-	g_cvJoinFlags = 			CreateConVar("bots_join_flags", 		"3", 		"额外玩家加入生还者的方法. \n0=插件不进行处理, 1=输入!join手动加入, 2=进服后插件自动加入, 3=手动+自动", CVAR_FLAGS);
-	g_cvRespawn = 				CreateConVar("bots_join_respawn", 		"1", 		"玩家第一次进服时如果没有存活的Bot可以接管是否复活. \n0=否, 1=是.", CVAR_FLAGS);
-	g_cvSpecLimit = 			CreateConVar("bots_spec_limit", 		"1", 		"当完全旁观玩家达到多少个时禁止使用sm_spec命令.", CVAR_FLAGS);
-	g_cvSpecNotify = 			CreateConVar("bots_spec_notify", 		"3", 		"完全旁观玩家点击鼠标左键时, 提示加入生还者的方式 \n0=不提示, 1=聊天栏, 2=屏幕中央, 3=弹出菜单.", CVAR_FLAGS);
-	g_esWeapon[0].cvFlags = 	CreateConVar("bots_give_slot0", 		"131071", 	"主武器给什么. \n0=不给, 131071=所有, 7=微冲, 1560=霰弹, 30720=狙击, 31=Tier1, 32736=Tier2, 98304=Tier0.", CVAR_FLAGS);
-	g_esWeapon[1].cvFlags = 	CreateConVar("bots_give_slot1", 		"1064", 	"副武器给什么. \n0=不给, 131071=所有.(如果选中了近战且该近战在当前地图上未解锁,则会随机给一把).", CVAR_FLAGS);
-	g_esWeapon[2].cvFlags = 	CreateConVar("bots_give_slot2", 		"0", 		"投掷物给什么. \n0=不给, 7=所有.", CVAR_FLAGS);
-	g_esWeapon[3].cvFlags =		CreateConVar("bots_give_slot3", 		"1", 		"医疗品给什么. \n0=不给, 15=所有.", CVAR_FLAGS);
-	g_esWeapon[4].cvFlags =		CreateConVar("bots_give_slot4", 		"3", 		"药品给什么. \n0=不给, 3=所有.", CVAR_FLAGS);
-	g_cvGiveType = 				CreateConVar("bots_give_type", 			"2", 		"根据什么来给玩家装备. \n0=不给, 1=每个槽位的设置, 2=当前存活生还者的平均装备质量(仅主副武器).", CVAR_FLAGS);
-	g_cvGiveTime = 				CreateConVar("bots_give_time", 			"0", 		"什么时候给玩家装备. \n0=每次出生时, 1=只在本插件创建Bot和复活玩家时.", CVAR_FLAGS);
+	g_cvBotsLimit =				CreateConVar("bots_limit",				"4",		"开局Bot的数量", CVAR_FLAGS, true, 1.0, true, 31.0);
+	g_cvJoinFlags =				CreateConVar("bots_join_flags",			"3",		"额外玩家加入生还者的方法. \n0=插件不进行处理, 1=输入!join手动加入, 2=进服后插件自动加入, 3=手动+自动", CVAR_FLAGS);
+	g_cvRespawn =				CreateConVar("bots_join_respawn",		"1",		"玩家第一次进服时如果没有存活的Bot可以接管是否复活. \n0=否, 1=是.", CVAR_FLAGS);
+	g_cvSpecLimit =				CreateConVar("bots_spec_limit",			"1",		"当完全旁观玩家达到多少个时禁止使用sm_spec命令.", CVAR_FLAGS);
+	g_cvSpecNotify =			CreateConVar("bots_spec_notify",		"3",		"完全旁观玩家点击鼠标左键时, 提示加入生还者的方式 \n0=不提示, 1=聊天栏, 2=屏幕中央, 3=弹出菜单.", CVAR_FLAGS);
+	g_esWeapon[0].cvFlags =		CreateConVar("bots_give_slot0",			"131071",	"主武器给什么. \n0=不给, 131071=所有, 7=微冲, 1560=霰弹, 30720=狙击, 31=Tier1, 32736=Tier2, 98304=Tier0.", CVAR_FLAGS);
+	g_esWeapon[1].cvFlags =		CreateConVar("bots_give_slot1",			"1064",		"副武器给什么. \n0=不给, 131071=所有.(如果选中了近战且该近战在当前地图上未解锁,则会随机给一把).", CVAR_FLAGS);
+	g_esWeapon[2].cvFlags = 	CreateConVar("bots_give_slot2",			"0",		"投掷物给什么. \n0=不给, 7=所有.", CVAR_FLAGS);
+	g_esWeapon[3].cvFlags =		CreateConVar("bots_give_slot3",			"1",		"医疗品给什么. \n0=不给, 15=所有.", CVAR_FLAGS);
+	g_esWeapon[4].cvFlags =		CreateConVar("bots_give_slot4",			"3",		"药品给什么. \n0=不给, 3=所有.", CVAR_FLAGS);
+	g_cvGiveType =				CreateConVar("bots_give_type",			"2",		"根据什么来给玩家装备. \n0=不给, 1=每个槽位的设置, 2=当前存活生还者的平均装备质量(仅主副武器).", CVAR_FLAGS);
+	g_cvGiveTime =				CreateConVar("bots_give_time",			"0",		"什么时候给玩家装备. \n0=每次出生时, 1=只在本插件创建Bot和复活玩家时.", CVAR_FLAGS);
 
 	g_cvSurvivorLimit = FindConVar("survivor_limit");
 	g_cvSurvivorLimit.Flags &= ~FCVAR_NOTIFY; // 移除ConVar变动提示
@@ -338,22 +338,22 @@ public void OnPluginStart() {
 	
 	AutoExecConfig(true, "bots");
 
-	RegConsoleCmd("sm_teams", 	cmdTeamPanel, 	"团队菜单");
-	RegConsoleCmd("sm_spec", 	cmdJoinTeam1, 	"加入旁观者");
-	RegConsoleCmd("sm_join", 	cmdJoinTeam2, 	"加入生还者");
-	RegConsoleCmd("sm_tkbot", 	cmdTakeOverBot, "接管指定BOT");
+	RegConsoleCmd("sm_teams",	cmdTeamPanel,	"团队菜单");
+	RegConsoleCmd("sm_spec",	cmdJoinTeam1,	"加入旁观者");
+	RegConsoleCmd("sm_join",	cmdJoinTeam2,	"加入生还者");
+	RegConsoleCmd("sm_tkbot",	cmdTakeOverBot,	"接管指定BOT");
 
-	RegAdminCmd("sm_afk", 		cmdGoIdle,	ADMFLAG_RCON,	"闲置");
-	RegAdminCmd("sm_botset",	cmdBotSet,	ADMFLAG_RCON,	"设置开局Bot的数量");
+	RegAdminCmd("sm_afk",		cmdGoIdle,	ADMFLAG_RCON,	"闲置");
+	RegAdminCmd("sm_bot",		cmdBotSet,	ADMFLAG_RCON,	"设置开局Bot的数量");
 
-	HookEvent("round_end", 				Event_RoundEnd, 	EventHookMode_PostNoCopy);
-	HookEvent("round_start", 			Event_RoundStart, 	EventHookMode_PostNoCopy);
-	HookEvent("player_spawn", 			Event_PlayerSpawn);
-	HookEvent("player_death", 			Event_PlayerDeath,	EventHookMode_Pre);
-	HookEvent("player_team", 			Event_PlayerTeam);
-	HookEvent("player_bot_replace", 	Event_PlayerBotReplace);
-	HookEvent("bot_player_replace", 	Event_BotPlayerReplace);
-	HookEvent("finale_vehicle_leaving", Event_FinaleVehicleLeaving);
+	HookEvent("round_end",				Event_RoundEnd,		EventHookMode_PostNoCopy);
+	HookEvent("round_start",			Event_RoundStart,	EventHookMode_PostNoCopy);
+	HookEvent("player_spawn",			Event_PlayerSpawn);
+	HookEvent("player_death",			Event_PlayerDeath,	EventHookMode_Pre);
+	HookEvent("player_team",			Event_PlayerTeam);
+	HookEvent("player_bot_replace",		Event_PlayerBotReplace);
+	HookEvent("bot_player_replace",		Event_BotPlayerReplace);
+	HookEvent("finale_vehicle_leaving",	Event_FinaleVehicleLeaving);
 
 	if (g_bLateLoad)
 		g_bRoundStart = !OnEndScenario();
@@ -542,8 +542,8 @@ int IsAllowedTeam(int client) {
 }
 
 void TakeOverBotMenu(int client) {
-	char item[12];
-	char info[64];
+	char info[12];
+	char disp[64];
 	Menu menu = new Menu(TakeOverBot_MenuHandler);
 	menu.SetTitle("- 请选择接管目标 - [!tkbot]");
 	menu.AddItem("o", "当前旁观目标");
@@ -552,9 +552,9 @@ void TakeOverBotMenu(int client) {
 		if (!IsValidSurBot(i))
 			continue;
 
-		FormatEx(item, sizeof item, "%d", GetClientUserId(i));
-		FormatEx(info, sizeof info, "%s - %s", IsPlayerAlive(i) ? "存活" : "死亡", GetModelName(i));
-		menu.AddItem(item, info);
+		FormatEx(info, sizeof info, "%d", GetClientUserId(i));
+		FormatEx(disp, sizeof disp, "%s - %s", IsPlayerAlive(i) ? "存活" : "死亡", GetModelName(i));
+		menu.AddItem(info, disp);
 	}
 
 	menu.ExitButton = true;
@@ -757,9 +757,9 @@ Action umSayText2(UserMsg msg_id, BfRead msg, const int[] players, int playersNu
 	msg.ReadByte();
 	msg.ReadByte();
 
-	char sMsg[254];
-	msg.ReadString(sMsg, sizeof sMsg, true);
-	if (strcmp(sMsg, "#Cstrike_Name_Change") == 0)
+	char buffer[254];
+	msg.ReadString(buffer, sizeof buffer, true);
+	if (strcmp(buffer, "#Cstrike_Name_Change") == 0)
 		return Plugin_Handled;
 
 	return Plugin_Continue;
