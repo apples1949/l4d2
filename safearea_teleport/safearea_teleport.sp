@@ -148,6 +148,8 @@ public void OnPluginStart() {
 	g_aEndNavArea = new ArrayList();
 	g_aRescueVehicle = new ArrayList();
 
+	CreateConVar("safearea_teleport_version", PLUGIN_VERSION, "SafeArea Teleport plugin version.", FCVAR_NOTIFY|FCVAR_DONTRECORD);
+
 	g_hCvarAllow =			CreateConVar("st_allow",		"1",	"0=Plugin off, 1=Plugin on.", CVAR_FLAGS);
 	g_hCvarModes =			CreateConVar("st_modes",		"",		"Turn on the plugin in these game modes, separate by commas (no spaces). (Empty = all).", CVAR_FLAGS);
 	g_hCvarModesOff =		CreateConVar("st_modes_off",	"",		"Turn off the plugin in these game modes, separate by commas (no spaces). (Empty = none).", CVAR_FLAGS);
