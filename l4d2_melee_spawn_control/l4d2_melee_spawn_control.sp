@@ -5,11 +5,11 @@
 
 #define MAX_MELEE		16
 #define GAMEDATA		"l4d2_melee_spawn_control"
-#define MELEE_MANIFEST	"scripts\\melee\\melee_manifest.txt"
-#define DEFAULT_MELEES	"fireaxe;frying_pan;machete;baseball_bat;crowbar;cricket_bat;tonfa;katana;electric_guitar;knife;golfclub;shovel;pitchfork"
+#define MANIFEST		"scripts\\melee\\melee_manifest.txt"
+#define MELEEWEAPONS	"fireaxe;frying_pan;machete;baseball_bat;crowbar;cricket_bat;tonfa;katana;electric_guitar;knife;golfclub;shovel;pitchfork"
 
 StringMap
-	g_smMissionDefault;
+	g_smDefMelee;
 
 Handle
 	g_hSDK_CTerrorGameRules_GetMissionInfo,
@@ -18,8 +18,8 @@ Handle
 	g_hSDK_KeyValues_SetString;
 
 ConVar
-	g_hBaseMelees,
-	g_hExtraMelees;
+	g_cvBaseMelees,
+	g_cvExtraMelees;
 
 public Plugin myinfo = {
 	name = "l4d2 melee spawn control",
@@ -30,50 +30,50 @@ public Plugin myinfo = {
 }
 
 public void OnPluginStart() {
-	vInitGameData();
-	g_smMissionDefault = new StringMap();
+	InitData();
+	g_smDefMelee = new StringMap();
 
-	g_hBaseMelees = 	CreateConVar("l4d2_melee_spawn", 	"", "Melee weapon list for unlock, use ';' to separate between names, e.g: pitchfork;shovel. Empty for no change");
-	g_hExtraMelees =	CreateConVar("l4d2_add_melee", 		"", "Add melee weapons to map basis melee spawn or l4d2_melee_spawn, use ';' to separate between names. Empty for don't add");
+	g_cvBaseMelees = 	CreateConVar("l4d2_melee_spawn", 	"", "Melee weapon list for unlock, use ';' to separate between names, e.g: pitchfork;shovel. Empty for no change");
+	g_cvExtraMelees =	CreateConVar("l4d2_add_melee", 		"", "Add melee weapons to map basis melee spawn or l4d2_melee_spawn, use ';' to separate between names. Empty for don't add");
 }
 
 MRESReturn DD_CMeleeWeaponInfoStore_LoadScripts_Pre(Address pThis, DHookReturn hReturn, DHookParam hParams) {
-	int kvInfo = SDKCall(g_hSDK_CTerrorGameRules_GetMissionInfo);
-	if (!kvInfo)
+	int kvMission = SDKCall(g_hSDK_CTerrorGameRules_GetMissionInfo);
+	if (!kvMission)
 		return MRES_Ignored;
 
 	int kvFirstMap = SDKCall(g_hSDK_CTerrorGameRules_GetMissionFirstMap, 0);
 	if (!kvFirstMap)
 		return MRES_Ignored;
 
-	char sMap[64];
-	SDKCall(g_hSDK_KeyValues_GetString, kvFirstMap, sMap, sizeof sMap, "map", "");
-	if (!sMap[0])
+	char map[64];
+	SDKCall(g_hSDK_KeyValues_GetString, kvFirstMap, map, sizeof map, "map", "");
+	if (!map[0])
 		return MRES_Ignored;
 
-	char sDefault[512];
-	StringToLowerCase(sMap);
-	if (!g_smMissionDefault.GetString(sMap, sDefault, sizeof sDefault)) {
-		char sCurrent[512];
-		SDKCall(g_hSDK_KeyValues_GetString, kvInfo, sCurrent, sizeof sCurrent, "meleeweapons", "");
+	char def[512];
+	StringToLowerCase(map);
+	if (!g_smDefMelee.GetString(map, def, sizeof def)) {
+		char cur[512];
+		SDKCall(g_hSDK_KeyValues_GetString, kvMission, cur, sizeof cur, "meleeweapons", "");
 
-		if (sCurrent[0])
-			strcopy(sDefault, sizeof sDefault, sCurrent);
+		if (cur[0])
+			strcopy(def, sizeof def, cur);
 		else
-			LoadScriptsFromManifest(sDefault, sizeof sDefault); //Dark Wood (Extended), Divine Cybermancy
+			LoadMeleeStrFromManifest(def, sizeof def); //Dark Wood (Extended), Divine Cybermancy
 
-		if (!sDefault[0])
-			strcopy(sDefault, sizeof sDefault, DEFAULT_MELEES);
+		if (!def[0])
+			strcopy(def, sizeof def, MELEEWEAPONS);
 
-		g_smMissionDefault.SetString(sMap, sDefault, false);
+		g_smDefMelee.SetString(map, def, false);
 	}
 
-	char sMapSet[512];
-	sMapSet = sGetMapMeleeString(sDefault);
-	if (!sMapSet[0])
+	char set[512];
+	set = GetMapMeleeStr(def);
+	if (!set[0])
 		return MRES_Ignored;
 
-	SDKCall(g_hSDK_KeyValues_SetString, kvInfo, "meleeweapons", sMapSet);
+	SDKCall(g_hSDK_KeyValues_SetString, kvMission, "meleeweapons", set);
 	return MRES_Ignored;
 }
 
@@ -91,35 +91,31 @@ MRESReturn DD_CDirectorItemManager_IsMeleeWeaponAllowedToExistPost(Address pThis
 	return MRES_Override;
 }
 
-void LoadScriptsFromManifest(char[] buffer, int maxlength) {
-	File file = OpenFile(MELEE_MANIFEST, "r", true);
-	if (!file)
-		return;
+void LoadMeleeStrFromManifest(char[] meleeStr, int maxlength) {
+	File file = OpenFile(MANIFEST, "r", true);
+	if (file) {
+		char str[PLATFORM_MAX_PATH];
+		char val[PLATFORM_MAX_PATH];
+		while (!file.EndOfFile() && file.ReadLine(str, sizeof str)) {
+			TrimString(str);
+			if (!KvGetValue(str, "file", val, sizeof val))
+				continue;
 
-	char line[255];
-	char value[255];
-	while (!file.EndOfFile()) {
-		if (!file.ReadLine(line, sizeof line))
-			break;
+			if (SplitString(val, ".txt", val, sizeof val) == -1)
+				continue;
 
-		TrimString(line);
-		if (!KV_GetValue(line, "file", value))
-			continue;
-
-		if (SplitString(value, ".txt", value, sizeof value) == -1)
-			continue;
-
-		if (SplitStringRight(value, "scripts/melee/", value, sizeof value))
-			Format(buffer, maxlength, "%s;%s", buffer, value);
-	}
+			if (SplitStringRight(val, "scripts/melee/", val, sizeof val))
+				Format(meleeStr, maxlength, "%s;%s", meleeStr, val);
+		}
 	
-	file.Close();
-	strcopy(buffer, maxlength, buffer[1]);
+		delete file;
+		strcopy(meleeStr, maxlength, meleeStr[1]);
+	}
 }
 
 // [L4D1 & L4D2] Map changer with rating system (https://forums.alliedmods.net/showthread.php?t=311161)
-bool KV_GetValue(char[] str, char[] key, char buffer[255]) {
-	buffer[0] = '\0';
+bool KvGetValue(const char[] str, const char[] key, char[] value, int maxlength) {
+	value[0] = '\0';
 	int posKey, posComment, sizeKey;
 	char substr[64];
 	FormatEx(substr, sizeof substr, "\"%s\"", key);
@@ -129,114 +125,114 @@ bool KV_GetValue(char[] str, char[] key, char buffer[255]) {
 		posComment = StrContains(str, "//", true);
 		if (posComment == -1 || posComment > posKey) {
 			sizeKey = strlen(substr);
-			buffer = UnQuote(str[posKey + sizeKey]);
+			UnQuote(str[posKey + sizeKey], value, maxlength);
 			return true;
 		}
 	}
 	return false;
 }
 
-char[] UnQuote(char[] Str) {
+void UnQuote(const char[] str, char[] result, int maxlength) {
 	int pos;
 	static char buf[64];
-	strcopy(buf, sizeof buf, Str);
+	strcopy(buf, sizeof buf, str);
 	TrimString(buf);
-	if (buf[0] == '\"') {
+	if (buf[0] == '\"')
 		strcopy(buf, sizeof buf, buf[1]);
-	}
+
 	pos = FindCharInString(buf, '\"');
-	if (pos != -1) {
+	if (pos != -1)
 		buf[pos] = '\x0';
-	}
-	return buf;
+
+	strcopy(result, maxlength, buf);
 }
 
 // https://forums.alliedmods.net/showpost.php?p=2094396&postcount=6
 bool SplitStringRight(const char[] source, const char[] split, char[] part, int partLen) {
-	int index = StrContains(source, split);
-	if (index == -1)
+	int idx = StrContains(source, split);
+	if (idx == -1)
 		return false;
 
-	index += strlen(split);
-	if (index == strlen(source) - 1)
+	idx += strlen(split);
+	if (idx == strlen(source) - 1)
 		return false;
 
-	strcopy(part, partLen, source[index]);
+	strcopy(part, partLen, source[idx]);
 	return true;
 }
 
-char[] sGetMapMeleeString(const char[] source) {
-	char sBase[512];
-	char sExtra[512];
-	g_hBaseMelees.GetString(sBase, sizeof sBase);
-	g_hExtraMelees.GetString(sExtra, sizeof sExtra);
-	if (!sBase[0]) {
-		if (!sExtra[0])
-			return sBase;
+char[] GetMapMeleeStr(const char[] source) {
+	char base[512];
+	char extra[512];
+	g_cvBaseMelees.GetString(base, sizeof base);
+	g_cvExtraMelees.GetString(extra, sizeof extra);
+	if (!base[0]) {
+		if (!extra[0])
+			return base;
 
-		strcopy(sBase, sizeof sBase, source);
+		strcopy(base, sizeof base, source);
 	}
 
-	ArrayList aMelee = new ArrayList(ByteCountToCells(32));
-	ParseMeleeString(sBase, aMelee);
-	if (sExtra[0])
-		ParseMeleeString(sExtra, aMelee);
+	ArrayList al_melee = new ArrayList(ByteCountToCells(32));
+	ParseMeleeStr(base, al_melee);
+	if (extra[0])
+		ParseMeleeStr(extra, al_melee);
 
-	sBase[0] = '\0';
-	int count = aMelee.Length;
+	base[0] = '\0';
+	int count = al_melee.Length;
 	if (!count) {
-		delete aMelee;
-		return sBase;
+		delete al_melee;
+		return base;
 	}
 
 	if (count > MAX_MELEE)
 		count = MAX_MELEE;
 
-	char buffer[32];
-	aMelee.GetString(0, buffer, sizeof buffer);
-	StrCat(sBase, sizeof sBase, buffer);
+	char meleeStr[32];
+	al_melee.GetString(0, meleeStr, sizeof meleeStr);
+	StrCat(base, sizeof base, meleeStr);
 
 	for (int i = 1; i < count; i++) {
-		StrCat(sBase, sizeof sBase, ";");
-		aMelee.GetString(i, buffer, sizeof buffer);
-		StrCat(sBase, sizeof sBase, buffer);
+		StrCat(base, sizeof base, ";");
+		al_melee.GetString(i, meleeStr, sizeof meleeStr);
+		StrCat(base, sizeof base, meleeStr);
 	}
 
-	delete aMelee;
-	return sBase;
+	delete al_melee;
+	return base;
 }
 
-void ParseMeleeString(const char[] source, ArrayList array) {
+void ParseMeleeStr(const char[] source, ArrayList array) {
 	int reloc_idx, idx;
-	char buffer[32];
+	char meleeStr[32];
 	char path[PLATFORM_MAX_PATH];
 
-	while ((idx = SplitString(source[reloc_idx], ";", buffer, sizeof buffer)) != -1) {
+	while ((idx = SplitString(source[reloc_idx], ";", meleeStr, sizeof meleeStr)) != -1) {
 		reloc_idx += idx;
-		TrimString(buffer);
-		if (!buffer[0])
+		TrimString(meleeStr);
+		if (!meleeStr[0])
 			continue;
 
-		StringToLowerCase(buffer);
-		if (array.FindString(buffer) != -1)
+		StringToLowerCase(meleeStr);
+		if (array.FindString(meleeStr) != -1)
 			continue;
 			
-		FormatEx(path, sizeof path, "scripts/melee/%s.txt", buffer);
+		FormatEx(path, sizeof path, "scripts/melee/%s.txt", meleeStr);
 		if (!FileExists(path, true))
 			continue;
 
-		array.PushString(buffer);
+		array.PushString(meleeStr);
 	}
 
 	if (reloc_idx > 0) {
-		strcopy(buffer, sizeof buffer, source[reloc_idx]);
-		TrimString(buffer);
-		if (buffer[0]) {
-			StringToLowerCase(buffer);
-			if (array.FindString(buffer) == -1) {
-				FormatEx(path, sizeof path, "scripts/melee/%s.txt", buffer);
+		strcopy(meleeStr, sizeof meleeStr, source[reloc_idx]);
+		TrimString(meleeStr);
+		if (meleeStr[0]) {
+			StringToLowerCase(meleeStr);
+			if (array.FindString(meleeStr) == -1) {
+				FormatEx(path, sizeof path, "scripts/melee/%s.txt", meleeStr);
 				if (FileExists(path, true))
-					array.PushString(buffer);
+					array.PushString(meleeStr);
 			}
 		}
 	}
@@ -256,11 +252,11 @@ void StringToLowerCase(char[] szInput) {
 	}
 }
 
-void vInitGameData() {
-	char sPath[PLATFORM_MAX_PATH];
-	BuildPath(Path_SM, sPath, sizeof sPath, "gamedata/%s.txt", GAMEDATA);
-	if (!FileExists(sPath))
-		SetFailState("\n==========\nMissing required file: \"%s\".\n==========", sPath);
+void InitData() {
+	char meleeStr[PLATFORM_MAX_PATH];
+	BuildPath(Path_SM, meleeStr, sizeof meleeStr, "gamedata/%s.txt", GAMEDATA);
+	if (!FileExists(meleeStr))
+		SetFailState("\n==========\nMissing required file: \"%s\".\n==========", meleeStr);
 
 	GameData hGameData = new GameData(GAMEDATA);
 	if (!hGameData)
@@ -298,12 +294,12 @@ void vInitGameData() {
 	if (!(g_hSDK_KeyValues_SetString = EndPrepSDKCall()))
 		SetFailState("Failed to create SDKCall: \"KeyValues::SetString\"");
 
-	vSetupDetours(hGameData);
+	SetupDetours(hGameData);
 
 	delete hGameData;
 }
 
-void vSetupDetours(GameData hGameData = null) {
+void SetupDetours(GameData hGameData = null) {
 	DynamicDetour dDetour = DynamicDetour.FromConf(hGameData, "DD::CMeleeWeaponInfoStore::LoadScripts");
 	if (!dDetour)
 		SetFailState("Failed to create DynamicDetour: \"DD::CMeleeWeaponInfoStore::LoadScripts\"");
