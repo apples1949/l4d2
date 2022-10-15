@@ -51,6 +51,8 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 }
 
 public void OnPluginStart() {
+	CreateConVar("server_info_version", PLUGIN_VERSION, "Server Info Hud plugin version.", FCVAR_NOTIFY|FCVAR_DONTRECORD);
+
 	HookEvent("round_end",		Event_RoundEnd,		EventHookMode_PostNoCopy);
 	HookEvent("round_start",	Event_RoundStart,	EventHookMode_PostNoCopy);
 	HookEvent("player_death",	Event_PlayerDeath,	EventHookMode_Pre);
