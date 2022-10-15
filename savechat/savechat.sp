@@ -78,8 +78,7 @@ Action CommandListener(int client, char[] command, int argc) {
 	GetCmdArgString(g_sMsg, sizeof g_sMsg);
 	StripQuotes(g_sMsg);
 
-	Format(g_sMsg, sizeof g_sMsg, "[%s] [%s] %N: %s %s", time, team, client, command, g_sMsg);
-	LogTo(g_sMsg);
+	LogTo("[%s] [%s] %N: %s %s", time, team, client, command, g_sMsg);
 	return Plugin_Continue;
 }
 
@@ -139,8 +138,7 @@ public void OnClientPostAdminCheck(int client) {
 	}
 
 	FormatTime(time, sizeof time, "%H:%M:%S", -1);
-	FormatEx(g_sMsg, sizeof g_sMsg, "[%s] [%s] %L 加入游戏 (%s)", time, ccode, client, ip);
-	LogTo(g_sMsg);
+	LogTo("[%s] [%s] %L 加入游戏 (%s)", time, ccode, client, ip);
 }
 
 void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast) {
@@ -165,8 +163,7 @@ void Event_PlayerDisconnect(Event event, const char[] name, bool dontBroadcast) 
 	char time[16];
 	FormatTime(time, sizeof time, "%H:%M:%S", -1);
 	event.GetString("reason", g_sMsg, sizeof g_sMsg);
-	Format(g_sMsg, sizeof g_sMsg, "[%s] %L 离开游戏 (reason: %s)", time, client, g_sMsg);
-	LogTo(g_sMsg);
+	LogTo("[%s] %L 离开游戏 (reason: %s)", time, client, g_sMsg);
 }
 
 void LogTo(const char[] format, any ...) {
