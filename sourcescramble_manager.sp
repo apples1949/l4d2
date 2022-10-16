@@ -60,37 +60,24 @@ Action cmdList(int args) {
 }
 
 Action cmdPatch(int args) {
-	switch (args) {
-		case 0:
-			TogglePatch(NULL_STRING, NULL_STRING, true);
-
-		case 1: {
-			char buffer[PLATFORM_MAX_PATH];
-			GetCmdArg(1, buffer, sizeof buffer);
-			TogglePatch(buffer, NULL_STRING, true);
-		}
-
-		case 2: {
-			char file[PLATFORM_MAX_PATH];
-			char name[PLATFORM_MAX_PATH];
-			GetCmdArg(1, file, sizeof file);
-			GetCmdArg(2, name, sizeof name);
-			TogglePatch(file, name, true);
-		}
-	}
-
+	PatchCommand(args, true);
 	return Plugin_Handled;
 }
 
 Action cmdUnpatch(int args) {
+	PatchCommand(args, false);
+	return Plugin_Handled;
+}
+
+void PatchCommand(int args, bool enable) {
 	switch (args) {
 		case 0:
-			TogglePatch(NULL_STRING, NULL_STRING, false);
+			TogglePatch(NULL_STRING, NULL_STRING, enable);
 
 		case 1: {
 			char buffer[PLATFORM_MAX_PATH];
 			GetCmdArg(1, buffer, sizeof buffer);
-			TogglePatch(buffer, NULL_STRING, false);
+			TogglePatch(buffer, NULL_STRING, enable);
 		}
 
 		case 2: {
@@ -98,11 +85,9 @@ Action cmdUnpatch(int args) {
 			char name[PLATFORM_MAX_PATH];
 			GetCmdArg(1, file, sizeof file);
 			GetCmdArg(2, name, sizeof name);
-			TogglePatch(file, name, false);
+			TogglePatch(file, name, enable);
 		}
 	}
-
-	return Plugin_Handled;
 }
 
 void ParseConfigs() {
