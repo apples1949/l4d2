@@ -8,7 +8,7 @@
 #define PLUGIN_NAME					"SafeArea Teleport"
 #define PLUGIN_AUTHOR				"sorallll"
 #define PLUGIN_DESCRIPTION			""
-#define PLUGIN_VERSION				"1.2.1"
+#define PLUGIN_VERSION				"1.2.0"
 #define PLUGIN_URL					"https://forums.alliedmods.net/showthread.php?p=2766514#post2766514"
 
 #define DEBUG						0
@@ -27,15 +27,12 @@ Handle
 	g_hSDK_Checkpoint_ContainsArea,
 	g_hSDK_Checkpoint_GetLargestArea,
 	g_hSDK_CDirectorChallengeMode_FindRescueAreaTrigger,
-	g_hSDK_CBaseTrigger_IsTouching,
-	g_hSDK_CPropDoorRotatingCheckpoint_IsCheckpointDoor,
-	g_hSDK_CPropDoorRotatingCheckpoint_IsCheckpointExitDoor;
+	g_hSDK_CBaseTrigger_IsTouching;
 
 Address
 	g_pTheCount;
 
 ArrayList
-	g_aLastDoor,
 	g_aEndNavArea,
 	g_aRescueVehicle;
 
@@ -68,14 +65,21 @@ float
 	g_vOrigin[3];
 
 bool
-	g_bLateLoad,
-	g_bMapStarted,
 	g_bCvarAllow,
+	g_bMapStarted,
 	g_bTranslation,
 	g_bIsFinaleMap,
 	g_bIsTriggered,
 	g_bIsSacrificeFinale,
 	g_bFinaleVehicleReady;
+
+enum struct Door {
+	int entRef;
+	float m_flSpeed;
+}
+
+Door
+	g_LastDoor;
 
 methodmap TerrorNavArea {
 	public bool IsNull() {
@@ -136,15 +140,8 @@ public Plugin myinfo = {
 	url = PLUGIN_URL
 };
 
-public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max) {
-	g_bLateLoad = late;
-	return APLRes_Success;
-}
-
 public void OnPluginStart() {
 	InitData();
-
-	g_aLastDoor = new ArrayList(2);
 	g_aEndNavArea = new ArrayList();
 	g_aRescueVehicle = new ArrayList();
 
@@ -178,9 +175,6 @@ public void OnPluginStart() {
 	RegAdminCmd("sm_st", cmdSt, ADMFLAG_ROOT, "Test");
 	
 	HookEntityOutput("trigger_finale", "FinaleStart", OnFinaleStart);
-
-	if (g_bLateLoad)
-		g_bIsFinaleMap = L4D_IsMissionFinalMap();
 }
 
 void OnFinaleStart(const char[] output, int caller, int activator, float delay) {
@@ -235,13 +229,13 @@ void CvarChanged(ConVar convar, const char[] oldValue, const char[] newValue) {
 }
 
 void GetCvars() {
-	int iLast = g_iSafeAreaFlags;
+	int last = g_iSafeAreaFlags;
 	g_iSafeAreaFlags = g_hSafeAreaFlags.IntValue;
 	g_iSafeAreaType = g_hSafeAreaType.IntValue;
 	g_iSafeAreaTime = g_hSafeAreaTime.IntValue;
 	g_iMinSurvivorPercent = g_hMinSurvivorPercent.IntValue;
 
-	if (iLast != g_iSafeAreaFlags) {
+	if (last != g_iSafeAreaFlags) {
 		if (IsValidEntRef(g_iChangelevel)) {
 			UnhookSingleEntityOutput(g_iChangelevel, "OnStartTouch",  OnStartTouch);
 			UnhookSingleEntityOutput(g_iChangelevel, "OnEndTouch", OnEndTouch);
@@ -516,7 +510,8 @@ void CalculateBoundingBoxSize(float vMins[3], float vMaxs[3], const float vOrigi
 }
 
 void FindSafeRoomDoors() {
-	g_aLastDoor.Clear();
+	g_LastDoor.entRef = 0;
+	g_LastDoor.m_flSpeed = 0.0;
 
 	if (g_bIsFinaleMap || g_iSafeAreaFlags & SAFE_ROOM == 0)
 		return;
@@ -524,18 +519,10 @@ void FindSafeRoomDoors() {
 	if (!IsValidEntRef(g_iChangelevel))
 		return;
 
-	int entity = MaxClients + 1;
-	while ((entity = FindEntityByClassname(entity, "prop_door_rotating_checkpoint")) != INVALID_ENT_REFERENCE) {
-		if (GetEntProp(entity, Prop_Data, "m_spawnflags") & DOOR_FLAG_IGNORE_USE)
-			continue;
-		
-		if (!SDKCall(g_hSDK_CPropDoorRotatingCheckpoint_IsCheckpointDoor, entity))
-			continue;
-
-		if (SDKCall(g_hSDK_CPropDoorRotatingCheckpoint_IsCheckpointExitDoor, entity))
-			continue;
-
-		g_aLastDoor.Set(g_aLastDoor.Push(EntIndexToEntRef(entity)), GetEntPropFloat(entity, Prop_Data, "m_flSpeed"), 1);
+	int ent = L4D_GetCheckpointLast();
+	if (ent != -1) {
+		g_LastDoor.entRef = EntIndexToEntRef(ent);
+		g_LastDoor.m_flSpeed = GetEntPropFloat(ent, Prop_Data, "m_flSpeed");
 	}
 }
 
@@ -759,34 +746,27 @@ void Perform(int type) {
 }
 
 void CloseAndLockLastSafeDoor() {
-	int count = g_aLastDoor.Length;
-	if (count > 0) {
-		int i;
-		int entRef;
+	int entRef = g_LastDoor.entRef;
+	if (EntRefToEntIndex(entRef) != INVALID_ENT_REFERENCE) {
 		char buffer[64];
-		while (i < count) {
-			if (EntRefToEntIndex((entRef = g_aLastDoor.Get(i))) != INVALID_ENT_REFERENCE) {
-				SetEntPropFloat(entRef, Prop_Data, "m_flSpeed", 1000.0);
-				SetEntProp(entRef, Prop_Data, "m_hasUnlockSequence", 0);
-				AcceptEntityInput(entRef, "DisableCollision");
-				AcceptEntityInput(entRef, "Unlock");
-				AcceptEntityInput(entRef, "Close");
-				AcceptEntityInput(entRef, "forceclosed");
-				AcceptEntityInput(entRef, "Lock");
-				SetEntProp(entRef, Prop_Data, "m_hasUnlockSequence", 1);
+		SetEntPropFloat(entRef, Prop_Data, "m_flSpeed", 1000.0);
+		SetEntProp(entRef, Prop_Data, "m_hasUnlockSequence", 0);
+		AcceptEntityInput(entRef, "DisableCollision");
+		AcceptEntityInput(entRef, "Unlock");
+		AcceptEntityInput(entRef, "Close");
+		AcceptEntityInput(entRef, "forceclosed");
+		AcceptEntityInput(entRef, "Lock");
+		SetEntProp(entRef, Prop_Data, "m_hasUnlockSequence", 1);
 
-				SetVariantString("OnUser1 !self:EnableCollision::1.0:-1");
-				AcceptEntityInput(entRef, "AddOutput");
-				SetVariantString("OnUser1 !self:Unlock::5.0:-1");
-				AcceptEntityInput(entRef, "AddOutput");
-				FloatToString(g_aLastDoor.Get(i, 1), buffer, sizeof buffer);
-				Format(buffer, sizeof buffer, "OnUser1 !self:SetSpeed:%s:5.0:-1", buffer);
-				SetVariantString(buffer);
-				AcceptEntityInput(entRef, "AddOutput");
-				AcceptEntityInput(entRef, "FireUser1");
-			}
-			i++;
-		}
+		SetVariantString("OnUser1 !self:EnableCollision::1.0:-1");
+		AcceptEntityInput(entRef, "AddOutput");
+		SetVariantString("OnUser1 !self:Unlock::5.0:-1");
+		AcceptEntityInput(entRef, "AddOutput");
+		FloatToString(g_LastDoor.m_flSpeed, buffer, sizeof buffer);
+		Format(buffer, sizeof buffer, "OnUser1 !self:SetSpeed:%s:5.0:-1", buffer);
+		SetVariantString(buffer);
+		AcceptEntityInput(entRef, "AddOutput");
+		AcceptEntityInput(entRef, "FireUser1");
 	}
 }
 
@@ -937,9 +917,9 @@ void InitData() {
 	if (!g_pTheCount)
 		SetFailState("Failed to find address: TheCount");
 
-	g_iOff_m_flow = hGameData.GetOffset("CTerrorPlayer::GetFlowDistance::m_flow");
+	g_iOff_m_flow = hGameData.GetOffset("m_flow");
 	if (g_iOff_m_flow == -1)
-		SetFailState("Failed to find offset: CTerrorPlayer::GetFlowDistance::m_flow");
+		SetFailState("Failed to find offset: m_flow");
 
 	StartPrepSDKCall(SDKCall_Player);
 	if (!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorPlayer::CleanupPlayerState"))
@@ -983,20 +963,6 @@ void InitData() {
 	PrepSDKCall_SetReturnInfo(SDKType_Bool, SDKPass_Plain);
 	if (!(g_hSDK_CBaseTrigger_IsTouching = EndPrepSDKCall()))
 		SetFailState("Failed to create SDKCall: CBaseTrigger::IsTouching");
-
-	StartPrepSDKCall(SDKCall_Entity);
-	if (!PrepSDKCall_SetFromConf(hGameData, SDKConf_Virtual, "CPropDoorRotatingCheckpoint::IsCheckpointDoor"))
-		SetFailState("Failed to find offset: CPropDoorRotatingCheckpoint::IsCheckpointDoor");
-	PrepSDKCall_SetReturnInfo(SDKType_Bool, SDKPass_Plain);
-	if (!(g_hSDK_CPropDoorRotatingCheckpoint_IsCheckpointDoor = EndPrepSDKCall()))
-		SetFailState("Failed to create SDKCall: CPropDoorRotatingCheckpoint::IsCheckpointDoor");
-
-	StartPrepSDKCall(SDKCall_Entity);
-	if (!PrepSDKCall_SetFromConf(hGameData, SDKConf_Virtual, "CPropDoorRotatingCheckpoint::IsCheckpointExitDoor"))
-		SetFailState("Failed to find offset: CPropDoorRotatingCheckpoint::IsCheckpointExitDoor");
-	PrepSDKCall_SetReturnInfo(SDKType_Bool, SDKPass_Plain);
-	if (!(g_hSDK_CPropDoorRotatingCheckpoint_IsCheckpointExitDoor = EndPrepSDKCall()))
-		SetFailState("Failed to create SDKCall: CPropDoorRotatingCheckpoint::IsCheckpointExitDoor");
 
 	delete hGameData;
 }
