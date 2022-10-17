@@ -22,22 +22,10 @@
 		"Offsets"
 		{
 			/* CTerrorPlayer::GetFlowDistance(TerrorNavArea::FlowType)const */
-			"CTerrorPlayer::GetFlowDistance::m_flow"
+			"m_flow"
 			{
 				"linux"		"340"
 				"windows"	"332"
-			}
-			/* CPropDoorRotatingCheckpoint::IsCheckpointDoor(CPropDoorRotatingCheckpoint *__hidden this) */
-			"CPropDoorRotatingCheckpoint::IsCheckpointDoor"
-			{
-				"linux"		"286"
-				"windows"	"238"
-			}
-			/* CPropDoorRotatingCheckpoint::IsCheckpointExitDoor(CPropDoorRotatingCheckpoint *__hidden this) */
-			"CPropDoorRotatingCheckpoint::IsCheckpointExitDoor"
-			{
-				"linux"		"287"
-				"windows"	"239"
 			}
 		}
 	
@@ -51,6 +39,7 @@
 				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x57\x33\x2A\x83\x2A\x2A\x75"
 				/* ? ? ? ? ? ? 57 33 ? 83 ? ? 75 */
 			}
+
 			/* CTerrorPlayer::CleanupPlayerState(void) */
 			"CTerrorPlayer::CleanupPlayerState"
 			{
@@ -59,6 +48,7 @@
 				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x83\x2A\x2A\x83\x2A\x2A\x55\x8B\x2A\x2A\x89\x2A\x2A\x2A\x8B\x2A\x0F\x2A\x2A\x83\x2A\x2A\x56\x8B\x2A\xC7"
 				/* ? ? ? ? ? ? 83 ? ? 83 ? ? 55 8B ? ? 89 ? ? ? 8B ? 0F ? ? 83 ? ? 56 8B ? C7 */
 			}
+
 			/* Checkpoint::GetLargestArea(Checkpoint *__hidden this) */
 			"Checkpoint::GetLargestArea"
 			{
@@ -67,6 +57,7 @@
 				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x8B\x2A\x53\x8B\x2A\x2A\x33\x2A\x33\x2A\x89\x2A\x2A\x83"
 				/* ? ? ? ? ? ? ? 8B ? 53 8B ? ? 33 ? 33 ? 89 ? ? 83 */
 			}
+
 			/* TerrorNavMesh::GetLastCheckpoint(TerrorNavMesh *__hidden this) */
 			"TerrorNavMesh::GetLastCheckpoint"
 			{
@@ -75,6 +66,7 @@
 				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x56\x33\x2A\x57\x85\x2A\x7E\x2A\x8B\xB1\x2A\x2A\x2A\x2A\x8B\x2A\x8B"
 				/* ? ? ? ? ? ? 56 33 ? 57 85 ? 7E ? 8B B1 ? ? ? ? 8B ? 8B */
 			}
+
 			/* Checkpoint::ContainsArea(TerrorNavArea *)const */
 			"Checkpoint::ContainsArea"
 			{
@@ -83,6 +75,7 @@
 				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x33\x2A\x56\x85\x2A\x7E\x2A\x8B\x2A\x8B"
 				/* ? ? ? ? ? ? 33 ? 56 85 ? 7E ? 8B ? 8B */
 			}
+
 			/* CDirectorChallengeMode::FindRescueAreaTrigger(void) */
 			"CDirectorChallengeMode::FindRescueAreaTrigger"
 			{
@@ -91,6 +84,7 @@
 				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x83\x2A\x2A\x53\x57\x8B\xB8"
 				/* ? ? ? ? ? ? ? ? 83 ? ? 53 57 8B B8 */
 			}
+
 			/* CBaseTrigger::IsTouching(CBaseTrigger *__hidden this, CBaseEntity *) */
 			"CBaseTrigger::IsTouching"
 			{
