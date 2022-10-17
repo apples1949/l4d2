@@ -68,7 +68,7 @@ bool
 	g_bCvarAllow,
 	g_bMapStarted,
 	g_bTranslation,
-	g_bIsFinaleMap,
+	g_bIsFinalMap,
 	g_bIsTriggered,
 	g_bIsSacrificeFinale,
 	g_bFinaleVehicleReady;
@@ -178,7 +178,7 @@ public void OnPluginStart() {
 }
 
 void OnFinaleStart(const char[] output, int caller, int activator, float delay) {
-	if (!g_bIsFinaleMap || g_iSafeAreaFlags & RESCUE_VEHICLE == 0 || IsValidEntRef(g_iTriggerFinale))
+	if (!g_bIsFinalMap || g_iSafeAreaFlags & RESCUE_VEHICLE == 0 || IsValidEntRef(g_iTriggerFinale))
 		return;
 
 	g_iTriggerFinale = EntIndexToEntRef(caller);
@@ -344,7 +344,7 @@ bool IsAllowedGameMode() {
 public void OnMapStart() {
 	g_bMapStarted = true;
 	PrecacheSound(SOUND_COUNTDOWN);
-	g_bIsFinaleMap = L4D_IsMissionFinalMap();
+	g_bIsFinalMap = L4D_IsMissionFinalMap();
 }
 
 public void OnMapEnd() {
@@ -382,7 +382,7 @@ Action tmrInitPlugin(Handle timer) {
 }
 
 void InitPlugin() {
-	if (!g_bIsFinaleMap)
+	if (!g_bIsFinalMap)
 		g_bFinaleVehicleReady = true;
 
 	if (GetNavAreaCount() && FindEndNavAreas()) {
@@ -395,7 +395,7 @@ bool FindEndNavAreas() {
 	if (g_aEndNavArea.Length)
 		return true;
 
-	if (g_bIsFinaleMap) {
+	if (g_bIsFinalMap) {
 		if (g_iSafeAreaFlags & RESCUE_VEHICLE == 0)
 			return false;
 	}
@@ -408,7 +408,7 @@ bool FindEndNavAreas() {
 	TerrorNavArea area;
 
 	Address pLastCheckpoint;
-	if (!g_bIsFinaleMap)
+	if (!g_bIsFinalMap)
 		pLastCheckpoint = SDKCall(g_hSDK_TerrorNavMesh_GetLastCheckpoint, L4D_GetPointer(POINTER_NAVMESH));
 
 	Address pTheNavAreas = view_as<Address>(LoadFromAddress(g_pTheCount + view_as<Address>(4), NumberType_Int32));
@@ -426,7 +426,7 @@ bool FindEndNavAreas() {
 			continue;
 
 		spawnAttributes = area.m_spawnAttributes;
-		if (g_bIsFinaleMap) {
+		if (g_bIsFinalMap) {
 			if (spawnAttributes & NAV_SPAWN_RESCUE_VEHICLE)
 				g_aEndNavArea.Push(area);
 		}
@@ -513,7 +513,7 @@ void FindSafeRoomDoors() {
 	g_LastDoor.entRef = 0;
 	g_LastDoor.m_flSpeed = 0.0;
 
-	if (g_bIsFinaleMap || g_iSafeAreaFlags & SAFE_ROOM == 0)
+	if (g_bIsFinalMap || g_iSafeAreaFlags & SAFE_ROOM == 0)
 		return;
 
 	if (!IsValidEntRef(g_iChangelevel))
@@ -730,7 +730,7 @@ void PrintHintToSurvivor(const char[] format, any ...) {
 void Perform(int type) {
 	switch (type) {
 		case 1: {
-			if (!g_bIsFinaleMap)
+			if (!g_bIsFinalMap)
 				CloseAndLockLastSafeDoor();
 
 			CreateTimer(0.5, tmrTeleportToEndArea, _, TIMER_FLAG_NO_MAPCHANGE);
@@ -791,7 +791,7 @@ void TeleportToEndArea() {
 		float vPos[3];
 		TerrorNavArea largest;
 
-		if (!g_bIsFinaleMap)
+		if (!g_bIsFinalMap)
 			largest = SDKCall(g_hSDK_Checkpoint_GetLargestArea, SDKCall(g_hSDK_TerrorNavMesh_GetLastCheckpoint, L4D_GetPointer(POINTER_NAVMESH)));
 
 		if (largest) {
@@ -991,7 +991,7 @@ bool IsPlayerInEndArea(int client, bool checkArea = true) {
 	if (checkArea && g_aEndNavArea.FindValue(area) == -1)
 		return false;
 
-	if (g_bIsFinaleMap)
+	if (g_bIsFinalMap)
 		return IsValidEntRef(g_iRescueVehicle) && SDKCall(g_hSDK_CBaseTrigger_IsTouching, g_iRescueVehicle, client);
 	
 	return IsValidEntRef(g_iChangelevel) && SDKCall(g_hSDK_CBaseTrigger_IsTouching, g_iChangelevel, client);
