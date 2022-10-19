@@ -46,7 +46,7 @@ StringMap
 	g_smFirstMap;
 
 ConVar
-	g_hMPGameMode,
+	g_cvMPGameMode,
 	g_cvNotifyMapNext;
 
 char
@@ -106,8 +106,8 @@ public void OnPluginStart() {
 
 	//AutoExecConfig(true);
 
-	g_hMPGameMode = FindConVar("mp_gamemode");
-	g_hMPGameMode.AddChangeHook(CvarChanged_Mode);
+	g_cvMPGameMode = FindConVar("mp_gamemode");
+	g_cvMPGameMode.AddChangeHook(CvarChanged_Mode);
 
 	RegConsoleCmd("sm_v3", 		cmdMapVote);
 	RegConsoleCmd("sm_maps", 	cmdMapVote);
@@ -392,7 +392,7 @@ void GetCvars() {
 }
 
 void GetCvars_Mode() {
-	g_hMPGameMode.GetString(g_sMode, sizeof g_sMode);
+	g_cvMPGameMode.GetString(g_sMode, sizeof g_sMode);
 }
 
 void SetFirstMapString() {
