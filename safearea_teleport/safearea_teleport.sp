@@ -8,7 +8,7 @@
 #define PLUGIN_NAME					"SafeArea Teleport"
 #define PLUGIN_AUTHOR				"sorallll"
 #define PLUGIN_DESCRIPTION			""
-#define PLUGIN_VERSION				"1.2.0"
+#define PLUGIN_VERSION				"1.2.1"
 #define PLUGIN_URL					"https://forums.alliedmods.net/showthread.php?p=2766514#post2766514"
 
 #define DEBUG						0
@@ -22,7 +22,6 @@
 
 Handle
 	g_hTimer,
-	g_hSDK_CTerrorPlayer_CleanupPlayerState,
 	g_hSDK_TerrorNavMesh_GetLastCheckpoint,
 	g_hSDK_Checkpoint_ContainsArea,
 	g_hSDK_Checkpoint_GetLargestArea,
@@ -783,7 +782,7 @@ void TeleportToEndArea() {
 		int i = 1;
 		for (; i <= MaxClients; i++) {
 			if (IsClientInGame(i) && GetClientTeam(i) == 3 && IsPlayerAlive(i)) {
-				SDKCall(g_hSDK_CTerrorPlayer_CleanupPlayerState, i);
+				L4D_CleanupPlayerState(i);
 				ForcePlayerSuicide(i);
 			}
 		}
@@ -920,12 +919,6 @@ void InitData() {
 	g_iOff_m_flow = hGameData.GetOffset("m_flow");
 	if (g_iOff_m_flow == -1)
 		SetFailState("Failed to find offset: m_flow");
-
-	StartPrepSDKCall(SDKCall_Player);
-	if (!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorPlayer::CleanupPlayerState"))
-		SetFailState("Failed to find signature: CTerrorPlayer::CleanupPlayerState");
-	if (!(g_hSDK_CTerrorPlayer_CleanupPlayerState = EndPrepSDKCall()))
-		SetFailState("Failed to create SDKCall: CTerrorPlayer::CleanupPlayerState");
 
 	StartPrepSDKCall(SDKCall_Raw);
 	if (!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "TerrorNavMesh::GetLastCheckpoint"))
