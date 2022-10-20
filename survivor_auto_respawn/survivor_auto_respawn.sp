@@ -142,7 +142,7 @@ stock void CSayText2(int client, int author, const char[] szMessage) {
 #define PLUGIN_NAME				"Survivor Auto Respawn"
 #define PLUGIN_AUTHOR			"sorallll"
 #define PLUGIN_DESCRIPTION		"自动复活"
-#define PLUGIN_VERSION			"1.3.8"
+#define PLUGIN_VERSION			"1.3.9"
 #define PLUGIN_URL				"https://steamcommunity.com/id/sorallll"
 
 #define GAMEDATA				"survivor_auto_respawn"
@@ -164,21 +164,23 @@ ConVar
 	g_cvRespawnLimit,
 	g_cvRespawnBot,
 	g_cvRespawnIdle,
-	g_cvGiveType,
+	g_cvRespawnGoAFK,
 	g_cvPunishType,
 	g_cvPunishTime,
-	g_cvBotSpawned,
 	g_cvPunishBot,
+	g_cvBotSpawned,
+	g_cvGiveType,
 	g_cvSbAllBotGame,
 	g_cvAllowAllBotSur;
 
 bool
-	g_bGiveType,
+	g_bRespawnBot,
+	g_bRespawnIdle,
+	g_bRespawnGoAFK,
 	g_bPunishType,
 	g_bPunishBot,
 	g_bBotSpawned,
-	g_bRespawnBot,
-	g_bRespawnIdle;
+	g_bGiveType;
 
 int
 	g_iRespawnTime,
@@ -190,7 +192,7 @@ float
 	g_fCmdCooldown[MAXPLAYERS + 1];
 
 enum struct esWeapon {
-	ConVar cFlags;
+	ConVar cvFlags;
 
 	int count;
 	int allowed[20];
@@ -387,33 +389,35 @@ public void OnPluginStart() {
 
 	g_cvRespawnTime =		CreateConVar("sar_respawn_time",	"15",		"玩家自动复活时间(秒).", CVAR_FLAGS);
 	g_cvRespawnLimit =		CreateConVar("sar_respawn_limit",	"5",		"玩家每回合自动复活次数.", CVAR_FLAGS);
+	g_cvRespawnBot =		CreateConVar("sar_respawn_bot",		"1",		"是否允许Bot自动复活 \n0=否,1=是.", CVAR_FLAGS);
+	g_cvRespawnIdle =		CreateConVar("sar_respawn_idle",	"1",		"是否允许闲置玩家自动复活 \n0=否,1=是.", CVAR_FLAGS);
+	g_cvRespawnGoAFK =		CreateConVar("sar_respawn_goafk",	"1",		"玩家被复活后是否立即闲置 \n0=否,1=是.", CVAR_FLAGS);
 	g_cvPunishType =		CreateConVar("sar_punish_type",		"1",		"玩家复活惩罚类型 \n0=每个人单独计算,1=按本回合内最高已复活次数计算.", CVAR_FLAGS);
 	g_cvPunishTime =		CreateConVar("sar_punish_time",		"5",		"每次复活一次的惩罚时间 \n0=不惩罚.", CVAR_FLAGS);
 	g_cvPunishBot =			CreateConVar("sar_punish_bot",		"0",		"是否对Bot进行复活惩罚 \n0=否,1=是.", CVAR_FLAGS);
 	g_cvBotSpawned =		CreateConVar("sar_bot_spawned",		"0",		"是否将Bot的复活次数计入最高已复活次数 \n0=否,1=是.", CVAR_FLAGS);
-	g_cvRespawnBot =		CreateConVar("sar_respawn_bot",		"1",		"是否允许Bot自动复活 \n0=否,1=是.", CVAR_FLAGS);
-	g_cvRespawnIdle =		CreateConVar("sar_respawn_idle",	"1",		"是否允许闲置玩家自动复活 \n0=否,1=是.", CVAR_FLAGS);
-	g_esWeapon[0].cFlags =	CreateConVar("sar_respawn_slot0",	"131071",	"主武器给什么 \n0=不给,131071=所有,7=微冲,1560=霰弹,30720=狙击,31=Tier1,32736=Tier2,98304=Tier0.");
-	g_esWeapon[1].cFlags =	CreateConVar("sar_respawn_slot1",	"5160",		"副武器给什么 \n0=不给,131071=所有.如果选中了近战且该近战在当前地图上未解锁,则会随机给一把.");
-	g_esWeapon[2].cFlags =	CreateConVar("sar_respawn_slot2",	"7",		"投掷物给什么 \n0=不给,7=所有.", CVAR_FLAGS);
-	g_esWeapon[3].cFlags =	CreateConVar("sar_respawn_slot3",	"1",		"槽位3给什么 \n0=不给,15=所有.", CVAR_FLAGS);
-	g_esWeapon[4].cFlags =	CreateConVar("sar_respawn_slot4",	"3",		"槽位4给什么 \n0=不给,3=所有.", CVAR_FLAGS);
 	g_cvGiveType =			CreateConVar("sar_give_type",		"0",		"根据什么来给玩家装备. \n0=不给,1=根据每个槽位的设置,2=根据当前所有生还者的平均装备质量(仅主副武器).");
+	g_esWeapon[0].cvFlags =	CreateConVar("sar_respawn_slot0",	"131071",	"主武器给什么 \n0=不给,131071=所有,7=微冲,1560=霰弹,30720=狙击,31=Tier1,32736=Tier2,98304=Tier0.");
+	g_esWeapon[1].cvFlags =	CreateConVar("sar_respawn_slot1",	"5160",		"副武器给什么 \n0=不给,131071=所有.如果选中了近战且该近战在当前地图上未解锁,则会随机给一把.");
+	g_esWeapon[2].cvFlags =	CreateConVar("sar_respawn_slot2",	"7",		"投掷物给什么 \n0=不给,7=所有.", CVAR_FLAGS);
+	g_esWeapon[3].cvFlags =	CreateConVar("sar_respawn_slot3",	"1",		"槽位3给什么 \n0=不给,15=所有.", CVAR_FLAGS);
+	g_esWeapon[4].cvFlags =	CreateConVar("sar_respawn_slot4",	"3",		"槽位4给什么 \n0=不给,3=所有.", CVAR_FLAGS);
 
 	g_cvSbAllBotGame = FindConVar("sb_all_bot_game");
 	g_cvAllowAllBotSur = FindConVar("allow_all_bot_survivor_team");
 
 	g_cvRespawnTime.AddChangeHook(CvarChanged);
 	g_cvRespawnLimit.AddChangeHook(CvarChanged);
+	g_cvRespawnBot.AddChangeHook(CvarChanged);
+	g_cvRespawnIdle.AddChangeHook(CvarChanged);
+	g_cvRespawnGoAFK.AddChangeHook(CvarChanged);
 	g_cvPunishType.AddChangeHook(CvarChanged);
 	g_cvPunishTime.AddChangeHook(CvarChanged);
 	g_cvPunishBot.AddChangeHook(CvarChanged);
 	g_cvBotSpawned.AddChangeHook(CvarChanged);
-	g_cvRespawnBot.AddChangeHook(CvarChanged);
-	g_cvRespawnIdle.AddChangeHook(CvarChanged);
 
 	for (int i; i < MAX_SLOTS; i++)
-		g_esWeapon[i].cFlags.AddChangeHook(CvarChanged_Weapon);
+		g_esWeapon[i].cvFlags.AddChangeHook(CvarChanged_Weapon);
 		
 	AutoExecConfig(true);
 
@@ -490,11 +494,12 @@ void GetCvars() {
 	g_iRespawnLimit = g_cvRespawnLimit.IntValue;
 	g_iPunishTime = g_cvPunishTime.IntValue;
 	Toggle(g_iRespawnTime && g_iRespawnLimit);
+	g_bRespawnBot = g_cvRespawnBot.BoolValue;
+	g_bRespawnIdle = g_cvRespawnIdle.BoolValue;
+	g_bRespawnGoAFK = g_cvRespawnGoAFK.BoolValue;
 	g_bPunishType = g_cvPunishType.BoolValue;
 	g_bPunishBot = g_cvPunishBot.BoolValue;
 	g_bBotSpawned = g_cvBotSpawned.BoolValue;
-	g_bRespawnBot = g_cvRespawnBot.BoolValue;
-	g_bRespawnIdle = g_cvRespawnIdle.BoolValue;
 }
 
 void Toggle(bool enable) {
@@ -539,7 +544,7 @@ void GetCvars_Weapon() {
 	int count;
 	for (int i; i < MAX_SLOTS; i++) {
 		g_esWeapon[i].count = 0;
-		if (!g_esWeapon[i].cFlags.BoolValue || !GetSlotAllowed(i))
+		if (!g_esWeapon[i].cvFlags.BoolValue || !GetSlotAllowed(i))
 			count++;
 	}
 
@@ -551,7 +556,7 @@ int GetSlotAllowed(int slot) {
 		if (g_sWeaponName[slot][i][0] == '\0')
 			break;
 
-		if ((1 << i) & g_esWeapon[slot].cFlags.IntValue)
+		if ((1 << i) & g_esWeapon[slot].cvFlags.IntValue)
 			g_esWeapon[slot].allowed[g_esWeapon[slot].count++] = i;
 	}
 	return g_esWeapon[slot].count;
@@ -714,7 +719,7 @@ void RespawnSurvivor(int client) {
 		g_iMaxRespawned = g_esPlayer[client].respawned;
 
 	if (!isBot) {
-		if (CanIdle(client))
+		if (g_bRespawnGoAFK && CanIdle(client))
 			GoAFKTimer(client, 0.1);
 
 		CPrintToChat(client, "{olive}剩余复活次数 {default}-> {blue}%d", g_iRespawnLimit - g_esPlayer[client].respawned);
@@ -854,7 +859,7 @@ void TeleportToSurvivor(int client, bool random = true) {
 	delete aClients;
 
 	if (player) {
-		vSetInvincibilityTime(client, 1.5);
+		SetInvincibilityTime(client, 1.5);
 		SetEntProp(client, Prop_Send, "m_bDucked", 1);
 		SetEntProp(client, Prop_Send, "m_fFlags", GetEntProp(client, Prop_Send, "m_fFlags")|FL_DUCKING);
 
@@ -975,7 +980,7 @@ void GoAFKTimer(int client, float flDuration) {
 	SetEntDataFloat(client, m_GoAFKTimer + 8, GetGameTime() + flDuration);
 }
 
-void vSetInvincibilityTime(int client, float flDuration) {
+void SetInvincibilityTime(int client, float flDuration) {
 	static int m_invulnerabilityTimer = -1;
 	if (m_invulnerabilityTimer == -1)
 		m_invulnerabilityTimer = FindSendPropInfo("CTerrorPlayer", "m_noAvoidanceTimer") - 12;
