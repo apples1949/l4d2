@@ -922,40 +922,40 @@ void InitData() {
 
 	StartPrepSDKCall(SDKCall_Raw);
 	if (!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "TerrorNavMesh::GetLastCheckpoint"))
-		SetFailState("Failed to find signature: TerrorNavMesh::GetLastCheckpoint");
+		SetFailState("Failed to find signature: \"TerrorNavMesh::GetLastCheckpoint\"");
 	PrepSDKCall_SetReturnInfo(SDKType_PlainOldData, SDKPass_Plain);
 	if (!(g_hSDK_TerrorNavMesh_GetLastCheckpoint = EndPrepSDKCall()))
-		SetFailState("Failed to create SDKCall: TerrorNavMesh::GetLastCheckpoint");
+		SetFailState("Failed to create SDKCall: \"TerrorNavMesh::GetLastCheckpoint\"");
 
 	StartPrepSDKCall(SDKCall_Raw);
 	if (!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "Checkpoint::ContainsArea"))
-		SetFailState("Failed to find signature: Checkpoint::ContainsArea");
+		SetFailState("Failed to find signature: \"Checkpoint::ContainsArea\"");
 	PrepSDKCall_AddParameter(SDKType_PlainOldData, SDKPass_Plain);
 	PrepSDKCall_SetReturnInfo(SDKType_Bool, SDKPass_Plain);
 	if (!(g_hSDK_Checkpoint_ContainsArea = EndPrepSDKCall()))
-		SetFailState("Failed to create SDKCall: Checkpoint::ContainsArea");
+		SetFailState("Failed to create SDKCall: \"Checkpoint::ContainsArea\"");
 
 	StartPrepSDKCall(SDKCall_Raw);
 	if (!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "Checkpoint::GetLargestArea"))
-		SetFailState("Failed to find signature: Checkpoint::GetLargestArea");
+		SetFailState("Failed to find signature: \"Checkpoint::GetLargestArea\"");
 	PrepSDKCall_SetReturnInfo(SDKType_PlainOldData, SDKPass_Plain);
 	if (!(g_hSDK_Checkpoint_GetLargestArea = EndPrepSDKCall()))
-		SetFailState("Failed to create SDKCall: Checkpoint::GetLargestArea");
+		SetFailState("Failed to create SDKCall: \"Checkpoint::GetLargestArea\"");
 
 	StartPrepSDKCall(SDKCall_GameRules);
 	if (!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CDirectorChallengeMode::FindRescueAreaTrigger"))
-		SetFailState("Failed to find signature: CDirectorChallengeMode::FindRescueAreaTrigger");
+		SetFailState("Failed to find signature: \"CDirectorChallengeMode::FindRescueAreaTrigger\"");
 	PrepSDKCall_SetReturnInfo(SDKType_CBaseEntity, SDKPass_Pointer);
 	if (!(g_hSDK_CDirectorChallengeMode_FindRescueAreaTrigger = EndPrepSDKCall()))
-		SetFailState("Failed to create SDKCall: CDirectorChallengeMode::FindRescueAreaTrigger");
+		SetFailState("Failed to create SDKCall: \"CDirectorChallengeMode::FindRescueAreaTrigger\"");
 
 	StartPrepSDKCall(SDKCall_Entity);
 	if (!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CBaseTrigger::IsTouching"))
-		SetFailState("Failed to find signature: CBaseTrigger::IsTouching");
+		SetFailState("Failed to find signature: \"CBaseTrigger::IsTouching\"");
 	PrepSDKCall_AddParameter(SDKType_CBaseEntity, SDKPass_Pointer);
 	PrepSDKCall_SetReturnInfo(SDKType_Bool, SDKPass_Plain);
 	if (!(g_hSDK_CBaseTrigger_IsTouching = EndPrepSDKCall()))
-		SetFailState("Failed to create SDKCall: CBaseTrigger::IsTouching");
+		SetFailState("Failed to create SDKCall: \"CBaseTrigger::IsTouching\"");
 
 	delete hGameData;
 }
