@@ -58,6 +58,7 @@ ConVar
 	g_cvRushDistance,
 	g_cvSpawnRangeMin,
 	g_cvSpawnRangeMax,
+	g_cvFirstSpawnTime,
 	g_cvSafeSpawnRange,
 	g_cvSpawnRange,
 	g_cvDiscardRange;
@@ -69,6 +70,7 @@ float
 	g_fExtraSize,
 	g_fSuicideTime,
 	g_fRushDistance,
+	g_fFirstSpawnTime,
 	g_fSpawnTimes[MAXPLAYERS + 1],
 	g_fActionTimes[MAXPLAYERS + 1];
 
@@ -182,6 +184,8 @@ public void OnPluginStart() {
 	g_cvSpawnRangeMin =				CreateConVar("ss_spawnrange_min",		"100.0",					"特感最小生成距离", _, true, 0.0);
 	g_cvSpawnRangeMax =				CreateConVar("ss_spawnrange_max",		"1500.0",					"特感最大生成距离", _, true, 0.0);
 
+	g_cvFirstSpawnTime = 			CreateConVar("ss_first_time",			"0.0",						"玩家离开安全区域后第一波特感的刷新时间", _, true, 0.0);
+
 	g_cvSafeSpawnRange = FindConVar("z_safe_spawn_range");
 	g_cvSpawnRange = FindConVar("z_spawn_range");
 	
@@ -207,6 +211,7 @@ public void OnPluginStart() {
 	g_cvExtraSize.AddChangeHook(CvarChanged_General);
 	g_cvSuicideTime.AddChangeHook(CvarChanged_General);
 	g_cvRushDistance.AddChangeHook(CvarChanged_General);
+	g_cvFirstSpawnTime.AddChangeHook(CvarChanged_General);
 
 	g_cvTankStatusAction.AddChangeHook(CvarChanged_TankStatus);
 	g_cvTankStatusLimits.AddChangeHook(CvarChanged_TankCustom);
@@ -294,7 +299,7 @@ public void L4D_OnFirstSurvivorLeftSafeArea_Post(int client) {
 	else if (g_iCurrentClass > -1)
 		PrintToChatAll("\x01[\x05%s\x01]\x04模式\x01", g_sZombieClass[g_iCurrentClass]);
 
-	StartCustomSpawnTimer(0.1);
+	StartCustomSpawnTimer(g_fFirstSpawnTime);
 	delete g_hSuicideTimer;
 	g_hSuicideTimer = CreateTimer(2.0, tmrForceSuicide, _, TIMER_REPEAT);
 }
@@ -602,10 +607,10 @@ void CvarChanged_Times(ConVar convar, const char[] oldValue, const char[] newVal
 }
 
 void GetCvars_Times() {
-	g_iSILimit = g_cvSILimit.IntValue;
-	g_fSpawnTimeMin = g_cvSpawnTimeMin.FloatValue;
-	g_fSpawnTimeMax = g_cvSpawnTimeMax.FloatValue;
-	g_iSpawnTimeMode = g_cvSpawnTimeMode.IntValue;
+	g_iSILimit =		g_cvSILimit.IntValue;
+	g_fSpawnTimeMin =	g_cvSpawnTimeMin.FloatValue;
+	g_fSpawnTimeMax =	g_cvSpawnTimeMax.FloatValue;
+	g_iSpawnTimeMode =	g_cvSpawnTimeMode.IntValue;
 
 	if (g_fSpawnTimeMin > g_fSpawnTimeMax)
 		g_fSpawnTimeMin = g_fSpawnTimeMax;
@@ -639,17 +644,18 @@ void CvarChanged_General(ConVar convar, const char[] oldValue, const char[] newV
 }
 
 void GetCvars_General() {
-	g_bScaleWeights = g_cvScaleWeights.BoolValue;
+	g_bScaleWeights =	g_cvScaleWeights.BoolValue;
 
 	for (int i; i < 6; i++)
 		g_iSpawnWeights[i] = g_cvSpawnWeights[i].IntValue;
 
-	g_iBaseLimit = g_cvBaseLimit.IntValue;
-	g_fExtraLimit = g_cvExtraLimit.FloatValue;
-	g_iBaseSize = g_cvBaseSize.IntValue;
-	g_fExtraSize = g_cvExtraSize.FloatValue;
-	g_fSuicideTime = g_cvSuicideTime.FloatValue;
-	g_fRushDistance = g_cvRushDistance.FloatValue;
+	g_iBaseLimit =		g_cvBaseLimit.IntValue;
+	g_fExtraLimit =		g_cvExtraLimit.FloatValue;
+	g_iBaseSize =		g_cvBaseSize.IntValue;
+	g_fExtraSize =		g_cvExtraSize.FloatValue;
+	g_fSuicideTime =	g_cvSuicideTime.FloatValue;
+	g_fRushDistance =	g_cvRushDistance.FloatValue;
+	g_fFirstSpawnTime =	g_cvFirstSpawnTime.FloatValue;
 }
 
 void CvarChanged_TankStatus(ConVar convar, const char[] oldValue, const char[] newValue) {
