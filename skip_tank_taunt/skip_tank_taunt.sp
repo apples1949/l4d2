@@ -57,12 +57,13 @@ public void OnPluginStart() {
 
 	if (g_bLateLoad) {
 		for (int i = 1; i <= MaxClients; i++) {
-			if (IsClientInGame(i)) {
-				if (IsClientInGame(i) && GetClientTeam(i) == 3 && IsPlayerAlive(i) && GetEntProp(i, Prop_Send, "m_zombieClass") == 8) {
-					AnimHookEnable(i, OnTankAnimPre);
-					if (IsFakeClient(i))
-						SDKHook(i, SDKHook_PreThink, OnPreThink);
-				}
+			if (!IsClientInGame(i))
+				continue;
+
+			if (GetClientTeam(i) == 3 && IsPlayerAlive(i) && GetEntProp(i, Prop_Send, "m_zombieClass") == 8) {
+				AnimHookEnable(i, OnTankAnimPre);
+				if (IsFakeClient(i))
+					SDKHook(i, SDKHook_PreThink, OnPreThink);
 			}
 		}
 	}
