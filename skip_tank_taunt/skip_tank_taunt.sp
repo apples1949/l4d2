@@ -1,13 +1,13 @@
 #pragma semicolon 1
 #pragma newdecls required
 #include <sourcemod>
-#include <sdkhooks>
+//#include <sdkhooks>
 #include <left4dhooks>
 
 #define PLUGIN_NAME				"Skip Tank Taunt"
 #define PLUGIN_AUTHOR			"sorallll"
 #define PLUGIN_DESCRIPTION		""
-#define PLUGIN_VERSION			"1.0.5"
+#define PLUGIN_VERSION			"1.0.6"
 #define PLUGIN_URL				"https://forums.alliedmods.net/showthread.php?t=336707"
 
 ConVar
@@ -17,6 +17,7 @@ float
 	g_fAnimationPlaybackRate;
 
 bool
+	g_bL4D2,
 	g_bLateLoad,
 	g_bTankClimb[MAXPLAYERS + 1];
 
@@ -29,19 +30,30 @@ public Plugin myinfo = {
 };
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max) {
+	EngineVersion engine = GetEngineVersion();
+	if (engine == Engine_Left4Dead)
+		g_bL4D2 = false;
+	else if (engine == Engine_Left4Dead2)
+		g_bL4D2 = true;
+	else {
+		strcopy(error, err_max, "Plugin only supports Left 4 Dead 1 & 2.");
+		return APLRes_SilentFailure;
+	}
+	
 	g_bLateLoad = late;
 	return APLRes_Success;
 }
 
 public void OnPluginStart() {
+	CreateConVar("skip_tank_taunt_version", PLUGIN_VERSION, "Skip Tank Taunt plugin version.", FCVAR_NOTIFY|FCVAR_DONTRECORD);
 	g_cvAnimationPlaybackRate = CreateConVar("tank_animation_playbackrate", "5.0", "Obstacle animation playback rate", _, true, 0.0);
 	g_cvAnimationPlaybackRate.AddChangeHook(CvarChanged);
 	AutoExecConfig(true);
 
-	HookEvent("round_end", Event_RoundEnd);
-	HookEvent("tank_spawn", Event_TankSpawn);
-	HookEvent("player_death", Event_PlayerDeath);
-	HookEvent("player_team", Event_PlayerTeam);
+	HookEvent("round_end",		Event_RoundEnd, EventHookMode_PostNoCopy);
+	HookEvent("tank_spawn",		Event_TankSpawn);
+	HookEvent("player_death",	Event_PlayerDeath);
+	HookEvent("player_team",	Event_PlayerTeam);
 
 	if (g_bLateLoad) {
 		for (int i = 1; i <= MaxClients; i++) {
@@ -112,29 +124,6 @@ void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast) {
 	}
 }
 
-/**
-* From left4dhooks.l4d2.cfg
-* L4D2_ACT_TERROR_CLIMB_24_FROM_STAND	718
-* L4D2_ACT_TERROR_CLIMB_36_FROM_STAND	719
-* L4D2_ACT_TERROR_CLIMB_38_FROM_STAND	720
-* L4D2_ACT_TERROR_CLIMB_48_FROM_STAND	721
-* L4D2_ACT_TERROR_CLIMB_50_FROM_STAND	722
-* L4D2_ACT_TERROR_CLIMB_60_FROM_STAND	723
-* L4D2_ACT_TERROR_CLIMB_70_FROM_STAND	724
-* L4D2_ACT_TERROR_CLIMB_72_FROM_STAND	725
-* L4D2_ACT_TERROR_CLIMB_84_FROM_STAND	726
-* L4D2_ACT_TERROR_CLIMB_96_FROM_STAND	727
-* L4D2_ACT_TERROR_CLIMB_108_FROM_STAND	728
-* L4D2_ACT_TERROR_CLIMB_115_FROM_STAND	729
-* L4D2_ACT_TERROR_CLIMB_120_FROM_STAND	730
-* L4D2_ACT_TERROR_CLIMB_130_FROM_STAND	731
-* L4D2_ACT_TERROR_CLIMB_132_FROM_STAND	732
-* L4D2_ACT_TERROR_CLIMB_144_FROM_STAND	733
-* L4D2_ACT_TERROR_CLIMB_150_FROM_STAND	734
-* L4D2_ACT_TERROR_CLIMB_156_FROM_STAND	735
-* L4D2_ACT_TERROR_CLIMB_166_FROM_STAND	736
-* L4D2_ACT_TERROR_CLIMB_168_FROM_STAND	737
-**/
 void OnPreThink(int client) {
 	switch (GetEntProp(client, Prop_Send, "m_zombieClass") == 8) {
 		case true: {
@@ -152,27 +141,28 @@ void OnPreThink(int client) {
 	}
 }
 
-/**
-* From left4dhooks.l4d2.cfg
-* L4D2_ACT_TERROR_HULK_VICTORY		792
-* L4D2_ACT_TERROR_HULK_VICTORY_B	793
-* L4D2_ACT_TERROR_RAGE_AT_ENEMY		794
-* L4D2_ACT_TERROR_RAGE_AT_KNOCKDOWN	795
-**/
 Action OnTankAnimPre(int client, int &anim) {
-	g_bTankClimb[client] = 718 <= anim <= 737;
-
-	switch (anim) {
-		case L4D2_ACT_TERROR_HULK_VICTORY, 
-		L4D2_ACT_TERROR_HULK_VICTORY_B, 
-		L4D2_ACT_TERROR_RAGE_AT_ENEMY, 
-		L4D2_ACT_TERROR_RAGE_AT_KNOCKDOWN: {
-			if (GetClientTeam(client) == 3 && IsPlayerAlive(client) && GetEntProp(client, Prop_Send, "m_zombieClass") == 8) {
+	if (g_bL4D2) {
+		if (L4D2_ACT_TERROR_HULK_VICTORY <= anim <= L4D2_ACT_TERROR_RAGE_AT_KNOCKDOWN) {
+			if (GetEntProp(client, Prop_Send, "m_zombieClass") == 8) {
 				anim = 0;
 				SetEntPropFloat(client, Prop_Send, "m_flCycle", 1000.0);
 				return Plugin_Changed;
 			}
 		}
+		else
+			g_bTankClimb[client] = L4D2_ACT_TERROR_CLIMB_24_FROM_STAND <= anim <= L4D2_ACT_TERROR_CLIMB_168_FROM_STAND;
+	}
+	else {
+		if (L4D1_ACT_TERROR_HULK_VICTORY <= anim <= L4D1_ACT_TERROR_RAGE_AT_KNOCKDOWN) {
+			if (GetEntProp(client, Prop_Send, "m_zombieClass") == 8) {
+				anim = 0;
+				SetEntPropFloat(client, Prop_Send, "m_flCycle", 1000.0);
+				return Plugin_Changed;
+			}
+		}
+		else
+			g_bTankClimb[client] = L4D1_ACT_TERROR_CLIMB_24_FROM_STAND <= anim <= L4D1_ACT_TERROR_CLIMB_168_FROM_STAND;
 	}
 
 	return Plugin_Continue;
