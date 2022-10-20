@@ -7,7 +7,7 @@
 #define PLUGIN_NAME				"Skip Tank Taunt"
 #define PLUGIN_AUTHOR			"sorallll"
 #define PLUGIN_DESCRIPTION		""
-#define PLUGIN_VERSION			"1.0.6"
+#define PLUGIN_VERSION			"1.0.7"
 #define PLUGIN_URL				"https://forums.alliedmods.net/showthread.php?t=336707"
 
 ConVar
@@ -30,16 +30,19 @@ public Plugin myinfo = {
 };
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max) {
-	EngineVersion engine = GetEngineVersion();
-	if (engine == Engine_Left4Dead)
-		g_bL4D2 = false;
-	else if (engine == Engine_Left4Dead2)
-		g_bL4D2 = true;
-	else {
-		strcopy(error, err_max, "Plugin only supports Left 4 Dead 1 & 2.");
-		return APLRes_SilentFailure;
+	switch (GetEngineVersion()) {
+		case Engine_Left4Dead:
+			g_bL4D2 = false;
+
+		case Engine_Left4Dead2:
+			g_bL4D2 = true;
+
+		default: {
+			strcopy(error, err_max, "Plugin only supports Left 4 Dead 1 & 2.");
+			return APLRes_SilentFailure;
+		}
 	}
-	
+
 	g_bLateLoad = late;
 	return APLRes_Success;
 }
@@ -156,7 +159,7 @@ Action OnTankAnimPre(int client, int &anim) {
 	}
 	else {
 		if (L4D1_ACT_TERROR_HULK_VICTORY <= anim <= L4D1_ACT_TERROR_RAGE_AT_KNOCKDOWN) {
-			if (GetEntProp(client, Prop_Send, "m_zombieClass") == 8) {
+			if (GetEntProp(client, Prop_Send, "m_zombieClass") == 5) {
 				anim = 0;
 				SetEntPropFloat(client, Prop_Send, "m_flCycle", 1000.0);
 				return Plugin_Changed;
