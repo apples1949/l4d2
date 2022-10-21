@@ -5,6 +5,7 @@
 
 ConVar
 	g_hLungeInterval,
+	g_hHunterPounceRe,
 	g_hFastPounceProximity,
 	g_hPounceVerticalAngle,
 	g_hPounceAngleMean,
@@ -25,6 +26,7 @@ float
 	g_fCanLungeTime[MAXPLAYERS + 1];
 
 bool
+	g_bIgnoreCrouch,
 	g_bHasQueuedLunge[MAXPLAYERS + 1];
 
 public Plugin myinfo = {
@@ -44,6 +46,7 @@ public void OnPluginStart() {
 	g_hAimOffsetSensitivityHunter =	CreateConVar("ai_aim_offset_sensitivity_hunter",	"180.0",	"If the hunter has a target, it will not straight pounce if the target's aim on the horizontal axis is within this radius", _, true, 0.0, true, 180.0);
 	g_hWallDetectionDistance = 		CreateConVar("ai_wall_detection_distance",			"-1.0",		"How far in front of himself infected bot will check for a wall. Use '-1' to disable feature");
 	g_hLungeInterval = 				FindConVar("z_lunge_interval");
+	g_hHunterPounceRe = 			FindConVar("hunter_pounce_ready_range");
 
 	g_hLungeInterval.AddChangeHook(CvarChanged);
 	g_hFastPounceProximity.AddChangeHook(CvarChanged);
@@ -57,6 +60,19 @@ public void OnPluginStart() {
 	HookEvent("round_end",		Event_RoundEnd, EventHookMode_PostNoCopy);
 	HookEvent("player_spawn",	Event_PlayerSpawn);
 	HookEvent("ability_use",	Event_AbilityUse);
+}
+
+public void OnAllPluginsLoaded() {
+	g_bIgnoreCrouch = false;
+
+	ConVar cv = FindConVar("l4d2_hunter_patch_convert_leap");
+	if (cv && cv.IntValue == 1) {
+		cv = FindConVar("l4d2_hunter_patch_crouch_pounce");
+		if (cv && cv.IntValue == 2)
+			g_bIgnoreCrouch = true;
+	}
+
+	g_hHunterPounceRe.FloatValue = g_bIgnoreCrouch ? 0.0 : 1000.0;
 }
 
 public void OnPluginEnd() {
@@ -77,12 +93,12 @@ void CvarChanged(ConVar convar, const char[] oldValue, const char[] newValue) {
 }
 
 void TweakSettings() {
-	FindConVar("z_pounce_crouch_delay").SetFloat(0.0);
-	FindConVar("z_pounce_silence_range").SetFloat(999999.0);
-	FindConVar("hunter_pounce_ready_range").SetFloat(1000.0);
-	FindConVar("hunter_pounce_max_loft_angle").SetFloat(0.0);
-	FindConVar("hunter_committed_attack_range").SetFloat(600.0);
-	FindConVar("hunter_leap_away_give_up_range").SetFloat(0.0);
+	OnAllPluginsLoaded();
+	FindConVar("z_pounce_crouch_delay").FloatValue =			0.0;
+	FindConVar("z_pounce_silence_range").FloatValue =			999999.0;
+	FindConVar("hunter_pounce_max_loft_angle").FloatValue =		0.0;
+	FindConVar("hunter_committed_attack_range").FloatValue =	600.0;
+	FindConVar("hunter_leap_away_give_up_range").FloatValue =	0.0;
 }
 
 void GetCvars() {
@@ -128,7 +144,7 @@ public Action OnPlayerRunCmd(int client, int &buttons) {
 
 	static int flags;
 	flags = GetEntityFlags(client);
-	if (flags & FL_DUCKING == 0 || flags & FL_ONGROUND == 0 || !GetEntProp(client, Prop_Send, "m_hasVisibleThreats"))
+	if (flags & FL_ONGROUND == 0 || (g_bIgnoreCrouch && flags & FL_DUCKING == 0) ||!GetEntProp(client, Prop_Send, "m_hasVisibleThreats"))
 		return Plugin_Continue;
 	
 	buttons &= ~IN_ATTACK2;

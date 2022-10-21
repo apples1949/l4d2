@@ -51,8 +51,8 @@ void GetCvars() {
 }
 
 void TweakSettings() {
-	FindConVar("z_vomit_fatigue").SetInt(0);
-	FindConVar("z_boomer_near_dist").SetInt(1);
+	FindConVar("z_vomit_fatigue").IntValue =	0;
+	FindConVar("z_boomer_near_dist").IntValue =	1;
 }
 
 void Event_AbilityUse(Event event, const char[] name, bool dontBroadcast) {
