@@ -60,13 +60,13 @@ Action tmrSpawnWitch(Handle timer) {
 	if (ent == -1)
 		return Plugin_Stop;
 
-	float vOrigin[3];
-	GetAbsOrigin(ent, vOrigin, true);
-	vOrigin[2] = 0.0;
-
 	int door = L4D_GetCheckpointLast();
 	if (door == -1)
 		return Plugin_Stop;
+
+	float vOrigin[3];
+	GetAbsOrigin(ent, vOrigin, true);
+	vOrigin[2] = 0.0;
 
 	float height;
 	float vPos[3];
