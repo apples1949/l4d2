@@ -1,6 +1,5 @@
-﻿"Phrases"
+"Phrases"
 {
-	//Command reply
 	//Sprayed by: {Name} ({SteamID})
 	"Sprayed"
 	{
@@ -14,10 +13,9 @@
 		"pl"			"Namalowane przez: {1} ({2})"
 		"pt"			"Colocado por: {1} ({2})"
 		"es"			"Spray de: {1} ({2})"
-		"chi"           "{1} ({2}) 的喷漆"
+		"chi"			"{1} ({2}) 的喷漆"
 	}
 
-	//Command reply
 	//Sprayed by: {Name}
 	"Sprayed Name"
 	{
@@ -30,6 +28,6 @@
 		"pl"			"Namalowane przez: %s"
 		"pt"			"Colocado por: %s"
 		"es"			"Spray de: %s"
-		"chi"           "%s 的喷漆"
+		"chi"			"%s 的喷漆"
 	}
 }
