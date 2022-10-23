@@ -160,8 +160,8 @@ public void OnPhrasesReady() {
 			continue;
 
 		value = kvMissions.GetInt("builtin");
-		kvMissions.GetString("DisplayTitle", translation, sizeof translation, "N/A");
 		if (al_missions.FindString(phrase) == -1) {
+			kvMissions.GetString("DisplayTitle", translation, sizeof translation, "N/A");
 			strcopy(esp.key, sizeof esp.key, phrase);
 			strcopy(esp.val, sizeof esp.val, !strcmp(translation, "N/A") ? phrase : translation);
 			esp.official = value;
@@ -174,8 +174,8 @@ public void OnPhrasesReady() {
 				if (!strcmp(phrase, "N/A") || FindCharInString(phrase, '/') != -1)
 					continue;
 
-				kvChapters.GetString("DisplayName", translation, sizeof translation, "N/A");
 				if (al_chapters.FindString(phrase) == -1) {
+					kvChapters.GetString("DisplayName", translation, sizeof translation, "N/A");
 					strcopy(esp.key, sizeof esp.key, phrase);
 					strcopy(esp.val, sizeof esp.val, !strcmp(translation, "N/A") ? phrase : translation);
 					esp.official = value;
