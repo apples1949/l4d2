@@ -4,13 +4,14 @@
 #include <sdkhooks>
 #include <adminmenu>
 #include <clientprefs>
+#include <dhooks>
 #include <left4dhooks>
 
 #define PLUGIN_PREFIX			"\x01[\x04SCS\x01]"
 #define PLUGIN_NAME				"Survivor Chat Select"
 #define PLUGIN_AUTHOR			"DeatChaos25, Mi123456 & Merudo, Lux, SilverShot"
 #define PLUGIN_DESCRIPTION		"Select a survivor character by typing their name into the chat."
-#define PLUGIN_VERSION			"1.7.4"
+#define PLUGIN_VERSION			"1.7.5"
 #define PLUGIN_URL				"https://forums.alliedmods.net/showthread.php?p=2399163#post2399163"
 
 #define GAMEDATA				"survivor_chat_select"
@@ -54,16 +55,17 @@ ConVar
 int
 	g_iTabHUDBar,
 	g_iOrignalSet,
+	g_iTransitioning[MAXPLAYERS + 1],
 	g_iSelectedClient[MAXPLAYERS + 1];
 
 bool
 	g_bCookie,
 	g_bAutoModel,
 	g_bAdminsOnly,
+	g_bTransition,
 	g_bInTransition,
 	g_bBlockUserMsg,
-	g_bIgnoreOnce[MAXPLAYERS + 1],
-	g_bTransitioning[MAXPLAYERS + 1];
+	g_bIgnoreOnce[MAXPLAYERS + 1];
 
 static const char
 	g_sSurvivorNames[][] = {
@@ -198,7 +200,7 @@ Action cmdCsc(int client, int args) {
 			continue;
 
 		FormatEx(info, sizeof info, "%d", GetClientUserId(i));
-		FormatEx(disp, sizeof disp, "%N - %s", i, GetModelName(i));
+		FormatEx(disp, sizeof disp, "%s - %N", GetModelName(i), i);
 		menu.AddItem(info, disp);
 	}
 
@@ -525,6 +527,7 @@ Action umSayText2(UserMsg msg_id, BfRead msg, const int[] players, int playersNu
 
 public void OnMapStart() {
 	g_cvPrecacheAllSur.IntValue = 1;
+
 	for (int i; i < sizeof g_sSurvivorModels; i++)
 		PrecacheModel(g_sSurvivorModels[i], true);
 }
@@ -682,8 +685,8 @@ public void OnEntityCreated(int entity, const char[] classname) {
 	if (classname[0] == 'p' && strcmp(classname[1], "layer", false) == 0) {
 		SDKHook(entity, SDKHook_SpawnPost, PlayerSpawnPost);
 
-		if (!g_bTransitioning[entity])
-			g_bTransitioning[entity] = IsTransitioning(GetClientUserId(entity));
+		if (!g_iTransitioning[entity])
+			g_iTransitioning[entity] = IsTransitioning(GetClientUserId(entity)) ? 1 : -1;
 	}
 
 	if (classname[0] == 's' && strcmp(classname[1], "urvivor_bot", false) == 0) {
@@ -698,13 +701,10 @@ void PlayerSpawnPost(int client) {
 
 	SDKUnhook(client, SDKHook_SpawnPost, PlayerSpawnPost);
 
-	if (g_bTransitioning[client]) {
-		g_bTransitioning[client] = false;
-		if (g_bInTransition)
-			return;
-	}
-	else
+	if (!g_bInTransition || g_iTransitioning[client] != 1)
 		RequestFrame(NextFrame_Player, GetClientUserId(client));
+
+	g_iTransitioning[client] = -1;
 }
 
 void BotSpawnPost(int client) {
@@ -736,8 +736,11 @@ void NextFrame_Bot(int client) {
 
 	if (g_bInTransition) {
 		int userid = GetEntProp(client, Prop_Send, "m_humanSpectatorUserID");
-		if (GetClientOfUserId(userid) && IsTransitioning(userid))
+		int player = GetClientOfUserId(userid);
+		if (player && IsTransitioning(userid)) {
+			g_iTransitioning[player] = -1;
 			return;
+		}
 	}
 
 	SetLeastCharacter(client);
@@ -1026,7 +1029,31 @@ void InitGameData() {
 	if (!(g_hSDK_KeyValues_GetInt = EndPrepSDKCall()))
 		SetFailState("Failed to create SDKCall: \"KeyValues::GetInt\"");
 
+	SetupDetours(hGameData);
+
 	delete hGameData;
+}
+
+void SetupDetours(GameData hGameData = null) {
+	DynamicDetour dDetour = DynamicDetour.FromConf(hGameData, "DD::InfoChangelevel::ChangeLevelNow");
+	if (!dDetour)
+		SetFailState("Failed to create DynamicDetour: \"DD::InfoChangelevel::ChangeLevelNow\"");
+
+	if (!dDetour.Enable(Hook_Post, DD_InfoChangelevel_ChangeLevelNow_Post))
+		SetFailState("Failed to detour post: \"DD::InfoChangelevel::ChangeLevelNow\"");
+}
+
+MRESReturn DD_InfoChangelevel_ChangeLevelNow_Post(Address pThis) {
+	g_bTransition = true;
+	return MRES_Ignored;
+}
+
+public void OnMapEnd() {
+	int val = g_bTransition ? 0 : -1;
+	for (int i; i <= MaxClients; i++)
+		g_iTransitioning[i] = val;
+
+	g_bTransition = false;
 }
 
 bool PrepRestoreBots() {
