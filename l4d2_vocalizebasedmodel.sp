@@ -30,7 +30,7 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 
 public void OnPluginStart() {
 	if (g_bLateLoad) {
-		for(int i = 1; i <= MaxClients; i++) {
+		for (int i = 1; i <= MaxClients; i++) {
 			if (IsClientInGame(i))
 				OnClientPutInServer(i);
 		}
