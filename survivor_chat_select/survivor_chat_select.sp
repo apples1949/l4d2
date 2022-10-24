@@ -736,11 +736,8 @@ void NextFrame_Bot(int client) {
 
 	if (g_bInTransition) {
 		int userid = GetEntProp(client, Prop_Send, "m_humanSpectatorUserID");
-		int player = GetClientOfUserId(userid);
-		if (player && IsTransitioning(userid)) {
-			g_iTransitioning[player] = -1;
+		if (GetClientOfUserId(userid) && IsTransitioning(userid))
 			return;
-		}
 	}
 
 	SetLeastCharacter(client);
