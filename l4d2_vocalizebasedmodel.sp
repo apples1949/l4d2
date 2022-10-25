@@ -5,9 +5,12 @@
 #pragma semicolon 1
 #pragma newdecls required
 
+#include <sourcemod>
 #include <sdkhooks>
-#include <sourcemod>  
 #include <sdktools>
+
+bool
+	g_bLateLoad;
 
 public Plugin myinfo = {
 	name = "Voice based on model",
@@ -17,7 +20,6 @@ public Plugin myinfo = {
 	url = "https://steamcommunity.com/profiles/76561198026784913/"
 }
 
-bool g_bLateLoad;
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max) {
 	if (GetEngineVersion() != Engine_Left4Dead2) {
 		strcopy(error, err_max, "Plugin only supports Left 4 Dead 2.");
