@@ -142,7 +142,7 @@ stock void CSayText2(int client, int author, const char[] szMessage) {
 #define PLUGIN_NAME				"Survivor Auto Respawn"
 #define PLUGIN_AUTHOR			"sorallll"
 #define PLUGIN_DESCRIPTION		"自动复活"
-#define PLUGIN_VERSION			"1.3.9"
+#define PLUGIN_VERSION			"1.4.0"
 #define PLUGIN_URL				"https://steamcommunity.com/id/sorallll"
 
 #define GAMEDATA				"survivor_auto_respawn"
@@ -174,13 +174,15 @@ ConVar
 	g_cvAllowAllBotSur;
 
 bool
+	g_bDisabled,
 	g_bRespawnBot,
 	g_bRespawnIdle,
 	g_bRespawnGoAFK,
 	g_bPunishType,
 	g_bPunishBot,
 	g_bBotSpawned,
-	g_bGiveType;
+	g_bGiveType,
+	g_bRemoveDeathModel;
 
 int
 	g_iRespawnTime,
@@ -191,26 +193,25 @@ int
 float
 	g_fCmdCooldown[MAXPLAYERS + 1];
 
-enum struct esWeapon {
+enum struct Weapon {
 	ConVar cvFlags;
 
 	int count;
 	int allowed[20];
 }
 
-esWeapon
-	g_esWeapon[MAX_SLOTS];
+Weapon
+	g_Weapon[MAX_SLOTS];
 
-enum struct esPlayer {
+enum struct Player {
 	Handle timer;
 
 	int respawned;
 	int countdown;
-	int deathModel;
 }
 
-esPlayer
-	g_esPlayer[MAXPLAYERS + 1];
+Player
+	g_Player[MAXPLAYERS + 1];
 
 static const char
 	g_sWeaponName[MAX_SLOTS][17][] = {
@@ -382,6 +383,12 @@ public Plugin myinfo = {
 	url = PLUGIN_URL
 };
 
+native bool L4D2_RemovePlayerDeathModel(int client);
+public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max) {
+	MarkNativeAsOptional("L4D2_RemovePlayerDeathModel");
+	return APLRes_Success;
+}
+
 public void OnPluginStart() {
 	InitData();
 	g_aMeleeScripts = new ArrayList(ByteCountToCells(64));
@@ -397,11 +404,11 @@ public void OnPluginStart() {
 	g_cvPunishBot =			CreateConVar("sar_punish_bot",		"0",		"是否对Bot进行复活惩罚 \n0=否,1=是.", CVAR_FLAGS);
 	g_cvBotSpawned =		CreateConVar("sar_bot_spawned",		"0",		"是否将Bot的复活次数计入最高已复活次数 \n0=否,1=是.", CVAR_FLAGS);
 	g_cvGiveType =			CreateConVar("sar_give_type",		"0",		"根据什么来给玩家装备. \n0=不给,1=根据每个槽位的设置,2=根据当前所有生还者的平均装备质量(仅主副武器).");
-	g_esWeapon[0].cvFlags =	CreateConVar("sar_respawn_slot0",	"131071",	"主武器给什么 \n0=不给,131071=所有,7=微冲,1560=霰弹,30720=狙击,31=Tier1,32736=Tier2,98304=Tier0.");
-	g_esWeapon[1].cvFlags =	CreateConVar("sar_respawn_slot1",	"5160",		"副武器给什么 \n0=不给,131071=所有.如果选中了近战且该近战在当前地图上未解锁,则会随机给一把.");
-	g_esWeapon[2].cvFlags =	CreateConVar("sar_respawn_slot2",	"7",		"投掷物给什么 \n0=不给,7=所有.", CVAR_FLAGS);
-	g_esWeapon[3].cvFlags =	CreateConVar("sar_respawn_slot3",	"1",		"槽位3给什么 \n0=不给,15=所有.", CVAR_FLAGS);
-	g_esWeapon[4].cvFlags =	CreateConVar("sar_respawn_slot4",	"3",		"槽位4给什么 \n0=不给,3=所有.", CVAR_FLAGS);
+	g_Weapon[0].cvFlags =	CreateConVar("sar_respawn_slot0",	"131071",	"主武器给什么 \n0=不给,131071=所有,7=微冲,1560=霰弹,30720=狙击,31=Tier1,32736=Tier2,98304=Tier0.");
+	g_Weapon[1].cvFlags =	CreateConVar("sar_respawn_slot1",	"5160",		"副武器给什么 \n0=不给,131071=所有.如果选中了近战且该近战在当前地图上未解锁,则会随机给一把.");
+	g_Weapon[2].cvFlags =	CreateConVar("sar_respawn_slot2",	"7",		"投掷物给什么 \n0=不给,7=所有.", CVAR_FLAGS);
+	g_Weapon[3].cvFlags =	CreateConVar("sar_respawn_slot3",	"1",		"槽位3给什么 \n0=不给,15=所有.", CVAR_FLAGS);
+	g_Weapon[4].cvFlags =	CreateConVar("sar_respawn_slot4",	"3",		"槽位4给什么 \n0=不给,3=所有.", CVAR_FLAGS);
 
 	g_cvSbAllBotGame = FindConVar("sb_all_bot_game");
 	g_cvAllowAllBotSur = FindConVar("allow_all_bot_survivor_team");
@@ -417,7 +424,7 @@ public void OnPluginStart() {
 	g_cvBotSpawned.AddChangeHook(CvarChanged);
 
 	for (int i; i < MAX_SLOTS; i++)
-		g_esWeapon[i].cvFlags.AddChangeHook(CvarChanged_Weapon);
+		g_Weapon[i].cvFlags.AddChangeHook(CvarChanged_Weapon);
 		
 	AutoExecConfig(true);
 
@@ -428,21 +435,25 @@ public void OnPluginEnd() {
 	StatsConditionPatch(false);
 }
 
-Action CommandListener_SpecNext(int client, char[] command, int argc) {
-	if (!g_iRespawnTime || !g_iRespawnLimit)
+public void OnAllPluginsLoaded() {
+	g_bRemoveDeathModel = GetFeatureStatus(FeatureType_Native, "L4D2_RemovePlayerDeathModel") == FeatureStatus_Available;
+}
+
+Action Listener_SpecNext(int client, char[] command, int argc) {
+	if (g_bDisabled)
 		return Plugin_Handled;
 
 	if (!client || !IsClientInGame(client) || IsFakeClient(client))
 		return Plugin_Handled;
 
-	if (GetClientTeam(client) != 2 || IsPlayerAlive(client) || g_esPlayer[client].timer)
+	if (GetClientTeam(client) != 2 || IsPlayerAlive(client) || g_Player[client].timer)
 		return Plugin_Continue;
 
 	float time = GetEngineTime();
 	if (g_fCmdCooldown[client] > time)
 		return Plugin_Handled;
 
-	g_fCmdCooldown[client] = time + 5.0;
+	g_fCmdCooldown[client] = time + 30.0;
 
 	PrintHintText(client, "聊天栏输入 !respawn 进行复活");
 	PrintToChat(client, "\x01聊天栏输入 \x05!respawn \x01进行复活.");
@@ -453,12 +464,17 @@ Action cmdRespawn(int client, int args) {
 	if (!client || !IsClientInGame(client) || IsFakeClient(client))
 		return Plugin_Handled;
 
+	if (g_bDisabled) {
+		PrintToChat(client, "请等待回合开始后再尝试.");
+		return Plugin_Handled;
+	}
+
 	if (!g_iRespawnTime || !g_iRespawnLimit) {
 		PrintToChat(client, "复活功能已禁用.");
 		return Plugin_Handled;
 	}
 
-	if (g_esPlayer[client].timer) {
+	if (g_Player[client].timer) {
 		PrintToChat(client, "复活倒计时已在运行中");
 		return Plugin_Handled;
 	}
@@ -469,8 +485,8 @@ Action cmdRespawn(int client, int args) {
 	}
 
 	if (CalculateRespawnLimit(client)) {
-		delete g_esPlayer[client].timer;
-		g_esPlayer[client].timer = CreateTimer(1.0, tmrRespawnSurvivor, GetClientUserId(client), TIMER_REPEAT);
+		delete g_Player[client].timer;
+		g_Player[client].timer = CreateTimer(1.0, tmrRespawnSurvivor, GetClientUserId(client), TIMER_REPEAT);
 	}
 
 	return Plugin_Handled;
@@ -516,7 +532,7 @@ void Toggle(bool enable) {
 		HookEvent("player_bot_replace",		Event_PlayerBotReplace);
 		HookEvent("bot_player_replace",		Event_BotPlayerReplace);
 
-		AddCommandListener(CommandListener_SpecNext, "spec_next");
+		AddCommandListener(Listener_SpecNext, "spec_next");
 
 	}
 	else if (enabled && !enable) {
@@ -531,11 +547,11 @@ void Toggle(bool enable) {
 		UnhookEvent("player_bot_replace",		Event_PlayerBotReplace);
 		UnhookEvent("bot_player_replace",		Event_BotPlayerReplace);
 
-		RemoveCommandListener(CommandListener_SpecNext, "spec_next");
+		RemoveCommandListener(Listener_SpecNext, "spec_next");
 
 		for (int i = 1; i <= MaxClients; i++) {
-			g_esPlayer[i].respawned = 0;
-			delete g_esPlayer[i].timer;
+			g_Player[i].respawned = 0;
+			delete g_Player[i].timer;
 		}
 	}
 }
@@ -543,42 +559,37 @@ void Toggle(bool enable) {
 void GetCvars_Weapon() {
 	int count;
 	for (int i; i < MAX_SLOTS; i++) {
-		g_esWeapon[i].count = 0;
-		if (!g_esWeapon[i].cvFlags.BoolValue || !GetSlotAllowed(i))
+		g_Weapon[i].count = 0;
+		if (!g_Weapon[i].cvFlags.BoolValue || !IsNullSlot(i))
 			count++;
 	}
 
 	g_bGiveType = count < MAX_SLOTS ? g_cvGiveType.BoolValue : false;
 }
 
-int GetSlotAllowed(int slot) {
-	for (int i; i < 17; i++) {
+bool IsNullSlot(int slot) {
+	for (int i; i < sizeof g_sWeaponName[]; i++) {
 		if (g_sWeaponName[slot][i][0] == '\0')
 			break;
 
-		if ((1 << i) & g_esWeapon[slot].cvFlags.IntValue)
-			g_esWeapon[slot].allowed[g_esWeapon[slot].count++] = i;
+		if ((1 << i) & g_Weapon[slot].cvFlags.IntValue)
+			g_Weapon[slot].allowed[g_Weapon[slot].count++] = i;
 	}
-	return g_esWeapon[slot].count;
-}
-
-public void L4D2_OnSurvivorDeathModelCreated(int iClient, int deathModel) {
-	g_esPlayer[iClient].deathModel = EntIndexToEntRef(deathModel);
+	return g_Weapon[slot].count > 0;
 }
 
 public void OnClientDisconnect_Post(int client) {
-	delete g_esPlayer[client].timer;
-	g_esPlayer[client].respawned = 0;
+	delete g_Player[client].timer;
+	g_Player[client].respawned = 0;
 	RemoveSurDeathModel(client);
 }
 
 public void OnMapEnd() {
+	g_bDisabled = true;
 	g_iMaxRespawned = 0;
-	float time = GetEngineTime() + 3600.0;
 	for (int i = 1; i <= MaxClients; i++) {
-		g_fCmdCooldown[i] = time;
-		delete g_esPlayer[i].timer;
-		g_esPlayer[i].respawned = 0;
+		delete g_Player[i].timer;
+		g_Player[i].respawned = 0;
 	}
 }
 
@@ -587,10 +598,9 @@ void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast) {
 }
 
 void Event_RoundStart(Event event, const char[] name, bool dontBroadcast) {
-	for (int i = 1; i <= MaxClients; i++) {
-		g_fCmdCooldown[i] = 0.0;
-		delete g_esPlayer[i].timer;
-	}
+	g_bDisabled = false;
+	for (int i = 1; i <= MaxClients; i++)
+		delete g_Player[i].timer;
 }
 
 void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast) {
@@ -603,7 +613,7 @@ void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast) {
 		return;
 	}
 
-	if (g_esPlayer[client].timer || GetClientTeam(client) != 2)
+	if (g_Player[client].timer || GetClientTeam(client) != 2)
 		return;
 
 	bool isBot = IsFakeClient(client);
@@ -614,8 +624,8 @@ void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast) {
 		return;
 
 	if (CalculateRespawnLimit(client)) {
-		delete g_esPlayer[client].timer;
-		g_esPlayer[client].timer = CreateTimer(1.0, tmrRespawnSurvivor, event.GetInt("userid"), TIMER_REPEAT);
+		delete g_Player[client].timer;
+		g_Player[client].timer = CreateTimer(1.0, tmrRespawnSurvivor, event.GetInt("userid"), TIMER_REPEAT);
 	}
 }
 
@@ -637,23 +647,23 @@ int GetIdlePlayerOfBot(int client) {
 
 void Event_PlayerDeath(Event event, const char[] name, bool dontBroadcast) {
 	int client = GetClientOfUserId(event.GetInt("userid"));
-	if (!client || g_esPlayer[client].timer || !IsClientInGame(client) || (!g_bRespawnBot && IsFakeClient(client)) || GetClientTeam(client) != 2)
+	if (!client || g_Player[client].timer || !IsClientInGame(client) || (!g_bRespawnBot && IsFakeClient(client)) || GetClientTeam(client) != 2)
 		return;
 
 	if (CalculateRespawnLimit(client)) {
-		delete g_esPlayer[client].timer;
-		g_esPlayer[client].timer = CreateTimer(1.0, tmrRespawnSurvivor, event.GetInt("userid"), TIMER_REPEAT);
+		delete g_Player[client].timer;
+		g_Player[client].timer = CreateTimer(1.0, tmrRespawnSurvivor, event.GetInt("userid"), TIMER_REPEAT);
 	}
 }
 
 void Event_PlayerBotReplace(Event event, char[] name, bool dontBroadcast) {
 	int bot = GetClientOfUserId(event.GetInt("bot"));
-	if (!bot || g_esPlayer[bot].timer || !IsClientInGame(bot) || (!g_bRespawnBot && IsFakeClient(bot)) || GetClientTeam(bot) != 2 || IsPlayerAlive(bot))
+	if (!bot || g_Player[bot].timer || !IsClientInGame(bot) || (!g_bRespawnBot && IsFakeClient(bot)) || GetClientTeam(bot) != 2 || IsPlayerAlive(bot))
 		return;
 
 	if (CalculateRespawnLimit(bot)) {
-		delete g_esPlayer[bot].timer;
-		g_esPlayer[bot].timer = CreateTimer(1.0, tmrRespawnSurvivor, event.GetInt("bot"), TIMER_REPEAT);
+		delete g_Player[bot].timer;
+		g_Player[bot].timer = CreateTimer(1.0, tmrRespawnSurvivor, event.GetInt("bot"), TIMER_REPEAT);
 	}
 }
 
@@ -662,25 +672,28 @@ void Event_BotPlayerReplace(Event event, const char[] name, bool dontBroadcast) 
 		return;
 
 	int player = GetClientOfUserId(event.GetInt("player"));
-	if (!player || g_esPlayer[player].timer || !IsClientInGame(player) || GetClientTeam(player) != 2 || IsPlayerAlive(player))
+	if (!player || g_Player[player].timer || !IsClientInGame(player) || GetClientTeam(player) != 2 || IsPlayerAlive(player))
 		return;
 
 	if (CalculateRespawnLimit(player)) {
-		delete g_esPlayer[player].timer;
-		g_esPlayer[player].timer = CreateTimer(1.0, tmrRespawnSurvivor, event.GetInt("player"), TIMER_REPEAT);
+		delete g_Player[player].timer;
+		g_Player[player].timer = CreateTimer(1.0, tmrRespawnSurvivor, event.GetInt("player"), TIMER_REPEAT);
 	}
 }
 
 bool CalculateRespawnLimit(int client) {
+	if (g_bDisabled)
+		return false;
+
 	bool isBot = IsFakeClient(client);
-	if (g_esPlayer[client].respawned >= g_iRespawnLimit) {
+	if (g_Player[client].respawned >= g_iRespawnLimit) {
 		if (!isBot)
 			PrintHintText(client, "复活次数已耗尽, 请等待队友救援");
 
 		return false;
 	}
 
-	g_esPlayer[client].countdown = g_iRespawnTime + ((!g_bPunishBot && isBot) ? 0 : g_iPunishTime * (g_bPunishType ? g_iMaxRespawned : g_esPlayer[client].respawned));
+	g_Player[client].countdown = g_iRespawnTime + ((!g_bPunishBot && isBot) ? 0 : g_iPunishTime * (g_bPunishType ? g_iMaxRespawned : g_Player[client].respawned));
 	return true;
 }
 
@@ -689,22 +702,22 @@ Action tmrRespawnSurvivor(Handle timer, int client) {
 		return Plugin_Stop;
 
 	if (IsClientInGame(client) && GetClientTeam(client) == 2 && !IsPlayerAlive(client)) {
-		if (g_esPlayer[client].countdown > 0) {
+		if (g_Player[client].countdown > 0) {
 			if (!IsFakeClient(client))
-				PrintCenterText(client, "%d 秒后复活", g_esPlayer[client].countdown);
+				PrintCenterText(client, "%d 秒后复活", g_Player[client].countdown);
 
-			g_esPlayer[client].countdown--;
+			g_Player[client].countdown--;
 		}
 		else {
 			RespawnSurvivor(client);
-			g_esPlayer[client].timer = null;
+			g_Player[client].timer = null;
 			return Plugin_Stop;
 		}
 
 		return Plugin_Continue;
 	}
 
-	g_esPlayer[client].timer = null;
+	g_Player[client].timer = null;
 	return Plugin_Stop;	
 }
 
@@ -712,17 +725,17 @@ void RespawnSurvivor(int client) {
 	RoundRespawn(client);
 	GiveWeapon(client);
 	TeleportToSurvivor(client);
-	g_esPlayer[client].respawned++;
+	g_Player[client].respawned++;
 
 	bool isBot = IsFakeClient(client);
-	if ((!isBot || g_bBotSpawned) && g_esPlayer[client].respawned > g_iMaxRespawned)
-		g_iMaxRespawned = g_esPlayer[client].respawned;
+	if ((!isBot || g_bBotSpawned) && g_Player[client].respawned > g_iMaxRespawned)
+		g_iMaxRespawned = g_Player[client].respawned;
 
 	if (!isBot) {
 		if (g_bRespawnGoAFK && CanIdle(client))
 			GoAFKTimer(client, 0.1);
 
-		CPrintToChat(client, "{olive}剩余复活次数 {default}-> {blue}%d", g_iRespawnLimit - g_esPlayer[client].respawned);
+		CPrintToChat(client, "{olive}剩余复活次数 {default}-> {blue}%d", g_iRespawnLimit - g_Player[client].respawned);
 	}
 }
 
@@ -739,28 +752,21 @@ bool CanIdle(int client) {
 }
 
 void RemoveSurDeathModel(int client) {
-	if (!IsValidEntRef(g_esPlayer[client].deathModel))
-		return;
-
-	RemoveEntity(g_esPlayer[client].deathModel);
-	g_esPlayer[client].deathModel = 0;
-}
-
-bool IsValidEntRef(int entity) {
-	return entity && EntRefToEntIndex(entity) != INVALID_ENT_REFERENCE;
+	if (g_bRemoveDeathModel)
+		L4D2_RemovePlayerDeathModel(client);
 }
 
 void GiveWeapon(int client) {
 	if (!g_bGiveType)
 		return;
 
-	RemovePlayerWeapons(client);
+	RemoveAllWeapons(client);
 
 	for (int i = 4; i >= 2; i--) {
-		if (!g_esWeapon[i].count)
+		if (!g_Weapon[i].count)
 			continue;
 
-		GivePlayerItem(client, g_sWeaponName[i][g_esWeapon[i].allowed[GetRandomInt(0, g_esWeapon[i].count - 1)]]);
+		GivePlayerItem(client, g_sWeaponName[i][g_Weapon[i].allowed[GetRandomInt(0, g_Weapon[i].count - 1)]]);
 	}
 
 	GiveSecondary(client);
@@ -774,7 +780,7 @@ void GiveWeapon(int client) {
 	}
 }
 
-void RemovePlayerWeapons(int client) {
+void RemoveAllWeapons(int client) {
 	int weapon;
 	for (int i; i < MAX_SLOTS; i++) {
 		if ((weapon = GetPlayerWeaponSlot(client, i)) > MaxClients) {
@@ -785,8 +791,8 @@ void RemovePlayerWeapons(int client) {
 }
 
 void GiveSecondary(int client) {
-	if (g_esWeapon[1].count) {
-		int iRandom = g_esWeapon[1].allowed[GetRandomInt(0, g_esWeapon[1].count - 1)];
+	if (g_Weapon[1].count) {
+		int iRandom = g_Weapon[1].allowed[GetRandomInt(0, g_Weapon[1].count - 1)];
 		if (iRandom > 2)
 			GiveMelee(client, g_sWeaponName[1][iRandom]);
 		else
@@ -795,15 +801,15 @@ void GiveSecondary(int client) {
 }
 
 void GivePresetPrimary(int client) {
-	if (g_esWeapon[0].count)
-		GivePlayerItem(client, g_sWeaponName[0][g_esWeapon[0].allowed[GetRandomInt(0, g_esWeapon[0].count - 1)]]);
+	if (g_Weapon[0].count)
+		GivePlayerItem(client, g_sWeaponName[0][g_Weapon[0].allowed[GetRandomInt(0, g_Weapon[0].count - 1)]]);
 }
 
 bool IsWeaponTier1(int weapon) {
-	char sWeapon[32];
-	GetEntityClassname(weapon, sWeapon, sizeof sWeapon);
+	char cls[32];
+	GetEntityClassname(weapon, cls, sizeof cls);
 	for (int i; i < 5; i++) {
-		if (strcmp(sWeapon, g_sWeaponName[0][i], false) == 0)
+		if (strcmp(cls, g_sWeaponName[0][i], false) == 0)
 			return true;
 	}
 	return false;
@@ -832,39 +838,35 @@ void GiveAveragePrimary(int client) {
 	}
 }
 
-void TeleportToSurvivor(int client, bool random = true) {
-	int player = 1;
+void TeleportToSurvivor(int client) {
+	int target = 1;
 	ArrayList aClients = new ArrayList(2);
 
-	for (; player <= MaxClients; player++) {
-		if (player == client || !IsClientInGame(player) || GetClientTeam(player) != 2 || !IsPlayerAlive(player))
+	for (; target <= MaxClients; target++) {
+		if (target == client || !IsClientInGame(target) || GetClientTeam(target) != 2 || !IsPlayerAlive(target))
 			continue;
 	
-		aClients.Set(aClients.Push(!GetEntProp(player, Prop_Send, "m_isIncapacitated") ? 0 : !GetEntProp(player, Prop_Send, "m_isHangingFromLedge") ? 1 : 2), player, 1);
+		aClients.Set(aClients.Push(!GetEntProp(target, Prop_Send, "m_isIncapacitated") ? 0 : !GetEntProp(target, Prop_Send, "m_isHangingFromLedge") ? 1 : 2), target, 1);
 	}
 
 	if (!aClients.Length)
-		player = 0;
+		target = 0;
 	else {
 		aClients.Sort(Sort_Descending, Sort_Integer);
 
-		if (!random)
-			player = aClients.Get(aClients.Length - 1, 1);
-		else {
-			player = aClients.Length - 1;
-			player = aClients.Get(GetRandomInt(aClients.FindValue(aClients.Get(player, 0)), player), 1);
-		}
+		target = aClients.Length - 1;
+		target = aClients.Get(GetRandomInt(aClients.FindValue(aClients.Get(target, 0)), target), 1);
 	}
 
 	delete aClients;
 
-	if (player) {
+	if (target) {
 		SetInvincibilityTime(client, 1.5);
 		SetEntProp(client, Prop_Send, "m_bDucked", 1);
 		SetEntProp(client, Prop_Send, "m_fFlags", GetEntProp(client, Prop_Send, "m_fFlags")|FL_DUCKING);
 
 		float vPos[3];
-		GetClientAbsOrigin(player, vPos);
+		GetClientAbsOrigin(target, vPos);
 		TeleportEntity(client, vPos, NULL_VECTOR, NULL_VECTOR);
 	}
 }
@@ -879,7 +881,7 @@ public void OnMapStart() {
 	}
 
 	char buffer[64];
-	for (i = 3; i < 17; i++) {
+	for (i = 3; i < sizeof g_sWeaponName[]; i++) {
 		FormatEx(buffer, sizeof buffer, "scripts/melee/%s.txt", g_sWeaponName[1][i]);
 		if (!IsGenericPrecached(buffer))
 			PrecacheGeneric(buffer, true);
