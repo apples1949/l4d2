@@ -156,6 +156,10 @@ public void OnPluginStart() {
 		g_smSurvivorModels.SetValue(g_sSurvivorModels[i], i);
 }
 
+public void OnAllPluginsLoaded() {
+	g_pDirector = L4D_GetPointer(POINTER_DIRECTOR);
+}
+
 public void OnAdminMenuReady(Handle topmenu) {
 	TopMenu tmenu = TopMenu.FromHandle(topmenu);
 	if (tmenu == g_TopMenu)
@@ -527,6 +531,7 @@ Action umSayText2(UserMsg msg_id, BfRead msg, const int[] players, int playersNu
 
 public void OnMapStart() {
 	g_cvPrecacheAllSur.IntValue = 1;
+	g_iOrignalSet = L4D2_GetSurvivorSetMap();
 
 	for (int i; i < sizeof g_sSurvivorModels; i++)
 		PrecacheModel(g_sSurvivorModels[i], true);
@@ -534,8 +539,6 @@ public void OnMapStart() {
 
 public void OnConfigsExecuted() {
 	GetCvars();
-	g_iOrignalSet = L4D2_GetSurvivorSetMap();
-	g_pDirector = L4D_GetPointer(POINTER_DIRECTOR);
 }
 
 void CvarChanged(ConVar convar, const char[] oldValue, const char[] newValue) {
