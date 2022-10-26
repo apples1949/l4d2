@@ -219,8 +219,8 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 public void OnPluginStart() {
 	g_smCleanList = new StringMap();
 	g_smWhiteList = new StringMap();
-	vInitCleanTrie();
-	vLoadWhiteList();
+	InitCleanTrie();
+	LoadWhiteList();
 	
 	g_cvEnable= CreateConVar("weapon_cleaner_enable", "1", "0:Disable, 1:Enable Plugin", FCVAR_NONE);
 	g_cvSpawn= CreateConVar("weapon_cleaner_spawn", "2", "0:Detect all weapons when spawned, 1:Ignore weapons spawned by map, 2: Ignore weapons when the round starts (thirparty plugins)");
@@ -243,30 +243,30 @@ public void OnPluginStart() {
 	RegAdminCmd("sm_wclear", cmdClearWeapon, ADMFLAG_CHEATS, "clear weapons all weapons by name or/and classname, examples: 'sm_wclean pistol' 'sm_wclear weapon_pistol' 'sm_wclean pistol weapon_spawn'");
 	RegAdminCmd("sm_wclearall", cmdClearAllWeapons, ADMFLAG_CHEATS, "clear all weapons");
 	
-	g_cvEnable.AddChangeHook(vCvarChanged_Enable);
-	g_cvSpawn.AddChangeHook(vCvarsChanged);
-	g_cvDrop.AddChangeHook(vCvarsChanged);
-	g_cvClass.AddChangeHook(vCvarsChanged);
-	g_cvPhysics.AddChangeHook(vCvarsChanged);
-	g_cvAmmo.AddChangeHook(vCvarsChanged);
-	g_cvDelay.AddChangeHook(vCvarsChanged);
-	g_cvVisible.AddChangeHook(vCvarsChanged);
-	g_cvVisibleMode.AddChangeHook(vCvarsChanged);
-	g_cvEffectMode.AddChangeHook(vCvarsChanged);
-	g_cvEffectTime.AddChangeHook(vCvarsChanged);
-	g_cvEffectGlowColor.AddChangeHook(vCvarsChanged);
-	g_cvEffectGlowRange.AddChangeHook(vCvarsChanged);
+	g_cvEnable.AddChangeHook(CvarChanged_Enable);
+	g_cvSpawn.AddChangeHook(CvarsChanged);
+	g_cvDrop.AddChangeHook(CvarsChanged);
+	g_cvClass.AddChangeHook(CvarsChanged);
+	g_cvPhysics.AddChangeHook(CvarsChanged);
+	g_cvAmmo.AddChangeHook(CvarsChanged);
+	g_cvDelay.AddChangeHook(CvarsChanged);
+	g_cvVisible.AddChangeHook(CvarsChanged);
+	g_cvVisibleMode.AddChangeHook(CvarsChanged);
+	g_cvEffectMode.AddChangeHook(CvarsChanged);
+	g_cvEffectTime.AddChangeHook(CvarsChanged);
+	g_cvEffectGlowColor.AddChangeHook(CvarsChanged);
+	g_cvEffectGlowRange.AddChangeHook(CvarsChanged);
 	
-	vEnablePlugin();
+	EnablePlugin();
 }
 
 public void OnPluginEnd() {
-	vDisablePlugin();
+	DisablePlugin();
 }
 
 public void OnMapEnd() {
-	vStopCleanTimer();
-	vStopCheckSpawnTimer();
+	StopCleanTimer();
+	StopCheckSpawnTimer();
 	g_bSpawnedWeapons = false;
 }
 
@@ -274,7 +274,7 @@ Action cmdReloadWhiteList(int client, int args) {
 	if (!g_bEnable)
 		return Plugin_Continue;
 	
-	vLoadWhiteList();
+	LoadWhiteList();
 	ReplyToCommand(client, "reloaded: %s", CFG_WHITELIST);
 	return Plugin_Handled;
 }
@@ -289,9 +289,9 @@ Action cmdCleanWeapon(int client, int args) {
 		GetCmdArg(1, arg1, sizeof arg1);
 		GetCmdArg(2, arg2, sizeof arg2);
 		if (strncmp(arg1, "weapon_", 7) == 0)
-			count = iCleanWeapons(arg1, arg2);
+			count = CleanWeapons(arg1, arg2);
 		else
-			count = iCleanWeapons(arg2, arg1);
+			count = CleanWeapons(arg2, arg1);
 		
 		ReplyToCommand(client, "cleaned (%i) %s %s",count, arg1, arg2);
 	}
@@ -305,7 +305,7 @@ Action cmdCleanAllWeapons(int client, int args) {
 	if (!g_bEnable)
 		return Plugin_Continue;
 	
-	int count = iCleanWeapons();
+	int count = CleanWeapons();
 	ReplyToCommand(client, "cleaned all (%i) weapons no equipped", count);
 	return Plugin_Handled;
 }
@@ -320,9 +320,9 @@ Action cmdClearWeapon(int client, int args) {
 		GetCmdArg(1, arg1, sizeof arg1);
 		GetCmdArg(2, arg2, sizeof arg2);
 		if (strncmp(arg1, "weapon_", 7) == 0)
-			count = iCleanWeapons(arg1, arg2, true);
+			count = CleanWeapons(arg1, arg2, true);
 		else
-			count = iCleanWeapons(arg2, arg1, true);
+			count = CleanWeapons(arg2, arg1, true);
 		
 		ReplyToCommand(client, "cleaned all (%i) %s %s", count, arg1, arg2);
 	}
@@ -336,55 +336,55 @@ Action cmdClearAllWeapons(int client, int args) {
 	if (!g_bEnable)
 		return Plugin_Continue;
 	
-	int count = iCleanWeapons(_, _, true);
+	int count = CleanWeapons(_, _, true);
 	ReplyToCommand(client, "cleaned all (%i) weapons", count);
 	return Plugin_Handled;
 }
 
-Action sm_drop_Listener(int client, const char[] command, int argc) {
-	if (bIsValidClient(client)) {
+Action Listener_sm_drop(int client, const char[] command, int argc) {
+	if (IsValidClient(client)) {
 		int weapon = GetEntPropEnt(client, Prop_Data, "m_hActiveWeapon");
-		if (bIsValidEnt(weapon) && bIsItemToClean(weapon)) {
-			vRemoveEffects(weapon);
-			vSetWeaponClean(weapon);
+		if (IsValidEnt(weapon) && IsItemToClean(weapon)) {
+			RemoveEffects(weapon);
+			SetWeaponClean(weapon);
 		}
 	}
 
 	return Plugin_Continue;
 }
 
-void vCvarChanged_Enable(ConVar convar, const char[] oldValue, const char[] newValue) {
+void CvarChanged_Enable(ConVar convar, const char[] oldValue, const char[] newValue) {
 	g_bEnable = convar.BoolValue;
 	if (g_bEnable && (strcmp(oldValue, "0") == 0))
-		vReloadPlugin();
+		ReloadPlugin();
 	else if (!g_bEnable && (strcmp(oldValue, "1") == 0))
-		vDisablePlugin();
+		DisablePlugin();
 }
 
-void vCvarsChanged(ConVar convar, const char[] oldValue, const char[] newValue) {
-	vGetCvars();
+void CvarsChanged(ConVar convar, const char[] oldValue, const char[] newValue) {
+	GetCvars();
 }
 
-void vEnablePlugin() {
+void EnablePlugin() {
 	g_bEnable = g_cvEnable.BoolValue;
 	if (g_bEnable && g_bLateLoad) {
-		vReloadPlugin();
+		ReloadPlugin();
 	}
 	else if (g_bEnable) {
-		vHookEvents();
-		AddCommandListener(sm_drop_Listener, "sm_drop");
+		HookEvents();
+		AddCommandListener(Listener_sm_drop, "sm_drop");
 	}
-	vGetCvars();
+	GetCvars();
 }
 
-void vHookEvents() {
+void HookEvents() {
 	HookEvent("round_end", Event_RoundEnd);
 	HookEvent("round_start", Event_RoundStart);
 	HookEvent("player_spawn", Event_PlayerSpawn);
 	HookEvent("weapon_drop", Event_WeaponDrop);
 }
 
-void vGetCvars() {
+void GetCvars() {
 	g_bDrop			     = g_cvDrop.BoolValue;
 	g_bPhisics		     = g_cvPhysics.BoolValue;
 	g_bAmmo			     = g_cvAmmo.BoolValue;
@@ -398,10 +398,10 @@ void vGetCvars() {
 	g_iEffectGlowRange   = g_cvEffectGlowRange.IntValue;
 	char sTemp[16];
 	g_cvEffectGlowColor.GetString(sTemp, sizeof sTemp);
-	g_iEffectGlowColor = iStringRGBToIntRGB(sTemp);
+	g_iEffectGlowColor = StringRGBToIntRGB(sTemp);
 }
 
-void vInitCleanTrie() {
+void InitCleanTrie() {
 	int i;
 	for (; i < sizeof g_sItemGun; i++)
 		g_smCleanList.SetString(g_sModelGun[i], g_sItemGun[i]);
@@ -422,7 +422,7 @@ void vInitCleanTrie() {
 		g_smCleanList.SetString(g_sModelCarry[i], g_sItemCarry[i]);
 }
 
-void vLoadWhiteList() {
+void LoadWhiteList() {
 	//get file
 	char sPath[PLATFORM_MAX_PATH];
 	BuildPath(Path_SM, sPath, sizeof sPath, "%s", CFG_WHITELIST);
@@ -526,7 +526,7 @@ void vLoadWhiteList() {
 	delete hFile;
 }
 
-int iCleanWeapons(char[] classname = "", char[] itemname = "", bool equipped = false) {
+int CleanWeapons(char[] classname = "", char[] itemname = "", bool equipped = false) {
 	
 	int count, ent = MaxClients + 1;
 	char name[64];
@@ -534,16 +534,16 @@ int iCleanWeapons(char[] classname = "", char[] itemname = "", bool equipped = f
 	strcopy(class, sizeof class, classname[0] == '\0' ? "*" : classname);
 	while ((ent = FindEntityByClassname(ent, class)) != -1) {
 		GetEntityClassname(ent, name, sizeof name);
-		if (!bIsWeapon(name) && !bIsPropPhysic(name))
+		if (!IsWeapon(name) && !IsPropPhysic(name))
 			continue;
 	
 		if (itemname[0] != '\0') {
-			vGetItemName(ent, name, sizeof name);
+			GetItemName(ent, name, sizeof name);
 			if (strcmp(name, itemname) != 0)
 				continue;
 		}
 		
-		if (!equipped && bIsWeaponEquipped(ent))
+		if (!equipped && IsWeaponEquipped(ent))
 			continue;
 
 		RemoveEntity(ent);
@@ -554,18 +554,10 @@ int iCleanWeapons(char[] classname = "", char[] itemname = "", bool equipped = f
 }
 
 void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast) {
-	vLoadWhiteList();
-	vStopCleanTimer();
-	vStopCheckSpawnTimer();
+	LoadWhiteList();
+	StopCleanTimer();
+	StopCheckSpawnTimer();
 	g_bSpawnedWeapons = false;
-
-	char cls[13];
-	int iEnt = MaxClients + 1;
-	while ((iEnt = FindEntityByClassname(iEnt, "*")) != -1) {
-		GetEntityClassname(iEnt, cls, sizeof cls);
-		if (strncmp(cls, "weapon_", 7) == 0 || strcmp(cls, "prop_physics") == 0)
-			RemoveEntity(iEnt);
-	}
 }
 
 //postcheck weapons spowned on map or when round started
@@ -574,7 +566,7 @@ void Event_RoundStart(Event event, const char[] name, bool dontBroadcast) {
 		vCheckSpawn();
 	g_iRoundStart = 1;
 
-	vStartTimerClean();
+	StartTimerClean();
 }
 
 void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast) {
@@ -589,15 +581,15 @@ void vCheckSpawn() {
 			g_bSpawnedWeapons = true;
 
 		case 2:
-			vStartCheckSpawnTimer();
+			StartCheckSpawnTimer();
 	}
 }
 
 void Event_WeaponDrop(Event event, const char[] name, bool dontBroadcast) {
 	int weapon = event.GetInt("propid");
-	if (bIsValidEnt(weapon) && bIsItemToClean(weapon)) {
-		vRemoveEffects(weapon);
-		vSetWeaponClean(weapon);
+	if (IsValidEnt(weapon) && IsItemToClean(weapon)) {
+		RemoveEffects(weapon);
+		SetWeaponClean(weapon);
 	}
 }
 
@@ -611,7 +603,7 @@ public void OnEntityCreated(int entity, const char[] classname) {
 	if (classname[0] != 'w' && classname[0] != 'p')
 		return;
 	
-	if (!g_bDrop && bIsWeapon(classname))
+	if (!g_bDrop && IsWeapon(classname))
 		SDKHook(entity, SDKHook_SpawnPost, OnSpawnPost);
 	else if (g_bPhisics && (strcmp(classname, "physics_prop") == 0 || strcmp(classname, "prop_physics") == 0))
 		SDKHook(entity, SDKHook_SpawnPost, OnSpawnPost);
@@ -622,7 +614,7 @@ public void OnEntityDestroyed(int entity) {
 		return;
 
 	if (entity > MaxClients)
-		vUnSetWeaponClean(entity);
+		UnSetWeaponClean(entity);
 }
 
 public void OnClientPutInServer(int client) {
@@ -637,43 +629,43 @@ public void OnClientDisconnect(int client) {
 	if (!g_bEnable) 
 		return;
 
-	if (!bIsValidSurvivor(client))
+	if (!IsValidSurvivor(client))
 		return;
 	
 	for (int i; i < 5; i++) {
 		int weapon = GetPlayerWeaponSlot(client, i);
-		if (!bIsValidEnt(weapon) || !bIsItemToClean(weapon))
+		if (!IsValidEnt(weapon) || !IsItemToClean(weapon))
 			continue;
 
-		vRemoveEffects(weapon);
-		vSetWeaponClean(weapon);
+		RemoveEffects(weapon);
+		SetWeaponClean(weapon);
 	}
 }
 
 void OnSpawnPost(int entity) {
-	if (bIsValidEnt(entity) && bIsItemToClean(entity)) {
-		vSetWeaponClean(entity);
+	if (IsValidEnt(entity) && IsItemToClean(entity)) {
+		SetWeaponClean(entity);
 		_debug("Spawn:%d", entity);
 	}
 }
 
 void OnWeaponEquipPost(int client, int weapon) {
 	
-	if (!bIsValidSurvivor(client))
+	if (!IsValidSurvivor(client))
 		return;
 	
 	if (weapon > MaxClients) {
-		vRemoveEffects(weapon);
-		vUnSetWeaponClean(weapon);
+		RemoveEffects(weapon);
+		UnSetWeaponClean(weapon);
 	}
 	_debug("HOOK-player:%d Equip : %d", client, weapon);
 }
 
 void OnWeaponDropPost(int client, int weapon) {
 	
-	if (bIsValidSurvivor(client) && bIsValidEnt(weapon) && bIsItemToClean(weapon) && !bIsWeaponEquipped(weapon)) {
-		vRemoveEffects(weapon);
-		vSetWeaponClean(weapon);
+	if (IsValidSurvivor(client) && IsValidEnt(weapon) && IsItemToClean(weapon) && !IsWeaponEquipped(weapon)) {
+		RemoveEffects(weapon);
+		SetWeaponClean(weapon);
 		_debug("HOOK-player:%d Drop : %d", client, weapon);
 	}
 }
@@ -692,35 +684,35 @@ Action tmrCleaningWeapons(Handle timer) {
 			continue;
 
 		weapon = EntRefToEntIndex(g_iWeaponRef[i]);
-		if (!bIsValidEnt(weapon)) {
-			vUnSetWeaponClean(weapon);
+		if (!IsValidEnt(weapon)) {
+			UnSetWeaponClean(weapon);
 			continue;
 		}
 
 		if (g_iItemTime[weapon] < 0) {
-			vUnSetWeaponClean(weapon);
+			UnSetWeaponClean(weapon);
 			continue;
 		}
 
-		if (!bIsItemToClean(weapon)) {
-			vUnSetWeaponClean(weapon);
+		if (!IsItemToClean(weapon)) {
+			UnSetWeaponClean(weapon);
 			continue;
 		}
 
-		if (bIsWeaponEquipped(weapon)) {
+		if (IsWeaponEquipped(weapon)) {
 			_debug("USER: %d", weapon);
-			vRemoveEffects(weapon);
+			RemoveEffects(weapon);
 			//g_iItemTime[weapon] = g_iCleanDelay;
-			vUnSetWeaponClean(weapon);
+			UnSetWeaponClean(weapon);
 			continue;
 		}
 		else if (g_iItemTime[weapon] == 0) {
-			vUnSetWeaponClean(weapon);
+			UnSetWeaponClean(weapon);
 			RemoveEntity(weapon);
 			continue;
 		}
-		else if (g_bVisible && bIsVisibleToPlayers(weapon)) {
-			vSetEffects(weapon);
+		else if (g_bVisible && IsVisibleToPlayers(weapon)) {
+			SetEffects(weapon);
 			switch (g_iVisibleMode) {
 				case 0: {  //Pause Timer
 					_debug("Pause Time: %d", g_iItemTime[weapon]);
@@ -728,7 +720,7 @@ Action tmrCleaningWeapons(Handle timer) {
 				}
 
 				case 1: {  //Pause Timer on aiming
-					if (bIsAimToPlayers(weapon)) {
+					if (IsAimToPlayers(weapon)) {
 						_debug("Pause Time: %d", g_iItemTime[weapon]);
 						continue;
 					}
@@ -736,15 +728,15 @@ Action tmrCleaningWeapons(Handle timer) {
 
 				case 2: {  //Reset Timer
 					g_iItemTime[weapon] = g_iCleanDelay;
-					vRemoveEffects(weapon);
+					RemoveEffects(weapon);
 					_debug("Reset Time: %d", g_iItemTime[weapon]);
 					continue;
 				}
 
 				case 3: {  //Reset Timer on aiming
-					if (bIsAimToPlayers(weapon)) {
+					if (IsAimToPlayers(weapon)) {
 						g_iItemTime[weapon] = g_iCleanDelay;
-						vRemoveEffects(weapon);
+						RemoveEffects(weapon);
 						_debug("Pause Time: %d", g_iItemTime[weapon]);
 						continue;
 					}
@@ -752,7 +744,7 @@ Action tmrCleaningWeapons(Handle timer) {
 			}
 		}
 
-		vSetEffects(weapon);
+		SetEffects(weapon);
 		g_iItemTime[weapon]--;
 		_debug("Time: %d", g_iItemTime[weapon]);			
 	}
@@ -760,26 +752,26 @@ Action tmrCleaningWeapons(Handle timer) {
 	return Plugin_Continue;
 }
 
-void vStartCheckSpawnTimer() {
-	vStopCheckSpawnTimer();
+void StartCheckSpawnTimer() {
+	StopCheckSpawnTimer();
 	g_hCheckSpawnTimer = CreateTimer(3.0, tmrCheckSpawn);
 }
 
-void vStopCheckSpawnTimer() {
+void StopCheckSpawnTimer() {
 	delete g_hCheckSpawnTimer;
 }
 
-void vStartTimerClean() {
-	vStopCleanTimer();
+void StartTimerClean() {
+	StopCleanTimer();
 	g_hCleaningTimer = CreateTimer(1.0, tmrCleaningWeapons, _, TIMER_REPEAT);
 }
 
-void vStopCleanTimer() {
+void StopCleanTimer() {
 	delete g_hCleaningTimer;
 }
 
-void vSetEffects(int item) {
-	if (!bIsValidEnt(item) || g_iItemTime[item] <= 0 || !bIsItemToClean(item))
+void SetEffects(int item) {
+	if (!IsValidEnt(item) || g_iItemTime[item] <= 0 || !IsItemToClean(item))
 		return;
 
 	int time_fx = RoundFloat(g_fEffectTime >= 1.0 ? g_fEffectTime : float(g_iCleanDelay) * g_fEffectTime);
@@ -819,23 +811,23 @@ void vSetEffects(int item) {
 	}
 }
 
-void vRemoveEffects(int item) {
-	if (g_iItemTime[item] && bIsValidEnt(item) && bIsItemToClean(item)) {
+void RemoveEffects(int item) {
+	if (g_iItemTime[item] && IsValidEnt(item) && IsItemToClean(item)) {
 		L4D2_RemoveEntityGlow(item);
 		SetEntityRenderFx(item, RENDERFX_NONE);
 	}
 }
 
-bool bIsVisibleToPlayers(int entity) {
+bool IsVisibleToPlayers(int entity) {
 	for (int i = 1; i <= MaxClients; i++) {
-		if (IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i) && (GetClientAimTarget(i, false) == entity || bIsEntVisibleCam(i, entity))) {
+		if (IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i) && (GetClientAimTarget(i, false) == entity || IsEntVisibleCam(i, entity))) {
 			return true;
 		}
 	}
 	return false;
 }
 
-bool bIsAimToPlayers(int entity) {
+bool IsAimToPlayers(int entity) {
 	for (int i = 1; i <= MaxClients; i++) {
 		if (IsClientInGame(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i) && GetClientAimTarget(i, false) == entity)
 			return true;
@@ -843,11 +835,11 @@ bool bIsAimToPlayers(int entity) {
 	return false;
 }
 
-bool bIsEntVisibleCam(int client, int entity, float fov = 60.0) {
+bool IsEntVisibleCam(int client, int entity, float fov = 60.0) {
 	float vPos[3], vAng[3], vAim[3], vTarget[3], vEnt[3];
 	GetClientEyePosition(client, vPos);
 	GetEntPropVector(entity, Prop_Data, "m_vecAbsOrigin", vEnt);
-	if (bIsVisibleTo(vPos, vEnt)) {
+	if (IsVisibleTo(vPos, vEnt)) {
 		GetClientEyeAngles(client, vAng);
 		SubtractVectors(vEnt, vPos, vTarget);
 		GetAngleVectors(vAng, vAim, NULL_VECTOR, NULL_VECTOR);
@@ -857,7 +849,7 @@ bool bIsEntVisibleCam(int client, int entity, float fov = 60.0) {
 	return false;
 }
 // credits = "AtomicStryker"
-bool bIsVisibleTo(const float vPos[3], const float vTarget[3]) {
+bool IsVisibleTo(const float vPos[3], const float vTarget[3]) {
 	static float vAngles[3], vLookAt[3];
 	MakeVectorFromPoints(vPos, vTarget, vLookAt); // compute vector from start to target
 	GetVectorAngles(vLookAt, vAngles); // get angles from vector for trace
@@ -865,7 +857,7 @@ bool bIsVisibleTo(const float vPos[3], const float vTarget[3]) {
 	// execute Trace
 	static Handle hTrace;
 	static bool bIsVisible;
-	hTrace = TR_TraceRayFilterEx(vPos, vAngles, MASK_ALL, RayType_Infinite, bTraceEntityFilter);
+	hTrace = TR_TraceRayFilterEx(vPos, vAngles, MASK_ALL, RayType_Infinite, TraceEntityFilter);
 	bIsVisible = false;
 	if (TR_DidHit(hTrace)) {
 		static float vStart[3];
@@ -879,30 +871,30 @@ bool bIsVisibleTo(const float vPos[3], const float vTarget[3]) {
 	return bIsVisible;
 }
 
-bool bTraceEntityFilter(int entity, int contentsMask) {
+bool TraceEntityFilter(int entity, int contentsMask) {
 	return entity > MaxClients && IsValidEntity(entity);
 }
 
-bool bIsWeaponEquipped(int weapon) {	
+bool IsWeaponEquipped(int weapon) {
 	static char cls[64];
 	GetEntityClassname(weapon, cls, sizeof cls);
-	if (!bIsWeapon(cls) || bIsWeaponSpawner(cls))
+	if (!IsWeapon(cls) || IsWeaponSpawner(cls))
 		return false;
 
-	return bIsValidClient(GetEntPropEnt(weapon, Prop_Data, "m_hOwnerEntity"));
+	return IsValidClient(GetEntPropEnt(weapon, Prop_Data, "m_hOwnerEntity"));
 }
 
-void vGetItemName(int ent, char[] name, int size) {
-	bool bWeapon = bIsWeapon(name);
-	bool bSpawner = bIsSpawner(name);
+void GetItemName(int ent, char[] name, int size) {
+	bool bWeapon = IsWeapon(name);
+	bool bSpawner = IsSpawner(name);
 	if (bWeapon && !bSpawner) {
-		if (!bIsMelee(name))
+		if (!IsMelee(name))
 			SplitStringRight(name, "weapon_", name, size);
 		else
 			GetEntPropString(ent, Prop_Data, "m_strMapSetScriptName", name, size);
 		return;
 	}
-	else if (bWeapon && bSpawner || bIsPropPhysic(name)) {	
+	else if (bWeapon && bSpawner || IsPropPhysic(name)) {	
 		static char modelname[64];
 		GetEntPropString(ent, Prop_Data, "m_ModelName", modelname, sizeof modelname);
 		if (g_smCleanList.GetString(modelname, name, size))
@@ -911,25 +903,25 @@ void vGetItemName(int ent, char[] name, int size) {
 	name[0] = '\0';
 }
 
-bool bIsClassEnable(const char[] cls) {
-	if (!bIsSpawner(cls)) {
+bool IsClassEnable(const char[] cls) {
+	if (!IsSpawner(cls)) {
 		if (g_iClassWeapon & 1)
 			return true;
 	}
 	else {
-		if (g_iClassWeapon & 2 && (g_bAmmo || !bIsAmmoPile(cls)) && !bIsScavengeItem(cls))
+		if (g_iClassWeapon & 2 && (g_bAmmo || !IsAmmoPile(cls)) && !IsScavengeItem(cls))
 			return true;
 	}
 
 	return false;
 }
 
-bool bIsItemToClean(int item) {
+bool IsItemToClean(int item) {
 	static char name[64];
 	GetEntityClassname(item, name, sizeof name);
-	if ((bIsWeapon(name) && bIsClassEnable(name)) || (g_bPhisics && bIsPropPhysic(name))) {
+	if ((IsWeapon(name) && IsClassEnable(name)) || (g_bPhisics && IsPropPhysic(name))) {
 		bool exclude;
-		vGetItemName(item, name, sizeof name);//weapon_first_aid_kit_spawn
+		GetItemName(item, name, sizeof name);//weapon_first_aid_kit_spawn
 		g_smWhiteList.GetValue(name, exclude);
 		if (exclude)
 			return false;
@@ -947,57 +939,57 @@ bool bIsItemToClean(int item) {
 	return false;
 }
 
-void vSetWeaponClean(int weapon) {
+void SetWeaponClean(int weapon) {
 	g_iItemTime[weapon] = g_iCleanDelay;
 	g_iWeaponRef[weapon] = EntIndexToEntRef(weapon);
 }
 
-void vUnSetWeaponClean(int item) {
+void UnSetWeaponClean(int item) {
 	g_iItemTime[item] = -1;
 	g_iWeaponRef[item] = 0;
 }
 
-bool bIsMelee(const char[] cls) {
+bool IsMelee(const char[] cls) {
 	return strcmp(cls[7], "melee") == 0;
 }
 
-bool bIsScavengeItem(const char[] cls) {
+bool IsScavengeItem(const char[] cls) {
 	return strcmp(cls[7], "scavenge_item_spawn") == 0;
 }
 
-bool bIsWeaponSpawner(const char[] cls) {
-	return bIsWeapon(cls) && bIsSpawner(cls);
+bool IsWeaponSpawner(const char[] cls) {
+	return IsWeapon(cls) && IsSpawner(cls);
 }
 
-bool bIsSpawner(const char[] cls) {
+bool IsSpawner(const char[] cls) {
 	return strncmp(cls[strlen(cls) - 6], "_spawn", 7) == 0;
 }
 
-bool bIsAmmoPile(const char[] cls) {
+bool IsAmmoPile(const char[] cls) {
 	return strcmp(cls[7], "ammo_spawn") == 0;
 }
 
-bool bIsPropPhysic(const char[] cls) {
+bool IsPropPhysic(const char[] cls) {
 	return strcmp(cls, "prop_physics") == 0;
 }
 
-bool bIsWeapon(const char[] cls) {
+bool IsWeapon(const char[] cls) {
 	return strncmp(cls, "weapon_", 7) == 0;
 }
 
-bool bIsValidEnt(int entity) {
+bool IsValidEnt(int entity) {
 	return entity > MaxClients && IsValidEntity(entity);
 }
 
-bool bIsValidSurvivor(int client) {
-	return bIsValidClient(client) && GetClientTeam(client) == 2;
+bool IsValidSurvivor(int client) {
+	return IsValidClient(client) && GetClientTeam(client) == 2;
 }
 
-bool bIsValidClient(int client) {
-	return 0 < client <= MaxClients && IsClientInGame(client);
+bool IsValidClient(int client) {
+	return client > 0 && client <= MaxClients && IsClientInGame(client);
 }
 
-int[] iStringRGBToIntRGB(const char[] str_rgb) {
+int[] StringRGBToIntRGB(const char[] str_rgb) {
 	int colorRGB[3];
 	char str_color[16][3];
 	char color_string[16];
@@ -1034,14 +1026,14 @@ void _debug(const char[] szFormat, int ...) {
 	#endif
 }
 
-void vReloadPlugin() {
-	vHookEvents();
-	AddCommandListener(sm_drop_Listener, "sm_drop");
+void ReloadPlugin() {
+	HookEvents();
+	AddCommandListener(Listener_sm_drop, "sm_drop");
 	
 	int i = MaxClients + 1;
 	for (; i <= GetMaxEntities(); i++) {
-		if (IsValidEntity(i) && bIsItemToClean(i) && !bIsWeaponEquipped(i)) {
-			vSetWeaponClean(i);
+		if (IsValidEntity(i) && IsItemToClean(i) && !IsWeaponEquipped(i)) {
+			SetWeaponClean(i);
 		}
 	}
 	
@@ -1051,19 +1043,19 @@ void vReloadPlugin() {
 			SDKHook(i, SDKHook_WeaponDropPost, OnWeaponDropPost);
 		}
 	}
-	vStartTimerClean();
+	StartTimerClean();
 }
 
-void vDisablePlugin() {
+void DisablePlugin() {
 	UnHookEvents();
-	RemoveCommandListener(sm_drop_Listener, "sm_drop");
+	RemoveCommandListener(Listener_sm_drop, "sm_drop");
 	for (int i = 1; i <= MaxClients; i++) {
 		if (IsClientInGame(i)) {
 			SDKUnhook(i, SDKHook_WeaponEquipPost, OnWeaponEquipPost);
 			SDKUnhook(i, SDKHook_WeaponDropPost, OnWeaponDropPost);
 		}
 	}
-	vStopCleanTimer();
+	StopCleanTimer();
 }
 
 void UnHookEvents() {
