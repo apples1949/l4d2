@@ -1,0 +1,58 @@
+"Games"
+{
+	"left4dead2" 
+	{
+		"MemPatches"
+		{
+			"CDirectorVersusMode::UpdateNonVirtual::Ptach1"
+			{
+				"signature"		"CDirectorVersusMode::UpdateNonVirtual"
+
+				"linux"
+				{
+					"offset"	"11h"
+					"verify"	"\x75"
+					"patch"		"\xEB"
+				}
+				
+				"windows"
+				{
+					"offset"	"Ah"
+					"verify"	"\x74"
+					"patch"		"\x90\x90"
+				}
+			}
+
+			"CDirectorVersusMode::UpdateNonVirtual::Ptach2"
+			{
+				"signature"		"CDirectorVersusMode::UpdateNonVirtual"
+
+				"linux"
+				{
+					"offset"	"3Fh"
+					"verify"	"\x72"
+					"patch"		"\xEB"
+				}
+				
+				"windows"
+				{
+					"offset"	"26h"
+					"verify"	"\x72"
+					"patch"		"\xEB"
+				}
+			}
+		}
+
+		"Signatures"
+		{
+			/* CDirectorVersusMode::UpdateNonVirtual(CDirectorVersusMode *__hidden this) */
+			"CDirectorVersusMode::UpdateNonVirtual"
+			{
+				"library"	"server"
+				"linux"		"@_ZN19CDirectorVersusMode16UpdateNonVirtualEv"
+				"windows"	"\x57\x8B\xF9\xE8\x2A\x2A\x2A\x2A\x84\xC0\x74\x2A\x56"
+				/* 57 8B F9 E8 ? ? ? ? 84 C0 74 ? 56 */
+			}
+		}
+	}
+}
