@@ -361,7 +361,7 @@ Action tmrStartCheckFlow(Handle timer){
 Action tmrCheckWitch(Handle timer) {
 	static int i;
 	static int witch;
-	static int iEntRef;
+	static int entRef;
 	static Address area;
 	static float fDist;
 	static float vPos[3];
@@ -397,16 +397,16 @@ Action tmrCheckWitch(Handle timer) {
 	witch = 0;
 	count = g_aWitches.Length;
 	while (i < count) {
-		if (EntRefToEntIndex((iEntRef =g_aWitches.Get(i))) == INVALID_ENT_REFERENCE) {
+		if (EntRefToEntIndex((entRef =g_aWitches.Get(i))) == INVALID_ENT_REFERENCE) {
 			g_aWitches.Erase(i);
 			count--;
 			continue;
 		}
 		else {
-			GetEntPropVector(iEntRef, Prop_Send, "m_vecOrigin", vWitch);
+			GetEntPropVector(entRef, Prop_Send, "m_vecOrigin", vWitch);
 			area = L4D_GetNearestNavArea(vWitch);
 			if (!area) {
-				RemoveEntity(iEntRef);
+				RemoveEntity(entRef);
 				g_aWitches.Erase(i);
 				count--;
 				continue;
@@ -414,7 +414,7 @@ Action tmrCheckWitch(Handle timer) {
 
 			fDist = L4D2Direct_GetTerrorNavAreaFlow(area);
 			if (fDist == -9999.0 || lastFlow - fDist > 1800.0) {
-				RemoveEntity(iEntRef);
+				RemoveEntity(entRef);
 				g_aWitches.Erase(i);
 				count--;
 				continue;
@@ -423,7 +423,7 @@ Action tmrCheckWitch(Handle timer) {
 			GetClientAbsOrigin(client, vPos);
 			fDist = L4D2_NavAreaTravelDistance(vPos, vWitch, false);
 			if (fDist == -1.0 || fDist > 3600.0) {
-				RemoveEntity(iEntRef);
+				RemoveEntity(entRef);
 				g_aWitches.Erase(i);
 				count--;
 				continue;
@@ -576,5 +576,5 @@ int CreateWitch(const float vPos[3]) {
 		DispatchSpawn(witch);
 	}
 	
-	return -1;
+	return witch;
 }
