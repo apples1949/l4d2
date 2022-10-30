@@ -1,7 +1,7 @@
 #pragma semicolon 1
 
 #include <sourcemod>
-#include <sdktools>
+//#include <sdktools>
 #include <left4dhooks>
 
 //#define DEBUG
@@ -105,7 +105,7 @@ int
 	g_iWitchCounter,
 	g_iMaxTanks,
 	g_iMaxWitches,
-	g_iPreferredDirection;
+	g_iDirection;
 
 bool
 	g_bFinaleStarts,
@@ -113,11 +113,10 @@ bool
 	g_bAllowSpawnWitches,
 	g_bChekingFlow,
 	g_bInSpawnTime,
-	g_bIsFirstMap,
-	g_bIsFinalMap;
+	g_bIsFinalMap,
+	g_bIsFirstMap;
 
-public Plugin myinfo =
-{
+public Plugin myinfo = {
 	name = PLUGIN_NAME,
 	author = PLUGIN_AUTHOR,
 	description = PLUGIN_DESCRIPTION,
@@ -125,8 +124,7 @@ public Plugin myinfo =
 	url = PLUGIN_URL
 };
 
-public void OnPluginStart()
-{
+public void OnPluginStart() {
 	g_aWitches = new ArrayList();
 
 	cvarPluginEnable       = CreateConVar("boss_spawn", "1", "0:Disable, 1:Enable Plugin", FCVAR_NONE, true, 0.0, true, 1.0 );
@@ -182,36 +180,27 @@ public void OnPluginStart()
 	EnablePlugin();
 }
 
-public void OnPluginEnd()
-{
+public void OnPluginEnd() {
 	FindConVar("director_no_bosses").RestoreDefault();
 }
 
-public Action L4D_OnGetScriptValueInt(const char[] key, int &retVal)
-{
-	static int iValue;
+public Action L4D_OnGetScriptValueInt(const char[] key, int &retVal) {
 	if (!g_bInSpawnTime)
 		return Plugin_Continue;
 
-	iValue = retVal;
-	if (strcmp(key, "PreferredSpecialDirection", false) == 0)
-		iValue = g_iPreferredDirection;
-
-	if (iValue != retVal) {
-		retVal = iValue;
+	if (strcmp(key, "PreferredSpecialDirection", false) == 0) {
+		retVal = g_iDirection;
 		return Plugin_Handled;
 	}
 
 	return Plugin_Continue;
 }
 
-public void OnConfigsExecuted()
-{
+public void OnConfigsExecuted() {
 	FindConVar("director_no_bosses").IntValue = 1;
 }
 
-void CvarChanged_Enable(ConVar convar, const char[] oldValue, const char[] newValue)
-{
+void CvarChanged_Enable(ConVar convar, const char[] oldValue, const char[] newValue) {
 	g_bPluginEnable = convar.BoolValue;
 	if (g_bPluginEnable && oldValue[0] == '0')
 		EnablePlugin();
@@ -219,13 +208,11 @@ void CvarChanged_Enable(ConVar convar, const char[] oldValue, const char[] newVa
 		DisablePlugin();
 }
 
-void CvarsChanged(ConVar convar, const char[] oldValue, const char[] newValue)
-{
+void CvarsChanged(ConVar convar, const char[] oldValue, const char[] newValue) {
 	GetCvarsValues();
 }
 
-void EnablePlugin()
-{
+void EnablePlugin() {
 	g_bPluginEnable = cvarPluginEnable.BoolValue;
 	if (g_bPluginEnable){
 		HookEvent("round_start", Event_RoundStart);
@@ -240,8 +227,7 @@ void EnablePlugin()
 	GetCvarsValues();
 }
 
-void DisablePlugin()
-{
+void DisablePlugin() {
 	UnhookEvent("round_start", Event_RoundStart);
 	UnhookEvent("round_end", Event_RoundEnd);
 	UnhookEvent("player_left_checkpoint", Event_PlayerLeftCheckpoint);
@@ -254,8 +240,7 @@ void DisablePlugin()
 	delete g_hTimerCheckWitch;
 }
 
-void GetCvarsValues()
-{
+void GetCvarsValues() {
 	g_bRangeRandom = cvarRangeRandom.BoolValue;
 	g_bCheckTanks = cvarCheckTanks.BoolValue;
 	g_bCheckWitches = cvarCheckWitches.BoolValue;
@@ -280,14 +265,12 @@ void GetCvarsValues()
 	g_fInterval = cvarInterval.FloatValue;
 }
 
-public void OnMapStart()
-{
-	g_bIsFirstMap = L4D_IsFirstMapInScenario();
+public void OnMapStart() {
 	g_bIsFinalMap = L4D_IsMissionFinalMap();
+	g_bIsFirstMap = L4D_IsFirstMapInScenario();
 }
 
-public void OnMapEnd()
-{
+public void OnMapEnd() {
 	g_aWitches.Clear();
 	delete g_hTimerCheckFlow;
 	delete g_hTimerCheckWitch;
@@ -299,53 +282,31 @@ public void OnMapEnd()
 	g_bChekingFlow = false;
 }
 
-void EntityOutput_FinaleStart(const char[] output, int caller, int activator, float time)
-{
+void EntityOutput_FinaleStart(const char[] output, int caller, int activator, float time) {
 	g_bFinaleStarts = true;
 	g_bAllowSpawnTanks = (g_iFinaleTanks == 3 || g_bFinaleStarts && g_iFinaleTanks == 2 );
 	g_bAllowSpawnWitches = (g_iFinaleWitches == 3 || g_bFinaleStarts && g_iFinaleWitches == 2 ); 
 }
 
-void Event_TankSpawn(Event event, const char[] name, bool dontBroadcast)
-{
+void Event_TankSpawn(Event event, const char[] name, bool dontBroadcast) {
 	if (!g_bCheckTanks)
 		g_iTankCounter++;
 }
 
-void Event_WitchSpawn(Event event, const char[] name, bool dontBroadcast)
-{
+void Event_WitchSpawn(Event event, const char[] name, bool dontBroadcast) {
 	if (!g_bCheckWitches)
 		g_iWitchCounter++;
 }
 
-void Event_RoundStart(Event event, const char[] name, bool dontBroadcast)
-{
-	g_aWitches.Clear();
-	delete g_hTimerCheckFlow;
-	delete g_hTimerCheckWitch;
-	g_iTankCounter = 0;
-	g_iWitchCounter = 0;
-	g_fFlowSpawnTank = 0.0;
-	g_fFlowSpawnWitch = 0.0;
-	g_bFinaleStarts = false;
-	g_bChekingFlow = false;
+void Event_RoundStart(Event event, const char[] name, bool dontBroadcast) {
+	OnMapEnd();
 }
 
-void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast)
-{
-	g_aWitches.Clear();
-	delete g_hTimerCheckFlow;
-	delete g_hTimerCheckWitch;
-	g_iTankCounter = 0;
-	g_iWitchCounter = 0;
-	g_fFlowSpawnTank = 0.0;
-	g_fFlowSpawnWitch = 0.0;
-	g_bFinaleStarts = false;
-	g_bChekingFlow = false;
+void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast) {
+	OnMapEnd();
 }
 
-void Event_PlayerLeftCheckpoint(Event event, const char[] name, bool dontBroadcast)
-{
+void Event_PlayerLeftCheckpoint(Event event, const char[] name, bool dontBroadcast) {
 	if (g_bChekingFlow)
 		return;
 	
@@ -366,7 +327,6 @@ void Event_PlayerLeftCheckpoint(Event event, const char[] name, bool dontBroadca
 }
 
 Action tmrStartCheckFlow(Handle timer){
-	
 	if (g_bChekingFlow || !L4D_HasAnySurvivorLeftSafeArea())
 		return Plugin_Stop;
 
@@ -380,30 +340,28 @@ Action tmrStartCheckFlow(Handle timer){
 	g_iMaxTanks = !g_iTotalTanksRandom ? g_iTotalTanks : GetRandomInt(g_iTotalTanks, g_iTotalTanksRandom);
 	g_iMaxWitches = !g_iTotalWitchesRandom ? g_iTotalWitches : GetRandomInt(g_iTotalWitches, g_iTotalWitchesRandom);
 	
-	g_fFlowRangeMinTank = g_fFlowMaxMap * g_fFlowPercentMinTank/100.0;
-	g_fFlowRangeMaxTank = g_fFlowMaxMap * g_fFlowPercentMaxTank/100.0;
+	g_fFlowRangeMinTank = g_fFlowMaxMap * g_fFlowPercentMinTank / 100.0;
+	g_fFlowRangeMaxTank = g_fFlowMaxMap * g_fFlowPercentMaxTank / 100.0;
 	g_fFlowRangeSpawnTank = (g_fFlowRangeMaxTank-g_fFlowRangeMinTank)/float(g_iMaxTanks);
 	g_fFlowCanSpawnTank = g_fFlowRangeMinTank;
 	
-	g_fFlowRangeMinWitch = g_fFlowMaxMap * g_fFlowPercentMinWitch/100.0;
-	g_fFlowRangeMaxWitch = g_fFlowMaxMap * g_fFlowPercentMaxWitch/100.0;
-	g_fFlowRangeSpawnWitch = (g_fFlowRangeMaxWitch-g_fFlowRangeMinWitch)/float(g_iMaxWitches);
+	g_fFlowRangeMinWitch = g_fFlowMaxMap * g_fFlowPercentMinWitch / 100.0;
+	g_fFlowRangeMaxWitch = g_fFlowMaxMap * g_fFlowPercentMaxWitch / 100.0;
+	g_fFlowRangeSpawnWitch = (g_fFlowRangeMaxWitch-g_fFlowRangeMinWitch) / float(g_iMaxWitches);
 	g_fFlowCanSpawnWitch = g_fFlowRangeMinWitch;
 	
 	delete g_hTimerCheckFlow;
 	g_hTimerCheckFlow = CreateTimer(g_fInterval, tmrCheckFlow, _, TIMER_REPEAT);
 
 	delete g_hTimerCheckWitch;
-	g_hTimerCheckWitch = CreateTimer(30.0, tmrCheckWitch, _, TIMER_REPEAT);
+	g_hTimerCheckWitch = CreateTimer(10.0, tmrCheckWitch, _, TIMER_REPEAT);
 	return Plugin_Continue;
 }
 
-Action tmrCheckWitch(Handle timer)
-{
+Action tmrCheckWitch(Handle timer) {
 	static int i;
 	static int witch;
 	static int iEntRef;
-	static int iLength;
 	static Address area;
 	static float fDist;
 	static float vPos[3];
@@ -423,9 +381,9 @@ Action tmrCheckWitch(Handle timer)
 		}
 	}
 
-	static int iCount;
-	iCount = aList.Length;
-	if (!iCount) {
+	static int count;
+	count = aList.Length;
+	if (!count) {
 		delete aList;
 		return Plugin_Continue;
 	}
@@ -437,11 +395,11 @@ Action tmrCheckWitch(Handle timer)
 
 	i = 0;
 	witch = 0;
-	iLength =g_aWitches.Length;
-	while (i < iLength) {
+	count = g_aWitches.Length;
+	while (i < count) {
 		if (EntRefToEntIndex((iEntRef =g_aWitches.Get(i))) == INVALID_ENT_REFERENCE) {
 			g_aWitches.Erase(i);
-			iLength--;
+			count--;
 			continue;
 		}
 		else {
@@ -450,7 +408,7 @@ Action tmrCheckWitch(Handle timer)
 			if (!area) {
 				RemoveEntity(iEntRef);
 				g_aWitches.Erase(i);
-				iLength--;
+				count--;
 				continue;
 			}
 
@@ -458,7 +416,7 @@ Action tmrCheckWitch(Handle timer)
 			if (fDist == -9999.0 || lastFlow - fDist > 1800.0) {
 				RemoveEntity(iEntRef);
 				g_aWitches.Erase(i);
-				iLength--;
+				count--;
 				continue;
 			}
 
@@ -467,7 +425,7 @@ Action tmrCheckWitch(Handle timer)
 			if (fDist == -1.0 || fDist > 3600.0) {
 				RemoveEntity(iEntRef);
 				g_aWitches.Erase(i);
-				iLength--;
+				count--;
 				continue;
 			}
 
@@ -479,18 +437,17 @@ Action tmrCheckWitch(Handle timer)
 	return Plugin_Continue;
 }
 
-Action tmrCheckFlow(Handle timer)
-{
+Action tmrCheckFlow(Handle timer) {
 	if (g_iTankCounter >= g_iMaxTanks && g_iWitchCounter >= g_iMaxWitches) {
 		g_hTimerCheckFlow = null;
 		return Plugin_Stop;
 	}
 
 	static int i;
-	static int iCount;
-	static int iHighest;
-	iHighest = L4D_GetHighestFlowSurvivor();
-	g_fFurthestSurvivorFlow = iHighest != -1 ? L4D2_GetFurthestSurvivorFlow() : L4D2Direct_GetFlowDistance(iHighest);
+	static int count;
+	static int highest;
+	highest = L4D_GetHighestFlowSurvivor();
+	g_fFurthestSurvivorFlow = highest != -1 ? L4D2_GetFurthestSurvivorFlow() : L4D2Direct_GetFlowDistance(highest);
 
 	if (g_bAllowSpawnTanks && (g_iMaxTanks && g_iTankCounter < g_iMaxTanks) && (g_fFurthestSurvivorFlow >= g_fFlowRangeMinTank && g_fFurthestSurvivorFlow <= g_fFlowRangeMaxTank)) {
 		if (!g_fFlowSpawnTank){
@@ -503,9 +460,9 @@ Action tmrCheckFlow(Handle timer)
 		}
 		
 		if (g_fFurthestSurvivorFlow >= g_fFlowSpawnTank){
-			iCount = !g_iTanksRandom ? g_iTanks : GetRandomInt(g_iTanks, g_iTanksRandom);
-			for(i = 0; i < iCount; i++){
-				if (g_iTanksChance < GetRandomInt(1,100) || iSpawnTank(iHighest) < 1)
+			count = !g_iTanksRandom ? g_iTanks : GetRandomInt(g_iTanks, g_iTanksRandom);
+			for(i = 0; i < count; i++){
+				if (g_iTanksChance < GetRandomInt(1,100) || SpawnTank(highest) < 1)
 					continue;
 
 				g_fFlowCanSpawnTank = g_fFlowCanSpawnTank+g_fFlowRangeSpawnTank;
@@ -517,19 +474,19 @@ Action tmrCheckFlow(Handle timer)
 	}
 	
 	if (g_bAllowSpawnWitches && (g_iMaxWitches && g_iWitchCounter < g_iMaxWitches) && (g_fFurthestSurvivorFlow >= g_fFlowRangeMinWitch && g_fFurthestSurvivorFlow <= g_fFlowRangeMaxWitch)) {
-		float flowrange = g_fFlowCanSpawnWitch+g_fFlowRangeSpawnWitch;
+		float flowrange = g_fFlowCanSpawnWitch + g_fFlowRangeSpawnWitch;
 		if (!g_fFlowSpawnWitch)
 			g_fFlowSpawnWitch = GetRandomFloat(g_fFlowCanSpawnWitch, flowrange);// get flowspawn once
 		
 		if (g_fFurthestSurvivorFlow >= g_fFlowSpawnWitch){
-			iCount = !g_iWitchesRandom ? g_iWitches : GetRandomInt(g_iWitches, g_iWitchesRandom);
+			count = !g_iWitchesRandom ? g_iWitches : GetRandomInt(g_iWitches, g_iWitchesRandom);
 
 			static int witch;
-			for(i = 0; i < iCount; i++) {
+			for(i = 0; i < count; i++) {
 				if (g_iWitchesChance < GetRandomInt(1,100))
 					continue;
 
-				witch = iSpawnWitch(iHighest);
+				witch = SpawnWitch(highest);
 				if (witch == -1)
 					continue;
 				
@@ -545,66 +502,64 @@ Action tmrCheckFlow(Handle timer)
 	return Plugin_Continue;
 }
 
-int iSpawnTank(int client)
-{
-	bool bSuccess;
+int SpawnTank(int client) {
+	bool success;
 	float vecPos[3];
 	g_bInSpawnTime = true;
-	g_iPreferredDirection = SPAWN_SPECIALS_IN_FRONT_OF_SURVIVORS;
+	g_iDirection = SPAWN_SPECIALS_IN_FRONT_OF_SURVIVORS;
 	if (client)
-		bSuccess = L4D_GetRandomPZSpawnPosition(client, 7, 10, vecPos);//7: does not find spawn point in some places for witch
+		success = L4D_GetRandomPZSpawnPosition(client, 7, 10, vecPos);//7: does not find spawn point in some places for witch
 
-	if (!bSuccess)
-		bSuccess = L4D_GetRandomPZSpawnPosition(client, 8, 10, vecPos);
+	if (!success)
+		success = L4D_GetRandomPZSpawnPosition(client, 8, 10, vecPos);
 
-	if (!bSuccess) {
+	if (!success) {
 		for (int i = 1; i <= MaxClients; i++) {
 			if (!IsClientInGame(i) || GetClientTeam(i) != 2)
 				continue;
 
-			g_iPreferredDirection = SPAWN_SPECIALS_ANYWHERE;
-			bSuccess = L4D_GetRandomPZSpawnPosition(i, 7, 10, vecPos);//7: does not find spawn point in some places for witch
-			if (!bSuccess)
-				bSuccess = L4D_GetRandomPZSpawnPosition(i, 8, 10, vecPos);
+			g_iDirection = SPAWN_SPECIALS_ANYWHERE;
+			success = L4D_GetRandomPZSpawnPosition(i, 7, 10, vecPos);//7: does not find spawn point in some places for witch
+			if (!success)
+				success = L4D_GetRandomPZSpawnPosition(i, 8, 10, vecPos);
 
-			if (bSuccess)
+			if (success)
 				break;
 		}
 	}
 
 	g_bInSpawnTime = false;
-	if (bSuccess)
+	if (success)
 		return L4D2_SpawnTank(vecPos, NULL_VECTOR);
 
 	return 0;
 }
 
-int iSpawnWitch(int client)
-{
-	bool bSuccess;
+int SpawnWitch(int client) {
+	bool success;
 	float vecPos[3];
 	g_bInSpawnTime = true;
-	g_iPreferredDirection = SPAWN_SPECIALS_IN_FRONT_OF_SURVIVORS;
+	g_iDirection = SPAWN_SPECIALS_IN_FRONT_OF_SURVIVORS;
 	if (client)
-		bSuccess = L4D_GetRandomPZSpawnPosition(client, 8, 10, vecPos);//7: does not find spawn point in some places for witch
+		success = L4D_GetRandomPZSpawnPosition(client, 8, 10, vecPos);//7: does not find spawn point in some places for witch
 
-	if (!bSuccess) {
+	if (!success) {
 		for (int i = 1; i <= MaxClients; i++) {
 			if (!IsClientInGame(i) || GetClientTeam(i) != 2)
 				continue;
 
-			g_iPreferredDirection = SPAWN_IN_FRONT_OF_SURVIVORS;
-			bSuccess = L4D_GetRandomPZSpawnPosition(i, 7, 10, vecPos);//7: does not find spawn point in some places for witch
-			if (!bSuccess)
-				bSuccess = L4D_GetRandomPZSpawnPosition(i, 8, 10, vecPos);
+			g_iDirection = SPAWN_IN_FRONT_OF_SURVIVORS;
+			success = L4D_GetRandomPZSpawnPosition(i, 7, 10, vecPos);//7: does not find spawn point in some places for witch
+			if (!success)
+				success = L4D_GetRandomPZSpawnPosition(i, 8, 10, vecPos);
 
-			if (bSuccess)
+			if (success)
 				break;
 		}
 	}
 
 	g_bInSpawnTime = false;
-	if (bSuccess)
+	if (success)
 		return CreateWitch(vecPos);
 
 	return -1;
