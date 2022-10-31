@@ -12,12 +12,7 @@
 
 ConVar
 	g_cvDirectorNoBoss,
-	g_cvVersusBossFlowMin,
-	g_cvVersusBossFlowMax;
-
-float
-	g_fVersusBossFlowMin,
-	g_fVersusBossFlowMax;
+	g_cvDirectorNoSpec;
 
 public Plugin myinfo = {
 	name = PLUGIN_NAME,
@@ -28,31 +23,18 @@ public Plugin myinfo = {
 };
 
 public void OnPluginStart() {
-	g_cvDirectorNoBoss =	FindConVar("director_no_bosses");
-	g_cvVersusBossFlowMin =	FindConVar("versus_boss_flow_min");
-	g_cvVersusBossFlowMax =	FindConVar("versus_boss_flow_max");
-	g_cvVersusBossFlowMin.AddChangeHook(CvarChanged);
-	g_cvVersusBossFlowMax.AddChangeHook(CvarChanged);
-
-	HookEvent("round_start", Event_RoundStart, EventHookMode_PostNoCopy);
+	g_cvDirectorNoBoss = FindConVar("director_no_bosses");
+	g_cvDirectorNoSpec = FindConVar("director_no_specials");
 }
 
 public void OnPluginEnd() {
 	g_cvDirectorNoBoss.RestoreDefault();
+	g_cvDirectorNoSpec.RestoreDefault();
 }
 
 public void OnConfigsExecuted() {
-	GetCvars();
 	g_cvDirectorNoBoss.IntValue = 1;
-}
-
-void CvarChanged(ConVar convar, const char[] oldValue, const char[] newValue) {
-	GetCvars();
-}
-
-void GetCvars() {
-	g_fVersusBossFlowMin = g_cvVersusBossFlowMin.FloatValue;
-	g_fVersusBossFlowMax = g_cvVersusBossFlowMax.FloatValue;
+	g_cvDirectorNoSpec.IntValue = 1;
 }
 
 public Action L4D_OnGetScriptValueInt(const char[] key, int &retVal) {
@@ -66,42 +48,4 @@ public Action L4D_OnGetScriptValueInt(const char[] key, int &retVal) {
 
 public void L4D_OnFirstSurvivorLeftSafeArea_Post(int client) {
 	CPrintToChatAll("{olive}Tank{default}: {red}%d%%\n{olive}Witch{default}: {red}%d%%", RoundToCeil(L4D2Direct_GetVSTankFlowPercent(0) * 100.0), RoundToCeil(L4D2Direct_GetVSWitchFlowPercent(0) * 100.0));
-}
-
-void Event_RoundStart(Event event, const char[] name, bool dontBroadcast) {
-	CreateTimer(0.5, AdjustBossFlow, _, TIMER_FLAG_NO_MAPCHANGE);
-}
-
-Action AdjustBossFlow(Handle timer) {
-	SetTankFlowPercent(Math_GetRandomFloat(g_fVersusBossFlowMin, g_fVersusBossFlowMax));
-	SetWitchFlowPercent(Math_GetRandomFloat(g_fVersusBossFlowMin, g_fVersusBossFlowMax));
-	return Plugin_Continue;
-}
-
-void SetTankFlowPercent(float percent) {
-	L4D2Direct_SetVSTankFlowPercent(0, percent);
-	L4D2Direct_SetVSTankFlowPercent(1, percent);
-	L4D2Direct_SetVSTankToSpawnThisRound(0, percent ? true : false);
-	L4D2Direct_SetVSTankToSpawnThisRound(1, percent ? true : false);
-}
-
-void SetWitchFlowPercent(float percent) {
-	L4D2Direct_SetVSWitchFlowPercent(0, percent);
-	L4D2Direct_SetVSWitchFlowPercent(1, percent);
-	L4D2Direct_SetVSWitchToSpawnThisRound(0, percent ? true : false);
-	L4D2Direct_SetVSWitchToSpawnThisRound(1, percent ? true : false);
-}
-
-/**
- * Returns a random, uniform Float number in the specified (inclusive) range.
- * This is safe to use multiple times in a function.
- * The seed is set automatically for each plugin.
- *
- * @param min			Min value used as lower border
- * @param max			Max value used as upper border
- * @return				Random Float number between min and max
- */
-float Math_GetRandomFloat(float min, float max)
-{
-	return (GetURandomFloat() * (max  - min)) + min;
 }
