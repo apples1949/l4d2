@@ -131,7 +131,7 @@ void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast) {
 void OnPreThink(int client) {
 	switch (GetEntProp(client, Prop_Send, "m_zombieClass") == 8) {
 		case true: {
-			if (g_bTankClimb[client]) {
+			if (g_bTankClimb[client] && GetEntityMoveType(client) == MOVETYPE_CUSTOM) {
 				SetEntPropFloat(client, Prop_Send, "m_flPlaybackRate", g_fAnimationPlaybackRate);
 			}
 			/*switch (GetEntProp(client, Prop_Send, "m_nSequence")) {
