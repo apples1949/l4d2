@@ -75,8 +75,8 @@
 			{
 				"library"	"server"
 				"linux"		"@_ZN13CTerrorPlayer17TransitionRestoreEv"
-				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x80\x2A\x2A\x2A\x2A\x2A\x2A\x75\x2A\x33\x2A\x5E\x8B\x2A\x5D\xC3"
-				/* ? ? ? ? ? ? ? 80 ? ? ? ? ? ? 75 ? 33 ? 5E 8B ? 5D C3 */
+				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x80\xBE\x2A\x2A\x2A\x2A\x2A\x75\x2A\x33\x2A\x5E\x8B\x2A\x5D\xC3"
+				/* ? ? ? ? ? ? ? 80 BE ? ? ? ? ? 75 ? 33 ? 5E 8B ? 5D C3 */
 			}
 
 			/* RestoreTransitionedSurvivorBots(void) */
