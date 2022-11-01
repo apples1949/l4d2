@@ -47,5 +47,6 @@ public Action L4D_OnGetScriptValueInt(const char[] key, int &retVal) {
 }
 
 public void L4D_OnFirstSurvivorLeftSafeArea_Post(int client) {
-	CPrintToChatAll("{olive}Tank{default}: {red}%d%%\n{olive}Witch{default}: {red}%d%%", RoundToCeil(L4D2Direct_GetVSTankFlowPercent(0) * 100.0), RoundToCeil(L4D2Direct_GetVSWitchFlowPercent(0) * 100.0));
+	int round = GameRules_GetProp("m_bInSecondHalfOfRound") ? 1 : 0;
+	CPrintToChatAll("{olive}Tank{default}: {red}%d%%\n{olive}Witch{default}: {red}%d%%", RoundToNearest(L4D2Direct_GetVSTankFlowPercent(round) * 100.0), RoundToNearest(L4D2Direct_GetVSWitchFlowPercent(round) * 100.0));
 }
