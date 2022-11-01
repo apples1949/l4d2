@@ -6,7 +6,7 @@
 #define PLUGIN_NAME				"L4D2 Door Lock"
 #define PLUGIN_AUTHOR			"Glide Loading, sorallll"
 #define PLUGIN_DESCRIPTION		"Saferoom Door locked until all players loaded and infected are ready to spawn"
-#define PLUGIN_VERSION			"2.7"
+#define PLUGIN_VERSION			"2.7.1"
 #define PLUGIN_URL				"http://forums.alliedmods.net/showpost.php?p=1373587&postcount=136"
 
 #define CVAR_FLAGS				FCVAR_NOTIFY
@@ -137,7 +137,7 @@ void IsAllowed() {
 
 	if (g_bCvarAllow == false && bCvarAllow == true && bAllowMode == true) {
 		g_bCvarAllow = true;
-		InitPlugin();
+		//InitPlugin();
 		HookEvents(true);
 	}
 	else if (g_bCvarAllow == true && (bCvarAllow == false || bAllowMode == false)) {
@@ -265,9 +265,6 @@ void ResetPlugin() {
 	g_bFreezeAllowed = false;
 
 	delete g_hTimer;
-
-	for (int i = 1; i <= MaxClients; i++)
-		ResetLoading(i);
 }
 
 void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast) {
@@ -276,16 +273,19 @@ void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast) {
 
 	int client = GetClientOfUserId(event.GetInt("userid"));
 	if (client && IsClientInGame(client) && !IsFakeClient(client))
-		ResetLoading(client);
+		ResetLoadingState(client);
 }
 
-void ResetLoading(int client) {
+void ResetLoadingState(int client, bool state = false) {
 	g_iTimeout[client] = 0;
-	g_bIsLoading[client] = false;
+	g_bIsLoading[client] = state;
 }
 
 void StartSequence() {
 	delete g_hTimer;
+
+	for (int i = 1; i <= MaxClients; i++)
+		ResetLoadingState(i, true);
 
 	if (g_iStartDoor && EntRefToEntIndex(g_iStartDoor) != INVALID_ENT_REFERENCE) {
 		g_iCountDown = -1;
@@ -534,22 +534,36 @@ void OnOpen(const char[] output, int entity, int activator, float delay) {
 	EmitSoundToAll(GetRandomInt(0, 1) ? SOUND_BREAK1 : SOUND_BREAK2, ent);
 }
 
+bool IsFinishedLoading() {
+	for (int i = 1; i <= MaxClients; i++) {
+		if (IsClientConnected(i)) {
+			if (!IsClientInGame(i) && !IsFakeClient(i)) {
+				g_iTimeout[i]++;
+				if (g_bIsLoading[i] && g_iTimeout[i] == 1)
+					g_bIsLoading[i] = true;
+
+				if (g_iTimeout[i] == g_iClientTimeOut)
+					g_bIsLoading[i] = false;
+			}
+			else
+				g_bIsLoading[i] = false;
+		}
+		else
+			g_bIsLoading[i] = false;
+	}
+
+	if (g_iDisplayPanel > 0 && g_bFirstRound)
+		LoadingPanel();
+
+	return !IsAnyClientLoading();
+}
+
 bool IsAnyClientLoading() {
 	for (int i = 1; i <= MaxClients; i++) {
 		if (g_bIsLoading[i])
 			return true;
 	}
 	return false;
-}
-
-bool IsFinishedLoading() {
-	for (int i = 1; i <= MaxClients; i++)
-		g_bIsLoading[i] = IsClientConnected(i) && !IsClientInGame(i) && !IsFakeClient(i) && ++g_iTimeout[i] < g_iClientTimeOut;
-
-	if (g_iDisplayPanel > 0 && g_bFirstRound)
-		LoadingPanel();
-
-	return !IsAnyClientLoading();
 }
 
 void PrintTextAll(const char[] format, any ...) {
