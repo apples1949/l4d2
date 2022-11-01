@@ -888,7 +888,7 @@ void ReEquipWeapons(int client) {
 				int weaponSkin = GetEntProp(weapon, Prop_Send, "m_nSkin");
 
 				RemovePlayerSlot(client, weapon);
-				CheatCommand(client, "give", cls);
+				GivePlayerItem(client, cls);
 
 				weapon = GetPlayerWeaponSlot(client, 0);
 				if (weapon > MaxClients) {
@@ -928,12 +928,12 @@ void ReEquipWeapons(int client) {
 
 				switch (dualWielding) {
 					case true: {
-						CheatCommand(client, "give", "weapon_pistol");
-						CheatCommand(client, "give", "weapon_pistol");
+						GivePlayerItem(client, "weapon_pistol");
+						GivePlayerItem(client, "weapon_pistol");
 					}
 
 					case false:
-						CheatCommand(client, "give", cls);
+						GivePlayerItem(client, cls);
 				}
 
 				weapon = GetPlayerWeaponSlot(client, 1);
@@ -949,17 +949,6 @@ void ReEquipWeapons(int client) {
 	}
 
 	FakeClientCommand(client, "use %s", active);
-}
-
-void CheatCommand(int client, const char[] sCommand, const char[] sArguments = "") {
-	static int flagBits, cmdFlags;
-	flagBits = GetUserFlagBits(client);
-	cmdFlags = GetCommandFlags(sCommand);
-	SetUserFlagBits(client, ADMFLAG_ROOT);
-	SetCommandFlags(sCommand, cmdFlags & ~FCVAR_CHEAT);
-	FakeClientCommand(client, "%s %s", sCommand, sArguments);
-	SetUserFlagBits(client, flagBits);
-	SetCommandFlags(sCommand, cmdFlags);
 }
 
 int GetOrSetPlayerAmmo(int client, int weapon, int ammo = -1) {
