@@ -32,9 +32,10 @@ public Plugin myinfo = {
 
 public void OnPluginStart() {
 	InitData();
+	CreateConVar("si_climb_speed_modifier_version", PLUGIN_VERSION, "SI Climb Speed Modifier plugin version.", FCVAR_NOTIFY|FCVAR_DONTRECORD);
 
-	g_cvAIClimbSpeed = CreateConVar("l4d2_ai_climb_speed",	"0.0",	"AI特感爬升速度", FCVAR_NOTIFY, true, 0.0);
-	g_cvPZClimbSpeed = CreateConVar("l4d2_pz_climb_speed",	"0.0",	"玩家特感爬升速度", FCVAR_NOTIFY, true, 0.0);
+	g_cvAIClimbSpeed = CreateConVar("l4d2_ai_climb_speed", "0.0", "AI特感爬升速度", FCVAR_NOTIFY, true, 0.0);
+	g_cvPZClimbSpeed = CreateConVar("l4d2_pz_climb_speed", "0.0", "玩家特感爬升速度", FCVAR_NOTIFY, true, 0.0);
 	g_cvAIClimbSpeed.AddChangeHook(CvarChanged);
 	g_cvPZClimbSpeed.AddChangeHook(CvarChanged);
 }
