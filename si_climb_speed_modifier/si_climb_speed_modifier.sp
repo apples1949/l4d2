@@ -82,7 +82,7 @@ void SetupDetours(GameData hGameData = null) {
 		SetFailState("Failed to create DynamicDetour: \"DD::CTerrorGameMovement::ClimbSpeed\"");
 
 	if (!dDetour.Enable(Hook_Post, DD_CTerrorGameMovement_ClimbSpeed_Post))
-		SetFailState("Failed to detour pre: \"DD::CTerrorGameMovement::ClimbSpeed\"");
+		SetFailState("Failed to detour post: \"DD::CTerrorGameMovement::ClimbSpeed\"");
 }
 
 MRESReturn DD_CTerrorGameMovement_ClimbSpeed_Post(Address pThis, DHookReturn hReturn) {
