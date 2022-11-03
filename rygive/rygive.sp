@@ -1570,8 +1570,8 @@ int GodMode_MenuHandler(Menu menu, MenuAction action, int client, int param2) {
 }
 
 void ForcePanicEvent(int client) {
-	L4D2_CTimerStart(L4D2CT_MobSpawnTimer, 0.0);
-	//ExecuteCommand("director_force_panic_event");
+	L4D_ResetMobTimer();
+	L4D_ForcePanicEvent();
 	Miscell(client, g_iSelection[client]);
 }
 
