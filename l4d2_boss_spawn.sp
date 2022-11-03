@@ -447,7 +447,7 @@ Action tmrCheckFlow(Handle timer) {
 	static int count;
 	static int highest;
 	highest = L4D_GetHighestFlowSurvivor();
-	g_fFurthestSurvivorFlow = highest != -1 ? L4D2_GetFurthestSurvivorFlow() : L4D2Direct_GetFlowDistance(highest);
+	g_fFurthestSurvivorFlow = highest != -1 ? L4D2Direct_GetFlowDistance(highest) : L4D2_GetFurthestSurvivorFlow();
 
 	if (g_bAllowSpawnTanks && (g_iMaxTanks && g_iTankCounter < g_iMaxTanks) && (g_fFurthestSurvivorFlow >= g_fFlowRangeMinTank && g_fFurthestSurvivorFlow <= g_fFlowRangeMaxTank)) {
 		if (!g_fFlowSpawnTank){
@@ -507,7 +507,7 @@ int SpawnTank(int client) {
 	float vecPos[3];
 	g_bInSpawnTime = true;
 	g_iDirection = SPAWN_SPECIALS_IN_FRONT_OF_SURVIVORS;
-	if (client)
+	if (client != -1)
 		success = L4D_GetRandomPZSpawnPosition(client, 7, 10, vecPos);//7: does not find spawn point in some places for witch
 
 	if (!success)
@@ -540,7 +540,7 @@ int SpawnWitch(int client) {
 	float vecPos[3];
 	g_bInSpawnTime = true;
 	g_iDirection = SPAWN_SPECIALS_IN_FRONT_OF_SURVIVORS;
-	if (client)
+	if (client != -1)
 		success = L4D_GetRandomPZSpawnPosition(client, 8, 10, vecPos);//7: does not find spawn point in some places for witch
 
 	if (!success) {
