@@ -2,6 +2,7 @@
 #pragma newdecls required
 #include <sourcemod>
 #include <sdktools>
+#include <left4dhooks>
 
 ConVar
 	g_hBoomerBhop,
@@ -81,6 +82,9 @@ public Action OnPlayerRunCmd(int client, int &buttons) {
 		return Plugin_Continue;
 
 	if (!IsClientInGame(client) || !IsFakeClient(client) || GetClientTeam(client) != 3 || !IsPlayerAlive(client) || GetEntProp(client, Prop_Send, "m_zombieClass") != 2 || GetEntProp(client, Prop_Send, "m_isGhost") )
+		return Plugin_Continue;
+
+	if (L4D_IsPlayerStaggering(client))
 		return Plugin_Continue;
 
 	if (!IsGrounded(client) || GetEntityMoveType(client) == MOVETYPE_LADDER || GetEntProp(client, Prop_Data, "m_nWaterLevel") > 1 && (!GetEntProp(client, Prop_Send, "m_hasVisibleThreats") && !TargetSur(client)))

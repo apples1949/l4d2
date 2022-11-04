@@ -136,6 +136,9 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 	if (!IsClientInGame(client) || !IsFakeClient(client) || GetClientTeam(client) != 3 || !IsPlayerAlive(client) || GetEntProp(client, Prop_Send, "m_zombieClass") != 5 || GetEntProp(client, Prop_Send, "m_isGhost") || !GetEntProp(client, Prop_Send, "m_hasVisibleThreats"))
 		return Plugin_Continue;
 
+	if (L4D_IsPlayerStaggering(client))
+		return Plugin_Continue;
+
 	static float nearestSurDist;
 	nearestSurDist = NearestSurDistance(client);
 	if (nearestSurDist > g_fHopActivationProximity)

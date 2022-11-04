@@ -2,6 +2,7 @@
 #pragma newdecls required
 #include <sourcemod>
 #include <sdktools>
+#include <left4dhooks>
 
 ConVar
 	g_hChargerBhop,
@@ -92,6 +93,9 @@ public Action L4D2_OnChooseVictim(int specialInfected, int &curTarget) {
 bool g_bModify[MAXPLAYERS + 1];
 public Action OnPlayerRunCmd(int client, int &buttons) {
 	if (!IsClientInGame(client) || !IsFakeClient(client) || GetClientTeam(client) != 3 || !IsPlayerAlive(client) || GetEntProp(client, Prop_Send, "m_zombieClass") != 6 || GetEntProp(client, Prop_Send, "m_isGhost") )
+		return Plugin_Continue;
+
+	if (L4D_IsPlayerStaggering(client))
 		return Plugin_Continue;
 
 	static float nearestSurDist;
