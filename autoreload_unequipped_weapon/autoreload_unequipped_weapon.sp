@@ -75,7 +75,7 @@ public void OnClientPutInServer(int client) {
         SDKHook(client, SDKHook_WeaponSwitchPost, WeaponSwitchPost);
 }
 
-public void WeaponSwitchPost(int client, int weapon) {
+void WeaponSwitchPost(int client, int weapon) {
     if (g_hTimers[client] != null)
         delete g_hTimers[client];
 
