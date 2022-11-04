@@ -358,16 +358,16 @@ bool HitWall(int client, int target) {
 
 	MakeVectorFromPoints(vPos, vTar, vTar);
 	static float fDist;
-	fDist = GetVectorLength(vTar) - 49.0;
+	fDist = GetVectorLength(vTar);
 	NormalizeVector(vTar, vTar);
-	ScaleVector(vTar, fDist <= 0.0 ? 0.0 : fDist);
+	ScaleVector(vTar, fDist);
 	AddVectors(vPos, vTar, vTar);
 
 	static float vMins[3];
 	static float vMaxs[3];
 	GetClientMins(client, vMins);
 	GetClientMaxs(client, vMaxs);
-	vMins[2] += 10.0;
+	vMins[2] += fDist > 49.0 ? 10.0 : 45.0;
 	vMaxs[2] -= 10.0;
 
 	static bool didHit;
