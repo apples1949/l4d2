@@ -144,7 +144,7 @@ public Action OnPlayerRunCmd(int client, int &buttons) {
 
 	static int flags;
 	flags = GetEntityFlags(client);
-	if (flags & FL_ONGROUND == 0 || (g_bIgnoreCrouch && flags & FL_DUCKING == 0) ||!GetEntProp(client, Prop_Send, "m_hasVisibleThreats"))
+	if (flags & FL_ONGROUND == 0 || (!g_bIgnoreCrouch && flags & FL_DUCKING == 0) ||!GetEntProp(client, Prop_Send, "m_hasVisibleThreats"))
 		return Plugin_Continue;
 	
 	buttons &= ~IN_ATTACK2;
