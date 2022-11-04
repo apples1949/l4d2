@@ -11,7 +11,7 @@
 #define PLUGIN_NAME				"Survivor Chat Select"
 #define PLUGIN_AUTHOR			"DeatChaos25, Mi123456 & Merudo, Lux, SilverShot"
 #define PLUGIN_DESCRIPTION		"Select a survivor character by typing their name into the chat."
-#define PLUGIN_VERSION			"1.7.5"
+#define PLUGIN_VERSION			"1.7.6"
 #define PLUGIN_URL				"https://forums.alliedmods.net/showthread.php?p=2399163#post2399163"
 
 #define GAMEDATA				"survivor_chat_select"
@@ -285,7 +285,7 @@ int ShowMenuAdmin_MenuHandler(Menu menu, MenuAction action, int client, int para
 	switch (action) {
 		case MenuAction_Select: {
 			if (param2 >= 0 && param2 <= 7)
-				SetCharacter(client, param2, param2, false);
+				SetCharacter(GetClientOfUserId(g_iSelectedClient[client]), param2, param2, false);
 		}
 	
 		case MenuAction_End:
