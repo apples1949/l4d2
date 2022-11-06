@@ -142,7 +142,7 @@ stock void CSayText2(int client, int author, const char[] szMessage) {
 #define PLUGIN_NAME				"Survivor Auto Respawn"
 #define PLUGIN_AUTHOR			"sorallll"
 #define PLUGIN_DESCRIPTION		"自动复活"
-#define PLUGIN_VERSION			"1.4.0"
+#define PLUGIN_VERSION			"1.4.1"
 #define PLUGIN_URL				"https://steamcommunity.com/id/sorallll"
 
 #define GAMEDATA				"survivor_auto_respawn"
@@ -154,7 +154,6 @@ Handle
 
 ArrayList
 	g_aMeleeScripts;
-
 
 Address
 	g_pStatsCondition;
@@ -441,17 +440,17 @@ public void OnAllPluginsLoaded() {
 
 Action Listener_SpecNext(int client, char[] command, int argc) {
 	if (g_bDisabled)
-		return Plugin_Handled;
+		return Plugin_Continue;
 
 	if (!client || !IsClientInGame(client) || IsFakeClient(client))
-		return Plugin_Handled;
+		return Plugin_Continue;
 
 	if (GetClientTeam(client) != 2 || IsPlayerAlive(client) || g_Player[client].timer)
 		return Plugin_Continue;
 
 	float time = GetEngineTime();
 	if (g_fCmdCooldown[client] > time)
-		return Plugin_Handled;
+		return Plugin_Continue;
 
 	g_fCmdCooldown[client] = time + 30.0;
 
