@@ -272,7 +272,7 @@ public void OnMapEnd() {
 
 Action cmdReloadWhiteList(int client, int args) {
 	if (!g_bEnable)
-		return Plugin_Continue;
+		return Plugin_Handled;
 	
 	LoadWhiteList();
 	ReplyToCommand(client, "reloaded: %s", CFG_WHITELIST);
@@ -281,7 +281,7 @@ Action cmdReloadWhiteList(int client, int args) {
 
 Action cmdCleanWeapon(int client, int args) {
 	if (!g_bEnable)
-		return Plugin_Continue;
+		return Plugin_Handled;
 	
 	if (args > 0) {
 		int count;
@@ -303,7 +303,7 @@ Action cmdCleanWeapon(int client, int args) {
 
 Action cmdCleanAllWeapons(int client, int args) {
 	if (!g_bEnable)
-		return Plugin_Continue;
+		return Plugin_Handled;
 	
 	int count = CleanWeapons();
 	ReplyToCommand(client, "cleaned all (%i) weapons no equipped", count);
@@ -312,7 +312,7 @@ Action cmdCleanAllWeapons(int client, int args) {
 
 Action cmdClearWeapon(int client, int args) {
 	if (!g_bEnable)
-		return Plugin_Continue;
+		return Plugin_Handled;
 	
 	if (args > 0) {
 		int count;
@@ -334,7 +334,7 @@ Action cmdClearWeapon(int client, int args) {
 
 Action cmdClearAllWeapons(int client, int args) {
 	if (!g_bEnable)
-		return Plugin_Continue;
+		return Plugin_Handled;
 	
 	int count = CleanWeapons(_, _, true);
 	ReplyToCommand(client, "cleaned all (%i) weapons", count);
@@ -685,7 +685,8 @@ Action tmrCleaningWeapons(Handle timer) {
 
 		weapon = EntRefToEntIndex(g_iWeaponRef[i]);
 		if (!IsValidEnt(weapon)) {
-			UnSetWeaponClean(weapon);
+			if (weapon > -1)
+				UnSetWeaponClean(weapon);
 			continue;
 		}
 
