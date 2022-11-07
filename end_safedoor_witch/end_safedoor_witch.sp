@@ -6,7 +6,7 @@
 #define PLUGIN_NAME				"End Safedoor Witch"
 #define PLUGIN_AUTHOR			"sorallll"
 #define PLUGIN_DESCRIPTION		""
-#define PLUGIN_VERSION			"1.0.4"
+#define PLUGIN_VERSION			"1.0.5"
 #define PLUGIN_URL				"https://forums.alliedmods.net/showthread.php?t=335777"
 
 // witch向门外偏移的距离
@@ -97,9 +97,9 @@ void Init() {
 	ScaleVector(vFwd, 24.0);
 	AddVectors(vPos, vFwd, vPos);
 
-	if (GetEndPoint(vPos, vAng, 32.0, vEnd[0], door)) {
+	if (GetEndPoint(vPos, vAng, 32.0, vEnd[0])) {
 		vAng[1] += 180.0;
-		if (GetEndPoint(vPos, vAng, 32.0, vEnd[1], door)) {
+		if (GetEndPoint(vPos, vAng, 32.0, vEnd[1])) {
 			NormalizeVector(vFwd, vFwd);
 			ScaleVector(vFwd, GetVectorDistance(vEnd[0], vEnd[1]) * 0.5);
 			AddVectors(vEnd[1], vFwd, vPos);
@@ -112,21 +112,20 @@ void Init() {
 	AddVectors(vPos, vFwd, vPos);
 
 	vPos[2] -= 25.0;
-	height = GetGroundHeight(vPos, 128.0, door);
-	if (height && vPos[2] - height < 104.0)
-		vPos[2] = height + 5.0;
+	height = GetGroundHeight(vPos, 128.0);
+	vPos[2] = height ? height + 5.0 : vPos[2] - 10.5;
 
 	SpawnWitch(vPos, vOff);
 }
 
-float GetGroundHeight(const float vPos[3], float scale, int ent) {
+float GetGroundHeight(const float vPos[3], float scale) {
 	float vEnd[3];
 	GetAngleVectors(view_as<float>({90.0, 0.0, 0.0}), vEnd, NULL_VECTOR, NULL_VECTOR);
 	NormalizeVector(vEnd, vEnd);
 	ScaleVector(vEnd, scale);
 	AddVectors(vPos, vEnd, vEnd);
 
-	Handle hTrace = TR_TraceHullFilterEx(vPos, vEnd, view_as<float>({-5.0, -5.0, 0.0}), view_as<float>({5.0, 5.0, 5.0}), MASK_ALL, _TraceEntityFilter, ent);
+	Handle hTrace = TR_TraceHullFilterEx(vPos, vEnd, view_as<float>({-5.0, -5.0, 0.0}), view_as<float>({5.0, 5.0, 5.0}), MASK_ALL, _TraceEntityFilter);
 	if (TR_DidHit(hTrace)) {
 		TR_GetEndPosition(vEnd, hTrace);
 		delete hTrace;
@@ -137,14 +136,14 @@ float GetGroundHeight(const float vPos[3], float scale, int ent) {
 	return 0.0;
 }
 
-bool GetEndPoint(const float vStart[3], const float vAng[3], float scale, float vBuffer[3], int ent) {
+bool GetEndPoint(const float vStart[3], const float vAng[3], float scale, float vBuffer[3]) {
 	float vEnd[3];
 	GetAngleVectors(vAng, vEnd, NULL_VECTOR, NULL_VECTOR);
 	NormalizeVector(vEnd, vEnd);
 	ScaleVector(vEnd, scale);
 	AddVectors(vStart, vEnd, vEnd);
 
-	Handle hTrace = TR_TraceHullFilterEx(vStart, vEnd, view_as<float>({-5.0, -5.0, 0.0}), view_as<float>({5.0, 5.0, 5.0}), MASK_ALL, _TraceEntityFilter, ent);
+	Handle hTrace = TR_TraceHullFilterEx(vStart, vEnd, view_as<float>({-5.0, -5.0, 0.0}), view_as<float>({5.0, 5.0, 5.0}), MASK_ALL, _TraceEntityFilter);
 	if (TR_DidHit(hTrace)) {
 		TR_GetEndPosition(vBuffer, hTrace);
 		delete hTrace;
@@ -155,16 +154,8 @@ bool GetEndPoint(const float vStart[3], const float vAng[3], float scale, float 
 	return false;
 }
 
-bool _TraceEntityFilter(int entity, int contentsMask, any data) {
-	if (entity == data || entity <= MaxClients)
-		return false;
-
-	char cls[9];
-	GetEntityClassname(entity, cls, sizeof cls);
-	if ((cls[0] == 'i' && strcmp(cls[1], "nfected") == 0) || (cls[0] == 'w' && strcmp(cls[1], "itch") == 0))
-		return false;
-
-	return true;
+bool _TraceEntityFilter(int entity, int contentsMask) {
+	return !entity;
 }
 
 // https://forums.alliedmods.net/showthread.php?p=1471101
