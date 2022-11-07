@@ -86,6 +86,7 @@ void Init() {
 	GetEntPropVector(door, Prop_Data, "m_angRotationClosed", vOff);
 	GetAngleVectors(vOff, vVec[1], NULL_VECTOR, NULL_VECTOR);
 	NormalizeVector(vVec[1], vVec[1]);
+	vOff[0] = vOff[2] = 0.0;
 
 	if (RadToDeg(ArcCosine(GetVectorDotProduct(vVec[0], vVec[1]))) < 90.0)
 		vOff[1] += 180.0;
@@ -111,21 +112,29 @@ void Init() {
 	AddVectors(vPos, vFwd, vPos);
 
 	vPos[2] -= 25.0;
-	height = GetGroundHeight(vPos, door);
+	height = GetGroundHeight(vPos, 128.0, door);
 	if (height && vPos[2] - height < 104.0)
 		vPos[2] = height + 5.0;
 
 	SpawnWitch(vPos, vOff);
 }
 
-float GetGroundHeight(const float vPos[3], int ent) {
+float GetGroundHeight(const float vPos[3], float scale, int ent) {
 	float vEnd[3];
-	Handle hTrace = TR_TraceRayFilterEx(vPos, view_as<float>({90.0, 0.0, 0.0}), MASK_ALL, RayType_Infinite, _TraceEntityFilter, ent);
-	if (TR_DidHit(hTrace))
+	GetAngleVectors(view_as<float>({90.0, 0.0, 0.0}), vEnd, NULL_VECTOR, NULL_VECTOR);
+	NormalizeVector(vEnd, vEnd);
+	ScaleVector(vEnd, scale);
+	AddVectors(vPos, vEnd, vEnd);
+
+	Handle hTrace = TR_TraceHullFilterEx(vPos, vEnd, view_as<float>({-5.0, -5.0, 0.0}), view_as<float>({5.0, 5.0, 5.0}), MASK_ALL, _TraceEntityFilter, ent);
+	if (TR_DidHit(hTrace)) {
 		TR_GetEndPosition(vEnd, hTrace);
+		delete hTrace;
+		return vEnd[2];
+	}
 
 	delete hTrace;
-	return vEnd[2];
+	return 0.0;
 }
 
 bool GetEndPoint(const float vStart[3], const float vAng[3], float scale, float vBuffer[3], int ent) {
