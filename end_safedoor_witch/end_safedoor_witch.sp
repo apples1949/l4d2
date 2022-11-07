@@ -25,6 +25,8 @@ public Plugin myinfo = {
 };
 
 public void OnPluginStart() {
+	CreateConVar("end_safedoor_witch_version", PLUGIN_VERSION, "End Safedoor Witch plugin version.", FCVAR_NOTIFY|FCVAR_DONTRECORD);
+
 	HookEvent("round_end",		Event_RoundEnd,		EventHookMode_PostNoCopy);
 	HookEvent("round_start",	Event_RoundStart,	EventHookMode_PostNoCopy);
 	HookEvent("player_spawn",	Event_PlayerSpawn,	EventHookMode_PostNoCopy);
@@ -36,33 +38,32 @@ public void OnMapEnd() {
 }
 
 void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast) {
-	g_iRoundStart = 0;
-	g_iPlayerSpawn = 0;
+	OnMapEnd();
 }
 
 void Event_RoundStart(Event event, const char[] name, bool dontBroadcast) {
 	if (g_iRoundStart == 0 && g_iPlayerSpawn == 1)
-		CreateTimer(1.0, tmrSpawnWitch, _, TIMER_FLAG_NO_MAPCHANGE);
+		Init();
 	g_iRoundStart = 1;
 }
 
 void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast) {
 	if (g_iRoundStart == 1 && g_iPlayerSpawn == 0)
-		CreateTimer(1.0, tmrSpawnWitch, _, TIMER_FLAG_NO_MAPCHANGE);
+		Init();
 	g_iPlayerSpawn = 1;
 }
 
-Action tmrSpawnWitch(Handle timer) {
+void Init() {
 	int ent = INVALID_ENT_REFERENCE;
 	if ((ent = FindEntityByClassname(MaxClients + 1, "info_changelevel")) == -1)
 		ent = FindEntityByClassname(MaxClients + 1, "trigger_changelevel");
 
 	if (ent == -1)
-		return Plugin_Stop;
+		return;
 
 	int door = L4D_GetCheckpointLast();
 	if (door == -1)
-		return Plugin_Stop;
+		return;
 
 	float vOrigin[3];
 	GetAbsOrigin(ent, vOrigin, true);
@@ -115,7 +116,6 @@ Action tmrSpawnWitch(Handle timer) {
 		vPos[2] = height + 5.0;
 
 	SpawnWitch(vPos, vOff);
-	return Plugin_Continue;
 }
 
 float GetGroundHeight(const float vPos[3], int ent) {
