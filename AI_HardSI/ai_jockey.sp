@@ -99,21 +99,18 @@ void Event_JockeyRide(Event event, const char[] name, bool dontBroadcast) {
 	StumbleByStanders(victim, attacker);
 }
 
-void StumbleByStanders(int iPinnedSur, int iPinner) {
+void StumbleByStanders(int target, int pinner) {
 	static int i;
-	static float vPos[3];
-	static float vDir[3];
-	GetClientAbsOrigin(iPinnedSur, vPos);
+	static float vecPos[3];
+	static float vecTarget[3];
+	GetClientAbsOrigin(target, vecPos);
 	for (i = 1; i <= MaxClients; i++) {
-		if (i == iPinnedSur || i == iPinner || !IsClientInGame(i) || GetClientTeam(i) != 2 || !IsPlayerAlive(i) || IsPinned(i))
+		if (i == target || i == pinner || !IsClientInGame(i) || GetClientTeam(i) != 2 || !IsPlayerAlive(i) || IsPinned(i))
 			continue;
-		
-		GetClientAbsOrigin(i, vDir);
-		MakeVectorFromPoints(vPos, vDir, vDir);
-		if (GetVectorLength(vDir) <= g_fJockeyStumbleRadius) {
-			NormalizeVector(vDir, vDir);
-			L4D_StaggerPlayer(i, iPinnedSur, vDir);
-		}
+
+		GetClientAbsOrigin(i, vecTarget);
+		if (GetVectorDistance(vecPos, vecTarget) <= g_fJockeyStumbleRadius)
+			L4D_StaggerPlayer(i, i, vecPos);
 	}
 }
 
