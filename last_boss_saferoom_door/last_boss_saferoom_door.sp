@@ -265,10 +265,10 @@ void CreatePredictModel() {
 
 	g_Boss.idx = Math_GetRandomInt(0, sizeof g_sModels - 1);
 	g_Boss.type = g_Boss.idx < 2 ? Boss_Witch : Boss_Tank;
+	DispatchKeyValue(entity, "model", g_sModels[g_Boss.idx]);
 	DispatchKeyValue(entity, "solid", "6");
 	DispatchKeyValue(entity, "DefaultAnim", g_Boss.type == Boss_Witch ? "ACT_TERROR_WITCH_WANDER_WALK" : "ACT_TERROR_RAGE_AT_ENEMY");
 	DispatchKeyValue(entity, "disableshadows", "1");
-	SetEntityModel(entity, g_sModels[g_Boss.idx]);
 	SetAbsOrigin(entity, g_Boss.pos);
 	SetAbsAngles(entity, g_Boss.ang);
 	DispatchSpawn(entity);
