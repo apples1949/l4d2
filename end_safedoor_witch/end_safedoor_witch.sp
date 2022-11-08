@@ -54,11 +54,11 @@ void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast) {
 }
 
 void Init() {
-	int ent = INVALID_ENT_REFERENCE;
-	if ((ent = FindEntityByClassname(MaxClients + 1, "info_changelevel")) == -1)
-		ent = FindEntityByClassname(MaxClients + 1, "trigger_changelevel");
+	int entity = INVALID_ENT_REFERENCE;
+	if ((entity = FindEntityByClassname(MaxClients + 1, "info_changelevel")) == -1)
+		entity = FindEntityByClassname(MaxClients + 1, "trigger_changelevel");
 
-	if (ent == -1)
+	if (entity == -1)
 		return;
 
 	int door = L4D_GetCheckpointLast();
@@ -66,12 +66,11 @@ void Init() {
 		return;
 
 	float vOrigin[3];
-	GetAbsOrigin(ent, vOrigin, true);
+	GetAbsOrigin(entity, vOrigin, true);
 	vOrigin[2] = 0.0;
 
 	float height;
 	float vPos[3];
-	float vOff[3];
 	float vAng[3];
 	float vFwd[3];
 	float vVec[2][3];
@@ -83,39 +82,37 @@ void Init() {
 	MakeVectorFromPoints(vVec[0], vOrigin, vVec[0]);
 	NormalizeVector(vVec[0], vVec[0]);
 
-	GetEntPropVector(door, Prop_Data, "m_angRotationClosed", vOff);
-	GetAngleVectors(vOff, vVec[1], NULL_VECTOR, NULL_VECTOR);
-	NormalizeVector(vVec[1], vVec[1]);
-	vOff[0] = vOff[2] = 0.0;
-
-	if (RadToDeg(ArcCosine(GetVectorDotProduct(vVec[0], vVec[1]))) < 90.0)
-		vOff[1] += 180.0;
-
 	GetEntPropVector(door, Prop_Data, "m_angRotationOpenBack", vAng);
+	vAng[0] = vAng[2] = 0.0;
 	GetAngleVectors(vAng, vFwd, NULL_VECTOR, NULL_VECTOR);
 	NormalizeVector(vFwd, vFwd);
-	ScaleVector(vFwd, 24.0);
+	ScaleVector(vFwd, 28.0);
 	AddVectors(vPos, vFwd, vPos);
 
-	if (GetEndPoint(vPos, vAng, 32.0, vEnd[0])) {
+	if (GetEndPoint(vPos, vAng, 56.0, vEnd[0])) {
 		vAng[1] += 180.0;
-		if (GetEndPoint(vPos, vAng, 32.0, vEnd[1])) {
+		if (GetEndPoint(vPos, vAng, 56.0, vEnd[1])) {
 			NormalizeVector(vFwd, vFwd);
 			ScaleVector(vFwd, GetVectorDistance(vEnd[0], vEnd[1]) * 0.5);
 			AddVectors(vEnd[1], vFwd, vPos);
 		}
 	}
 
-	GetAngleVectors(vOff, vFwd, NULL_VECTOR, NULL_VECTOR);
+	vAng[1] += 90.0;
+	GetAngleVectors(vAng, vVec[1], NULL_VECTOR, NULL_VECTOR);
+	NormalizeVector(vVec[1], vVec[1]);
+	vAng[1] += RadToDeg(ArcCosine(GetVectorDotProduct(vVec[0], vVec[1]))) >= 90.0 ? 15.0 : 195.0;
+
+	GetAngleVectors(vAng, vFwd, NULL_VECTOR, NULL_VECTOR);
 	NormalizeVector(vFwd, vFwd);
 	ScaleVector(vFwd, WITCH_OFFSET);
 	AddVectors(vPos, vFwd, vPos);
 
 	vPos[2] -= 25.0;
 	height = GetGroundHeight(vPos, 128.0);
-	vPos[2] = height ? height + 5.0 : vPos[2] - 10.5;
+	vPos[2] = height ? height : vPos[2] - 10.5;
 
-	SpawnWitch(vPos, vOff);
+	SpawnWitch(vPos, vAng);
 }
 
 float GetGroundHeight(const float vPos[3], float scale) {
@@ -125,7 +122,7 @@ float GetGroundHeight(const float vPos[3], float scale) {
 	ScaleVector(vEnd, scale);
 	AddVectors(vPos, vEnd, vEnd);
 
-	Handle hTrace = TR_TraceHullFilterEx(vPos, vEnd, view_as<float>({-5.0, -5.0, 0.0}), view_as<float>({5.0, 5.0, 5.0}), MASK_ALL, _TraceEntityFilter);
+	Handle hTrace = TR_TraceHullFilterEx(vPos, vEnd, view_as<float>({-5.0, -5.0, 0.0}), view_as<float>({5.0, 5.0, 5.0}), MASK_ALL, TraceWorldFilter);
 	if (TR_DidHit(hTrace)) {
 		TR_GetEndPosition(vEnd, hTrace);
 		delete hTrace;
@@ -143,7 +140,7 @@ bool GetEndPoint(const float vStart[3], const float vAng[3], float scale, float 
 	ScaleVector(vEnd, scale);
 	AddVectors(vStart, vEnd, vEnd);
 
-	Handle hTrace = TR_TraceHullFilterEx(vStart, vEnd, view_as<float>({-5.0, -5.0, 0.0}), view_as<float>({5.0, 5.0, 5.0}), MASK_ALL, _TraceEntityFilter);
+	Handle hTrace = TR_TraceHullFilterEx(vStart, vEnd, view_as<float>({-5.0, -5.0, 0.0}), view_as<float>({5.0, 5.0, 5.0}), MASK_ALL, TraceWorldFilter);
 	if (TR_DidHit(hTrace)) {
 		TR_GetEndPosition(vBuffer, hTrace);
 		delete hTrace;
@@ -154,7 +151,7 @@ bool GetEndPoint(const float vStart[3], const float vAng[3], float scale, float 
 	return false;
 }
 
-bool _TraceEntityFilter(int entity, int contentsMask) {
+bool TraceWorldFilter(int entity, int contentsMask) {
 	return !entity;
 }
 
