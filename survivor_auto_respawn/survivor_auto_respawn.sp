@@ -584,7 +584,6 @@ public void OnClientDisconnect_Post(int client) {
 }
 
 public void OnMapEnd() {
-	g_bDisabled = true;
 	g_iMaxRespawned = 0;
 	for (int i = 1; i <= MaxClients; i++) {
 		delete g_Player[i].timer;
@@ -593,7 +592,12 @@ public void OnMapEnd() {
 }
 
 void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast) {
-	OnMapEnd();
+	g_bDisabled = true;
+	g_iMaxRespawned = 0;
+	for (int i = 1; i <= MaxClients; i++) {
+		delete g_Player[i].timer;
+		g_Player[i].respawned = 0;
+	}
 }
 
 void Event_RoundStart(Event event, const char[] name, bool dontBroadcast) {
