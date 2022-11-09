@@ -6,8 +6,12 @@
 #define PLUGIN_NAME				"Last Boss Saferoom Door"
 #define PLUGIN_AUTHOR			"sorallll"
 #define PLUGIN_DESCRIPTION		""
-#define PLUGIN_VERSION			"1.0.0"
+#define PLUGIN_VERSION			"1.0.1"
 #define PLUGIN_URL				""
+
+#define PARTICLE_BLACK			"smoke_window" // Large black smoke
+#define PARTICLE_CLOUD			"smoker_smokecloud" // Smoker cloud
+#define PARTICLE_CLOUD1			"smoker_smokecloud_cheap"
 
 enum {
 	Boss_None,
@@ -97,6 +101,10 @@ public void OnClientDisconnect(int client) {
 }
 
 public void OnMapStart() {
+	PrecacheParticle(PARTICLE_BLACK);
+	PrecacheParticle(PARTICLE_CLOUD);
+	PrecacheParticle(PARTICLE_CLOUD1);
+
 	for (int i; i < sizeof g_sModels; i++) {
 		if (!IsModelPrecached(g_sModels[i]))
 			PrecacheModel(g_sModels[i], true);
@@ -255,7 +263,7 @@ Action Hook_SetTransmit(int entity, int client) {
 	return Plugin_Handled;
 }
 
-float g_fTakeDamage;
+int g_iHits;
 void CreatePredictModel() {
 	int entity = CreateEntityByName("prop_dynamic");
 	if (entity == -1)
@@ -265,28 +273,38 @@ void CreatePredictModel() {
 
 	g_Boss.idx = Math_GetRandomInt(0, sizeof g_sModels - 1);
 	g_Boss.type = g_Boss.idx < 2 ? Boss_Witch : Boss_Tank;
-	DispatchKeyValue(entity, "model", g_sModels[g_Boss.idx]);
 	DispatchKeyValue(entity, "solid", "6");
-	DispatchKeyValue(entity, "DefaultAnim", g_Boss.type == Boss_Witch ? "ACT_TERROR_WITCH_WANDER_WALK" : "ACT_TERROR_RAGE_AT_ENEMY");
+	DispatchKeyValue(entity, "model", g_sModels[g_Boss.idx]);
+	DispatchKeyValue(entity, "DefaultAnim", g_Boss.type == Boss_Witch ? "ACT_TERROR_WITCH_IDLE" : "ACT_TERROR_RAGE_AT_ENEMY");
 	DispatchKeyValue(entity, "disableshadows", "1");
 	SetAbsOrigin(entity, g_Boss.pos);
 	SetAbsAngles(entity, g_Boss.ang);
 	DispatchSpawn(entity);
-	L4D2_SetEntityGlow(entity, L4D2Glow_Constant, 0, 0, {255, 0, 0}, false);
+	L4D2_SetEntityGlow(entity, L4D2Glow_Constant, 0, 0, {1, 1, 1}, false);
 
-	g_fTakeDamage = 0.0;
+	g_iHits = 0;
 	SDKHook(entity, SDKHook_OnTakeDamage, OnTakeDamage);
 }
 
+#define MAX_HITS 50
 Action OnTakeDamage(int victim, int &attacker, int &inflictor, float &damage, int &damagetype) {
-	g_fTakeDamage += damage;
-	if (g_fTakeDamage < 500.0)
+	g_iHits++;
+	if (g_iHits < MAX_HITS) {
+		static int color[3];
+		color[0] = RoundToCeil(255.0 * g_iHits / MAX_HITS);
+		L4D2_SetEntityGlow(victim, L4D2Glow_Constant, 0, 0, color, true);
 		return Plugin_Continue;
+	}
 
+	ShowParticle(PARTICLE_BLACK, g_Boss.pos, NULL_VECTOR, 10.0);
+	ShowParticle(PARTICLE_CLOUD, g_Boss.pos, NULL_VECTOR, 10.0);
+	ShowParticle(PARTICLE_CLOUD1, g_Boss.pos, NULL_VECTOR, 10.0);
 	SDKUnhook(victim, SDKHook_OnTakeDamage, OnTakeDamage);
+	PerformFade();
 	SpawnBoss(g_Boss.pos, g_Boss.ang);
+	L4D2_SetEntityGlow(g_Boss.refe, L4D2Glow_Constant, 0, 0, {1, 1, 1}, false);
 	RemoveEntity(victim);
-
+	
 	return Plugin_Continue;
 }
 
@@ -335,7 +353,7 @@ float GetGroundHeight(const float vPos[3], float scale) {
 	ScaleVector(vEnd, scale);
 	AddVectors(vPos, vEnd, vEnd);
 
-	Handle hTrace = TR_TraceHullFilterEx(vPos, vEnd, view_as<float>({-5.0, -5.0, 0.0}), view_as<float>({5.0, 5.0, 5.0}), MASK_ALL, TraceWorldFilter);
+	Handle hTrace = TR_TraceHullFilterEx(vPos, vEnd, view_as<float>({-16.0, -16.0, 0.0}), view_as<float>({16.0, 16.0,10.0}), MASK_PLAYERSOLID, TraceWorldFilter);
 	if (TR_DidHit(hTrace)) {
 		TR_GetEndPosition(vEnd, hTrace);
 		delete hTrace;
@@ -353,7 +371,7 @@ bool GetEndPoint(const float vStart[3], const float vAng[3], float scale, float 
 	ScaleVector(vEnd, scale);
 	AddVectors(vStart, vEnd, vEnd);
 
-	Handle hTrace = TR_TraceHullFilterEx(vStart, vEnd, view_as<float>({-5.0, -5.0, 0.0}), view_as<float>({5.0, 5.0, 5.0}), MASK_ALL, TraceWorldFilter);
+	Handle hTrace = TR_TraceHullFilterEx(vStart, vEnd, view_as<float>({-5.0, -5.0, 0.0}), view_as<float>({5.0, 5.0, 5.0}), MASK_PLAYERSOLID, TraceWorldFilter);
 	if (TR_DidHit(hTrace)) {
 		TR_GetEndPosition(vBuffer, hTrace);
 		delete hTrace;
@@ -375,7 +393,6 @@ void SpawnBoss(const float vPos[3], const float vAng[3]) {
 			if (entity > 0) {
 				SetEntityModel(entity, g_sModels[g_Boss.idx]);
 				g_Boss.refe = EntIndexToEntRef(entity);
-				CopyGlowing(g_Boss.attach, entity);
 			}
 		}
 
@@ -384,7 +401,6 @@ void SpawnBoss(const float vPos[3], const float vAng[3]) {
 			if (entity > 0) {
 				SetEntityModel(entity, g_sModels[g_Boss.idx]);
 				g_Boss.refe = GetClientUserId(entity);
-				CopyGlowing(g_Boss.attach, entity);
 			}
 		}
 	}
@@ -396,24 +412,12 @@ int SpawnWitch(const float vPos[3], const float vAng[3]) {
 	if (entity != -1) {
 		SetAbsOrigin(entity, vPos);
 		SetAbsAngles(entity, vAng);
-		//SetEntPropFloat(entity, Prop_Send, "m_rage", 0.5);
-		//SetEntProp(entity, Prop_Data, "m_nSequence", 4);
+		SetEntProp(entity, Prop_Data, "m_nSequence", 4);
+		SetEntPropFloat(entity, Prop_Send, "m_rage", 0.9);
 		DispatchSpawn(entity);
-
-		int health = GetRandomInt(1000, 10000);
-		SetEntProp(entity, Prop_Data, "m_iHealth", health);
-		SetEntProp(entity, Prop_Data, "m_iMaxHealth", health);
 	}
 
 	return entity;
-}
-
-void CopyGlowing(int entity, int target) {
-	SetEntProp(target, Prop_Send, "m_iGlowType", GetEntProp(entity, Prop_Send, "m_iGlowType"));
-	SetEntProp(target, Prop_Send, "m_nGlowRange", GetEntProp(entity, Prop_Send, "m_nGlowRange"));
-	SetEntProp(target, Prop_Send, "m_nGlowRangeMin", GetEntProp(entity, Prop_Send, "m_nGlowRangeMin"));
-	SetEntProp(target, Prop_Send, "m_glowColorOverride", GetEntProp(entity, Prop_Send, "m_glowColorOverride"));
-	SetEntProp(target, Prop_Send, "m_bFlashing", GetEntProp(entity, Prop_Send, "m_bFlashing"));
 }
 
 bool IsValidEntRef(int entity) {
@@ -437,4 +441,107 @@ int Math_GetRandomInt(int min, int max) {
 		random++;
 
 	return RoundToCeil(float(random) / (float(2147483647) / float(max - min + 1))) + min - 1;
+}
+
+int ShowParticle(const char[] particle, const float vPos[3], const float vAng[3], float time) {
+	int entity = CreateEntityByName("info_particle_system");
+	if (entity == -1)
+		return 0;
+
+	DispatchKeyValue(entity, "effect_name", particle);
+	DispatchSpawn(entity);
+	ActivateEntity(entity);
+	AcceptEntityInput(entity, "start");
+	TeleportEntity(entity, vPos, vAng, NULL_VECTOR);
+
+	static char buffer[64];
+	FormatEx(buffer, sizeof buffer, "OnUser1 !self:Kill::%f:-1", time);
+	SetVariantString(buffer);
+	AcceptEntityInput(entity, "AddOutput");
+	AcceptEntityInput(entity, "FireUser1");
+
+	return entity;
+}
+
+int PrecacheParticle(const char[] effect_name) {
+	static int table = INVALID_STRING_TABLE;
+	if (table == INVALID_STRING_TABLE)
+		table = FindStringTable("ParticleEffectNames");
+
+	int index = FindStringIndex(table, effect_name);
+	if (index == INVALID_STRING_INDEX) {
+		bool save = LockStringTables(false);
+		AddToStringTable(table, effect_name);
+		LockStringTables(save);
+		index = FindStringIndex(table, effect_name);
+	}
+
+	return index;
+}
+
+#define FFADE_IN		0x0001
+#define FFADE_OUT		0x0002
+#define FFADE_STAYOUT	0x0008
+#define FFADE_PURGE		0x0010
+
+#define SCREENFADE_FRACBITS	(1 << 9) // 512
+
+void PerformFade() {
+	float vEye[3];
+	float vPos[3];
+
+	vPos = g_Boss.pos;
+	vPos[2] += 45.0;
+	for (int i = 1; i <= MaxClients; i++) {
+		if (!IsClientInGame(i) || IsFakeClient(i))
+			continue;
+
+		GetClientEyePosition(i, vEye);
+		if (IsVisibleTo(vEye, vPos))
+			ScreenFade(i, 5, SCREENFADE_FRACBITS, FFADE_IN|FFADE_PURGE, 0, 0, 0, 255);
+	}
+}
+
+void ScreenFade(int client, int delay, int duration, int type, int red, int green, int blue, int alpha) {
+    BfWrite bf = UserMessageToBfWrite(StartMessageOne("Fade", client));
+    bf.WriteShort(delay);
+    bf.WriteShort(duration);
+    bf.WriteShort(type);
+    bf.WriteByte(red);
+    bf.WriteByte(green);
+    bf.WriteByte(blue);
+    bf.WriteByte(alpha);
+    EndMessage();
+}
+
+// credits = "AtomicStryker"
+bool IsVisibleTo(const float vecPos[3], const float vecTarget[3]) {
+	static float vecLookAt[3];
+	MakeVectorFromPoints(vecPos, vecTarget, vecLookAt);
+	GetVectorAngles(vecLookAt, vecLookAt);
+
+	static Handle hTrace;
+	hTrace = TR_TraceRayFilterEx(vecPos, vecLookAt, MASK_ALL, RayType_Infinite, TraceEntityFilter);
+
+	static bool isVisible;
+	isVisible = false;
+	if (TR_DidHit(hTrace)) {
+		static float vStart[3];
+		TR_GetEndPosition(vStart, hTrace);
+		if ((GetVectorDistance(vecPos, vStart, false) + 25.0) >= GetVectorDistance(vecPos, vecTarget))
+			isVisible = true;
+	}
+
+	delete hTrace;
+	return isVisible;
+}
+
+bool TraceEntityFilter(int entity, int contentsMask) {
+	if (!entity || !IsValidEntity(entity)) // dont let WORLD, or invalid ents be hit
+		return false;
+
+	// Don't hit triggers
+	static char cls[9];
+	GetEdictClassname(entity, cls, sizeof cls);
+	return strncmp(cls, "trigger_", 8) != 0;
 }
