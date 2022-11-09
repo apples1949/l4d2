@@ -275,7 +275,7 @@ void CreatePredictModel() {
 	g_Boss.type = g_Boss.idx < 2 ? Boss_Witch : Boss_Tank;
 	DispatchKeyValue(entity, "solid", "6");
 	DispatchKeyValue(entity, "model", g_sModels[g_Boss.idx]);
-	DispatchKeyValue(entity, "DefaultAnim", g_Boss.type == Boss_Witch ? "ACT_TERROR_WITCH_IDLE" : "ACT_TERROR_RAGE_AT_ENEMY");
+	DispatchKeyValue(entity, "DefaultAnim", g_Boss.type == Boss_Witch ? "ACT_TERROR_WITCH_WANDER_IDLE" : "ACT_TERROR_RAGE_AT_ENEMY");
 	DispatchKeyValue(entity, "disableshadows", "1");
 	SetAbsOrigin(entity, g_Boss.pos);
 	SetAbsAngles(entity, g_Boss.ang);
@@ -498,7 +498,7 @@ void PerformFade() {
 
 		GetClientEyePosition(i, vEye);
 		if (IsVisibleTo(vEye, vPos))
-			ScreenFade(i, 5, SCREENFADE_FRACBITS, FFADE_IN|FFADE_PURGE, 0, 0, 0, 255);
+			ScreenFade(i, 3, SCREENFADE_FRACBITS, FFADE_IN|FFADE_PURGE, 0, 0, 0, 255);
 	}
 }
 
@@ -521,7 +521,7 @@ bool IsVisibleTo(const float vecPos[3], const float vecTarget[3]) {
 	GetVectorAngles(vecLookAt, vecLookAt);
 
 	static Handle hTrace;
-	hTrace = TR_TraceRayFilterEx(vecPos, vecLookAt, MASK_ALL, RayType_Infinite, TraceEntityFilter);
+	hTrace = TR_TraceRayFilterEx(vecPos, vecLookAt, MASK_VISIBLE, RayType_Infinite, TraceEntityFilter);
 
 	static bool isVisible;
 	isVisible = false;
@@ -537,11 +537,13 @@ bool IsVisibleTo(const float vecPos[3], const float vecTarget[3]) {
 }
 
 bool TraceEntityFilter(int entity, int contentsMask) {
-	if (!entity || !IsValidEntity(entity)) // dont let WORLD, or invalid ents be hit
+	if (entity <= MaxClients || entity == EntRefToEntIndex(g_Boss.refe))
 		return false;
 
-	// Don't hit triggers
 	static char cls[9];
-	GetEdictClassname(entity, cls, sizeof cls);
-	return strncmp(cls, "trigger_", 8) != 0;
+	GetEntityClassname(entity, cls, sizeof cls);
+	if ((cls[0] == 'i' && strcmp(cls[1], "nfected") == 0) || (cls[0] == 'w' && strcmp(cls[1], "itch") == 0))
+		return false;
+
+	return true;
 }
