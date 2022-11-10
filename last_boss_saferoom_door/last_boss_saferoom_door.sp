@@ -286,7 +286,7 @@ void CreatePredictModel() {
 	SDKHook(entity, SDKHook_OnTakeDamage, OnTakeDamage);
 }
 
-#define MAX_HITS 50
+#define MAX_HITS 25
 Action OnTakeDamage(int victim, int &attacker, int &inflictor, float &damage, int &damagetype) {
 	g_iHits++;
 	if (g_iHits < MAX_HITS) {
@@ -300,7 +300,7 @@ Action OnTakeDamage(int victim, int &attacker, int &inflictor, float &damage, in
 	ShowParticle(PARTICLE_CLOUD, g_Boss.pos, NULL_VECTOR, 10.0);
 	ShowParticle(PARTICLE_CLOUD1, g_Boss.pos, NULL_VECTOR, 10.0);
 	SDKUnhook(victim, SDKHook_OnTakeDamage, OnTakeDamage);
-	PerformFade();
+	PerformBlind();
 	SpawnBoss(g_Boss.pos, g_Boss.ang);
 	L4D2_SetEntityGlow(g_Boss.refe, L4D2Glow_Constant, 0, 0, {1, 1, 1}, false);
 	RemoveEntity(victim);
@@ -486,19 +486,18 @@ int PrecacheParticle(const char[] effect_name) {
 
 #define SCREENFADE_FRACBITS	(1 << 9) // 512
 
-void PerformFade() {
-	float vEye[3];
+void PerformBlind() {
 	float vPos[3];
-
 	vPos = g_Boss.pos;
 	vPos[2] += 45.0;
-	for (int i = 1; i <= MaxClients; i++) {
-		if (!IsClientInGame(i) || IsFakeClient(i))
+	int clients[MAXPLAYERS + 1];
+	int num = GetClientsInRange(vPos, RangeType_Visibility, clients, MAXPLAYERS);
+
+	for (int i; i < num; i++) {
+		if (!IsClientInGame(clients[i]) || IsFakeClient(clients[i]))
 			continue;
 
-		GetClientEyePosition(i, vEye);
-		if (IsVisibleTo(vEye, vPos))
-			ScreenFade(i, 3, SCREENFADE_FRACBITS, FFADE_IN|FFADE_PURGE, 0, 0, 0, 255);
+		ScreenFade(clients[i], 1, SCREENFADE_FRACBITS, FFADE_IN|FFADE_PURGE, 0, 0, 0, 255);
 	}
 }
 
@@ -512,38 +511,4 @@ void ScreenFade(int client, int delay, int duration, int type, int red, int gree
     bf.WriteByte(blue);
     bf.WriteByte(alpha);
     EndMessage();
-}
-
-// credits = "AtomicStryker"
-bool IsVisibleTo(const float vecPos[3], const float vecTarget[3]) {
-	static float vecLookAt[3];
-	MakeVectorFromPoints(vecPos, vecTarget, vecLookAt);
-	GetVectorAngles(vecLookAt, vecLookAt);
-
-	static Handle hTrace;
-	hTrace = TR_TraceRayFilterEx(vecPos, vecLookAt, MASK_VISIBLE, RayType_Infinite, TraceEntityFilter);
-
-	static bool isVisible;
-	isVisible = false;
-	if (TR_DidHit(hTrace)) {
-		static float vStart[3];
-		TR_GetEndPosition(vStart, hTrace);
-		if ((GetVectorDistance(vecPos, vStart, false) + 25.0) >= GetVectorDistance(vecPos, vecTarget))
-			isVisible = true;
-	}
-
-	delete hTrace;
-	return isVisible;
-}
-
-bool TraceEntityFilter(int entity, int contentsMask) {
-	if (entity <= MaxClients || entity == EntRefToEntIndex(g_Boss.refe))
-		return false;
-
-	static char cls[9];
-	GetEntityClassname(entity, cls, sizeof cls);
-	if ((cls[0] == 'i' && strcmp(cls[1], "nfected") == 0) || (cls[0] == 'w' && strcmp(cls[1], "itch") == 0))
-		return false;
-
-	return true;
 }
