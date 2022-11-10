@@ -101,7 +101,7 @@ public Action OnPlayerRunCmd(int client, int &buttons) {
 	if (curTargetDist > 0.50 * g_fVomitRange && -1.0 < nearestSurDist < 1000.0) {
 		static float vAng[3];
 		GetClientEyeAngles(client, vAng);
-		return aBunnyHop(client, buttons, vAng);
+		return BunnyHop(client, buttons, vAng);
 	}
 
 	return Plugin_Continue;
@@ -116,7 +116,7 @@ bool TargetSur(int client) {
 	return IsAliveSur(GetClientAimTarget(client, true));
 }
 
-Action aBunnyHop(int client, int &buttons, const float vAng[3]) {
+Action BunnyHop(int client, int &buttons, const float vAng[3]) {
 	float vFwd[3];
 	float vRig[3];
 	float vDir[3];
@@ -295,41 +295,41 @@ bool IsAliveSur(int client) {
 	return client > 0 && client <= MaxClients && IsClientInGame(client) && GetClientTeam(client) == 2 && IsPlayerAlive(client);
 }
 
-int GetClosestSur(int client, int iExclude = -1, float fDistance) {
+int GetClosestSur(int client, int exclude = -1, float distance) {
 	static int i;
-	static int count;
-	static float fDist;
+	static int num;
+	static float dist;
 	static float vPos[3];
 	static float vTar[3];
-	static int iTargets[MAXPLAYERS + 1];
+	static int clients[MAXPLAYERS + 1];
 	
-	count = 0;
+	num = 0;
 	GetClientEyePosition(client, vPos);
-	count = GetClientsInRange(vPos, RangeType_Visibility, iTargets, MAXPLAYERS);
+	num = GetClientsInRange(vPos, RangeType_Visibility, clients, MAXPLAYERS);
 	
-	if (!count)
+	if (!num)
 		return -1;
-			
+
 	static int target;
-	static ArrayList aTargets;
-	aTargets = new ArrayList(2);
-	for (i = 0; i < count; i++) {
-		target = iTargets[i];
-		if (target && target != iExclude && GetClientTeam(target) == 2 && IsPlayerAlive(target) && !GetEntProp(target, Prop_Send, "m_isIncapacitated")) {
+	static ArrayList aClients;
+	aClients = new ArrayList(2);
+	for (i = 0; i < num; i++) {
+		target = clients[i];
+		if (target && target != exclude && GetClientTeam(target) == 2 && IsPlayerAlive(target) && !GetEntProp(target, Prop_Send, "m_isIncapacitated")) {
 			GetClientAbsOrigin(target, vTar);
-			fDist = GetVectorDistance(vPos, vTar);
-			if (fDist < fDistance)
-				aTargets.Set(aTargets.Push(fDist), target, 1);
+			dist = GetVectorDistance(vPos, vTar);
+			if (dist < distance)
+				aClients.Set(aClients.Push(dist), target, 1);
 		}
 	}
 
-	if (!aTargets.Length) {
-		delete aTargets;
+	if (!aClients.Length) {
+		delete aClients;
 		return -1;
 	}
 
-	aTargets.Sort(Sort_Ascending, Sort_Float);
-	target = aTargets.Get(0, 1);
-	delete aTargets;
+	aClients.Sort(Sort_Ascending, Sort_Float);
+	target = aClients.Get(0, 1);
+	delete aClients;
 	return target;
 }

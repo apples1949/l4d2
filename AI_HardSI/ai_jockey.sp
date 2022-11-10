@@ -161,8 +161,8 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 			g_bDoNormalJump[client] = false;
 		}
 		else {
-			static float fGameTime;
-			if (g_fLeapAgainTime[client] < (fGameTime = GetGameTime())) {
+			static float time;
+			if (g_fLeapAgainTime[client] < (time = GetGameTime())) {
 				if (nearestSurDist < g_fJockeyLeapRange) {
 					switch (Math_GetRandomInt(0, 1)) {
 						case 0:
@@ -181,7 +181,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 
 				buttons |= IN_ATTACK;
 				g_bDoNormalJump[client] = true;
-				g_fLeapAgainTime[client] = fGameTime + g_fJockeyLeapAgain;
+				g_fLeapAgainTime[client] = time + g_fJockeyLeapAgain;
 			}
 		}
 	}
@@ -244,19 +244,18 @@ bool WithinViewAngle(int client, float offsetThreshold) {
 
 // credits = "AtomicStryker"
 bool IsVisibleTo(const float vPos[3], const float vTarget[3]) {
-	static float vAngles[3], vLookAt[3];
-	MakeVectorFromPoints(vPos, vTarget, vLookAt); // compute vector from start to target
-	GetVectorAngles(vLookAt, vAngles); // get angles from vector for trace
+	static float vLookAt[3];
+	MakeVectorFromPoints(vPos, vTarget, vLookAt);
+	GetVectorAngles(vLookAt, vLookAt);
 
-	// execute Trace
 	static Handle hTrace;
+	hTrace = TR_TraceRayFilterEx(vPos, vLookAt, MASK_VISIBLE, RayType_Infinite, TraceEntityFilter);
+	
 	static bool isVisible;
-
 	isVisible = false;
-	hTrace = TR_TraceRayFilterEx(vPos, vAngles, MASK_ALL, RayType_Infinite, TraceEntityFilter);
 	if (TR_DidHit(hTrace)) {
 		static float vStart[3];
-		TR_GetEndPosition(vStart, hTrace); // retrieve our trace endpoint
+		TR_GetEndPosition(vStart, hTrace);
 
 		if ((GetVectorDistance(vPos, vStart, false) + 25.0) >= GetVectorDistance(vPos, vTarget))
 			isVisible = true; // if trace ray length plus tolerance equal or bigger absolute distance, you hit the target

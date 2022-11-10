@@ -139,7 +139,7 @@ public Action OnPlayerRunCmd(int client, int &buttons) {
 
 		if (CurTargetDistance(client) > 0.5 * g_fChargeProximity && -1.0 < nearestSurDist < 1000.0) {
 			GetClientEyeAngles(client, vAng);
-			return aBunnyHop(client, buttons, vAng);
+			return BunnyHop(client, buttons, vAng);
 		}
 	}
 	else {
@@ -206,7 +206,7 @@ bool IsGrounded(int client) {
 	return ent != -1 && IsValidEntity(ent);
 }
 
-Action aBunnyHop(int client, int &buttons, const float vAng[3]) {
+Action BunnyHop(int client, int &buttons, const float vAng[3]) {
 	float vFwd[3];
 	float vRig[3];
 	float vDir[3];
@@ -361,17 +361,17 @@ bool HitWall(int client, int target) {
 	vTar[2] += 10.0;
 
 	MakeVectorFromPoints(vPos, vTar, vTar);
-	static float fDist;
-	fDist = GetVectorLength(vTar);
+	static float dist;
+	dist = GetVectorLength(vTar);
 	NormalizeVector(vTar, vTar);
-	ScaleVector(vTar, fDist);
+	ScaleVector(vTar, dist);
 	AddVectors(vPos, vTar, vTar);
 
 	static float vMins[3];
 	static float vMaxs[3];
 	GetClientMins(client, vMins);
 	GetClientMaxs(client, vMaxs);
-	vMins[2] += fDist > 49.0 ? 10.0 : 45.0;
+	vMins[2] += dist > 49.0 ? 10.0 : 45.0;
 	vMaxs[2] -= 10.0;
 
 	static bool didHit;
@@ -464,35 +464,35 @@ bool IsPinned(int client) {
 	return false;
 }
 
-int GetClosestSur(int client, int iExclude = -1, float fDistance) {
+int GetClosestSur(int client, int exclude = -1, float distance) {
 	static int i;
-	static int count;
+	static int num;
 	static int index;
-	static float fDist;
+	static float dist;
 	static float vAng[3];
 	static float vSrc[3];
 	static float vTar[3];
-	static int iTargets[MAXPLAYERS + 1];
+	static int clients[MAXPLAYERS + 1];
 	
-	count = 0;
+	num = 0;
 	GetClientEyePosition(client, vSrc);
-	count = GetClientsInRange(vSrc, RangeType_Visibility, iTargets, MAXPLAYERS);
+	num = GetClientsInRange(vSrc, RangeType_Visibility, clients, MAXPLAYERS);
 
-	if (!count)
+	if (!num)
 		return -1;
 
 	static ArrayList aClients;
 	aClients = new ArrayList(3);
 	float fFOV = GetFOVDotProduct(g_fAimOffsetSensitivity);
-	for (i = 0; i < count; i++) {
-		if (iTargets[i] && iTargets[i] != iExclude && GetClientTeam(iTargets[i]) == 2 && IsPlayerAlive(iTargets[i]) && !Incapacitated(iTargets[i]) && !IsPinned(iTargets[i]) && !HitWall(client, iTargets[i])) {
-			GetClientEyePosition(iTargets[i], vTar);
-			fDist = GetVectorDistance(vSrc, vTar);
-			if (fDist < fDistance) {
-				index = aClients.Push(fDist);
-				aClients.Set(index, iTargets[i], 1);
+	for (i = 0; i < num; i++) {
+		if (clients[i] && clients[i] != exclude && GetClientTeam(clients[i]) == 2 && IsPlayerAlive(clients[i]) && !Incapacitated(clients[i]) && !IsPinned(clients[i]) && !HitWall(client, clients[i])) {
+			GetClientEyePosition(clients[i], vTar);
+			dist = GetVectorDistance(vSrc, vTar);
+			if (dist < distance) {
+				index = aClients.Push(dist);
+				aClients.Set(index, clients[i], 1);
 
-				GetClientEyeAngles(iTargets[i], vAng);
+				GetClientEyeAngles(clients[i], vAng);
 				aClients.Set(index, !PointWithinViewAngle(vTar, vSrc, vAng, fFOV) ? 0 : 1, 2);
 			}
 		}
@@ -505,7 +505,7 @@ int GetClosestSur(int client, int iExclude = -1, float fDistance) {
 
 	aClients.Sort(Sort_Ascending, Sort_Float);
 	index = aClients.FindValue(0, 2);
-	i = aClients.Get(index != -1 && aClients.Get(index, 0) < 0.5 * fDistance ? index : 0, 1);
+	i = aClients.Get(index != -1 && aClients.Get(index, 0) < 0.5 * distance ? index : 0, 1);
 	delete aClients;
 	return i;
 }
@@ -526,19 +526,18 @@ bool WithinViewAngle(int client, int viewer, float offsetThreshold) {
 
 // credits = "AtomicStryker"
 bool IsVisibleTo(const float vPos[3], const float vTarget[3]) {
-	static float vAngles[3], vLookAt[3];
-	MakeVectorFromPoints(vPos, vTarget, vLookAt); // compute vector from start to target
-	GetVectorAngles(vLookAt, vAngles); // get angles from vector for trace
+	static float vLookAt[3];
+	MakeVectorFromPoints(vPos, vTarget, vLookAt);
+	GetVectorAngles(vLookAt, vLookAt);
 
-	// execute Trace
 	static Handle hTrace;
+	hTrace = TR_TraceRayFilterEx(vPos, vLookAt, MASK_VISIBLE, RayType_Infinite, TraceEntityFilter);
+	
 	static bool isVisible;
-
 	isVisible = false;
-	hTrace = TR_TraceRayFilterEx(vPos, vAngles, MASK_ALL, RayType_Infinite, TraceEntityFilter);
 	if (TR_DidHit(hTrace)) {
 		static float vStart[3];
-		TR_GetEndPosition(vStart, hTrace); // retrieve our trace endpoint
+		TR_GetEndPosition(vStart, hTrace);
 
 		if ((GetVectorDistance(vPos, vStart, false) + 25.0) >= GetVectorDistance(vPos, vTarget))
 			isVisible = true; // if trace ray length plus tolerance equal or bigger absolute distance, you hit the target
