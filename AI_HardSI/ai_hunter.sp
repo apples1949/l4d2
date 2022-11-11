@@ -220,7 +220,7 @@ bool HitWall(int client, float vStart[3]) {
 	AddVectors(vStart, vEnd, vEnd);
 
 	static Handle hTrace;
-	hTrace = TR_TraceHullFilterEx(vStart, vEnd, view_as<float>({-16.0, -16.0, 0.0}), view_as<float>({16.0, 16.0, 36.0}), MASK_PLAYERSOLID_BRUSHONLY, TraceEntityFilter);
+	hTrace = TR_TraceHullFilterEx(vStart, vEnd, view_as<float>({-16.0, -16.0, 0.0}), view_as<float>({16.0, 16.0, 36.0}), MASK_PLAYERSOLID, TraceEntityFilter);
 	if (TR_DidHit(hTrace)) {
 		static float vPlane[3];
 		TR_GetPlaneNormal(hTrace, vPlane);

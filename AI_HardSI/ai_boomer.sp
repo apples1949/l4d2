@@ -172,7 +172,7 @@ bool WontFall(int client, const float vVel[3]) {
 	didHit = false;
 	vPos[2] += 20.0;
 	vEnd[2] += 20.0;
-	hTrace = TR_TraceHullFilterEx(vPos, vEnd, vMins, vMaxs, MASK_PLAYERSOLID_BRUSHONLY, TraceEntityFilter);
+	hTrace = TR_TraceHullFilterEx(vPos, vEnd, vMins, vMaxs, MASK_PLAYERSOLID, TraceEntityFilter);
 	if (TR_DidHit(hTrace)) {
 		didHit = true;
 		TR_GetEndPosition(vVec, hTrace);
@@ -193,10 +193,10 @@ bool WontFall(int client, const float vVel[3]) {
 	vDown[1] = vVec[1];
 	vDown[2] = vVec[2] - 100000.0;
 
-	hTrace = TR_TraceHullFilterEx(vVec, vDown, vMins, vMaxs, MASK_PLAYERSOLID_BRUSHONLY, TraceEntityFilter);
+	hTrace = TR_TraceHullFilterEx(vVec, vDown, vMins, vMaxs, MASK_PLAYERSOLID, TraceEntityFilter);
 	if (TR_DidHit(hTrace)) {
 		TR_GetEndPosition(vEnd, hTrace);
-		if (vVec[2] - vEnd[2] > 104.0) {
+		if (vVec[2] - vEnd[2] > 72.0) {
 			delete hTrace;
 			return false;
 		}

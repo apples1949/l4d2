@@ -221,7 +221,7 @@ bool WontFall(int client, const float vVel[3]) {
 	didHit = false;
 	vPos[2] += 20.0;
 	vEnd[2] += 20.0;
-	hTrace = TR_TraceHullFilterEx(vPos, vEnd, vMins, vMaxs, MASK_PLAYERSOLID_BRUSHONLY, TraceEntityFilter);
+	hTrace = TR_TraceHullFilterEx(vPos, vEnd, vMins, vMaxs, MASK_PLAYERSOLID, TraceEntityFilter);
 	if (TR_DidHit(hTrace)) {
 		didHit = true;
 		TR_GetEndPosition(vVec, hTrace);
@@ -242,10 +242,10 @@ bool WontFall(int client, const float vVel[3]) {
 	vDown[1] = vVec[1];
 	vDown[2] = vVec[2] - 100000.0;
 
-	hTrace = TR_TraceHullFilterEx(vVec, vDown, vMins, vMaxs, MASK_PLAYERSOLID_BRUSHONLY, TraceEntityFilter);
+	hTrace = TR_TraceHullFilterEx(vVec, vDown, vMins, vMaxs, MASK_PLAYERSOLID, TraceEntityFilter);
 	if (TR_DidHit(hTrace)) {
 		TR_GetEndPosition(vEnd, hTrace);
-		if (vVec[2] - vEnd[2] > 104.0) {
+		if (vVec[2] - vEnd[2] > 72.0) {
 			delete hTrace;
 			return false;
 		}
@@ -390,10 +390,10 @@ bool IsPinned(int client) {
 	return false;
 }
 
-bool HitWall(int iTank, int ent, int target = -1, const float vEnd[3] = NULL_VECTOR) {
+bool HitWall(int tank, int ent, int target = -1, const float vEnd[3] = NULL_VECTOR) {
 	static float vSrc[3];
 	static float vTar[3];
-	GetClientEyePosition(iTank, vSrc);
+	GetClientEyePosition(tank, vSrc);
 
 	if (target == -1)
 		vTar = vEnd;
@@ -407,10 +407,25 @@ bool HitWall(int iTank, int ent, int target = -1, const float vEnd[3] = NULL_VEC
 
 	static bool didHit;
 	static Handle hTrace;
-	hTrace = TR_TraceHullFilterEx(vSrc, vTar, vMins, vMaxs, MASK_SOLID, TraceEntityFilter, ent);
+	hTrace = TR_TraceHullFilterEx(vSrc, vTar, vMins, vMaxs, MASK_SOLID, TraceRockFilter, ent);
 	didHit = TR_DidHit(hTrace);
 	delete hTrace;
 	return didHit;
+}
+
+bool TraceRockFilter(int entity, int contentsMask, any data) {
+	if (entity == data)
+		return false;
+
+	if (entity > 0 && entity <= MaxClients)
+		return false;
+
+	static char cls[10];
+	GetEntityClassname(entity, cls, sizeof cls);
+	if ((cls[0] == 'i' && strcmp(cls[1], "nfected") == 0) || (cls[0] == 'w' && strcmp(cls[1], "itch") == 0))
+		return false;
+
+	return true;
 }
 
 int GetClosestSur(int client, int exclude = -1, int ent, float distance) {
