@@ -410,14 +410,14 @@ int GetSpectatorCount() {
 Action cmdJoinTeam2(int client, int args) {
 	if (!client || !IsClientInGame(client) || IsFakeClient(client))
 		return Plugin_Handled;
-
-	if (!(g_iJoinFlags & JOIN_MANUAL)) {
-		PrintToChat(client, "手动加入已禁用.");
+	
+	if (!g_bRoundStart) {
+		PrintToChat(client, "回合尚未开始.");
 		return Plugin_Handled;
 	}
 
-	if (!g_bRoundStart) {
-		PrintToChat(client, "回合尚未开始.");
+	if (!(g_iJoinFlags & JOIN_MANUAL)) {
+		PrintToChat(client, "手动加入已禁用.");
 		return Plugin_Handled;
 	}
 
@@ -1594,7 +1594,7 @@ bool CanTakeOver(int bot, int target) {
 }
 
 bool OnEndScenario() {
-	return view_as<float>(LoadFromAddress(g_pDirector + view_as<Address>(g_iOff_RestartScenarioTimer + 8), NumberType_Int32)) >= GetGameTime();
+	return view_as<float>(LoadFromAddress(g_pDirector + view_as<Address>(g_iOff_RestartScenarioTimer + 8), NumberType_Int32)) > 0.0;
 }
 
 bool PrepRestoreBots() {
