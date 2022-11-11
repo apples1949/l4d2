@@ -252,7 +252,7 @@ bool WontFall(int client, const float vVel[3]) {
 
 		static int ent;
 		if ((ent = TR_GetEntityIndex(hTrace)) > MaxClients) {
-			static char cls[13];
+			static char cls[14];
 			GetEdictClassname(ent, cls, sizeof cls);
 			if (strcmp(cls, "trigger_hurt") == 0) {
 				delete hTrace;
@@ -271,7 +271,7 @@ bool TraceEntityFilter(int entity, int contentsMask) {
 	if (entity <= MaxClients)
 		return false;
 
-	static char cls[9];
+	static char cls[10];
 	GetEntityClassname(entity, cls, sizeof cls);
 	if ((cls[0] == 'i' && strcmp(cls[1], "nfected") == 0) || (cls[0] == 'w' && strcmp(cls[1], "itch") == 0))
 		return false;

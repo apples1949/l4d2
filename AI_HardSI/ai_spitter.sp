@@ -172,7 +172,7 @@ bool TraceEntityFilter(int entity, int contentsMask) {
 	if (entity <= MaxClients)
 		return false;
 
-	static char cls[9];
+	static char cls[10];
 	GetEntityClassname(entity, cls, sizeof cls);
 	if ((cls[0] == 'i' && strcmp(cls[1], "nfected") == 0) || (cls[0] == 'w' && strcmp(cls[1], "itch") == 0))
 		return false;
