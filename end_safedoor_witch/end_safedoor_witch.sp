@@ -122,7 +122,7 @@ float GetGroundHeight(const float vPos[3], float scale) {
 	ScaleVector(vEnd, scale);
 	AddVectors(vPos, vEnd, vEnd);
 
-	Handle hTrace = TR_TraceHullFilterEx(vPos, vEnd, view_as<float>({-5.0, -5.0, 0.0}), view_as<float>({5.0, 5.0, 5.0}), MASK_ALL, TraceWorldFilter);
+	Handle hTrace = TR_TraceHullFilterEx(vPos, vEnd, view_as<float>({-16.0, -16.0, 0.0}), view_as<float>({16.0, 16.0, 10.0}), MASK_PLAYERSOLID, TraceWorldFilter);
 	if (TR_DidHit(hTrace)) {
 		TR_GetEndPosition(vEnd, hTrace);
 		delete hTrace;
@@ -140,7 +140,7 @@ bool GetEndPoint(const float vStart[3], const float vAng[3], float scale, float 
 	ScaleVector(vEnd, scale);
 	AddVectors(vStart, vEnd, vEnd);
 
-	Handle hTrace = TR_TraceHullFilterEx(vStart, vEnd, view_as<float>({-5.0, -5.0, 0.0}), view_as<float>({5.0, 5.0, 5.0}), MASK_ALL, TraceWorldFilter);
+	Handle hTrace = TR_TraceHullFilterEx(vStart, vEnd, view_as<float>({-5.0, -5.0, 0.0}), view_as<float>({5.0, 5.0, 5.0}), MASK_PLAYERSOLID, TraceWorldFilter);
 	if (TR_DidHit(hTrace)) {
 		TR_GetEndPosition(vBuffer, hTrace);
 		delete hTrace;
