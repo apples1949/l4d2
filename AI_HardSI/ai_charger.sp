@@ -4,19 +4,27 @@
 #include <sdktools>
 #include <left4dhooks>
 
+#define DEBUG	0
+
 ConVar
 	g_hChargerBhop,
 	g_hChargeProximity,
-	g_hChargeMaxSpeed,
-	g_hChargeStartSpeed,
 	g_hHealthThreshold,
-	g_hAimOffsetSensitivity;
+	g_hAimOffsetSensitivity,
+	#if DEBUG
+	g_hFallSpeedFatal,
+	#endif
+	g_hChargeMaxSpeed,
+	g_hChargeStartSpeed;
 
 float
 	g_fChargeProximity,
+	g_fAimOffsetSensitivity,
+	#if DEBUG
+	g_fFallSpeedFatal,
+	#endif
 	g_fChargeMaxSpeed,
-	g_fChargeStartSpeed,
-	g_fAimOffsetSensitivity;
+	g_fChargeStartSpeed;
 
 int
 	g_iHealthThreshold;
@@ -38,15 +46,21 @@ public void OnPluginStart() {
 	g_hChargeProximity =		CreateConVar("ai_charge_proximity",					"200.0",	"How close a client will approach before charging");
 	g_hHealthThreshold =		CreateConVar("ai_health_threshold_charger",			"300",		"Charger will charge if its health drops to this level");
 	g_hAimOffsetSensitivity =	CreateConVar("ai_aim_offset_sensitivity_charger",	"22.5",		"If the charger has a target, it will not straight charge if the target's aim on the horizontal axis is within this radius", _, true, 0.0, true, 180.0);
+	#if DEBUG
+	g_hFallSpeedFatal = 		FindConVar("fall_speed_fatal");
+	#endif
 	g_hChargeMaxSpeed =			FindConVar("z_charge_max_speed");
 	g_hChargeStartSpeed =		FindConVar("z_charge_start_speed");
 
 	g_hChargerBhop.AddChangeHook(CvarChanged);
 	g_hChargeProximity.AddChangeHook(CvarChanged);
-	g_hChargeMaxSpeed.AddChangeHook(CvarChanged);
-	g_hChargeStartSpeed.AddChangeHook(CvarChanged);
 	g_hHealthThreshold.AddChangeHook(CvarChanged);
 	g_hAimOffsetSensitivity.AddChangeHook(CvarChanged);
+	#if DEBUG
+	g_hFallSpeedFatal.AddChangeHook(CvarChanged);
+	#endif
+	g_hChargeMaxSpeed.AddChangeHook(CvarChanged);
+	g_hChargeStartSpeed.AddChangeHook(CvarChanged);
 
 	HookEvent("player_spawn",			Event_PlayerSpawn);
 	HookEvent("charger_charge_start",	Event_ChargerChargeStart);
@@ -62,11 +76,14 @@ void CvarChanged(ConVar convar, const char[] oldValue, const char[] newValue) {
 
 void GetCvars() {
 	g_bChargerBhop =			g_hChargerBhop.BoolValue;
-	g_fChargeMaxSpeed =			g_hChargeMaxSpeed.FloatValue;
-	g_fChargeStartSpeed =		g_hChargeStartSpeed.FloatValue;
 	g_fChargeProximity =		g_hChargeProximity.FloatValue;
 	g_iHealthThreshold =		g_hHealthThreshold.IntValue;
 	g_fAimOffsetSensitivity =	g_hAimOffsetSensitivity.FloatValue;
+	#if DEBUG
+	g_fFallSpeedFatal = 		g_hFallSpeedFatal.FloatValue;
+	g_fChargeMaxSpeed =			g_hChargeMaxSpeed.FloatValue;
+	#endif
+	g_fChargeStartSpeed =		g_hChargeStartSpeed.FloatValue;
 }
 
 void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast) {
@@ -84,6 +101,98 @@ void Event_ChargerChargeStart(Event event, const char[] name, bool dontBroadcast
 	SetEntityFlags(client, flags);
 }
 
+// 避免charger仰角携带玩家冲出地图外
+public void L4D2_OnStartCarryingVictim_Post(int victim, int attacker) {
+	if (GetEntPropEnt(attacker, Prop_Send, "m_carryVictim") != -1) {
+		DataPack dPack = new DataPack();
+		dPack.WriteCell(GetClientUserId(victim));
+		dPack.WriteCell(GetClientUserId(attacker));
+		RequestFrame(NextFrame_SetVelocity, dPack);
+	}
+}
+
+void NextFrame_SetVelocity(DataPack dPack) {
+	dPack.Reset();
+	int victim = dPack.ReadCell();
+	int attacker = dPack.ReadCell();
+	delete dPack;
+
+	victim = GetClientOfUserId(victim);
+	if (!victim || !IsClientInGame(victim))
+		return;
+
+	attacker = GetClientOfUserId(attacker);
+	if (!attacker || !IsClientInGame(attacker))
+		return;
+
+	if (GetEntPropEnt(attacker, Prop_Send, "m_carryVictim") == -1)
+		return;
+
+	if (GetEntPropEnt(attacker, Prop_Send, "m_pummelVictim") != -1)
+		return;
+
+	float vVel[3];
+	GetEntPropVector(attacker, Prop_Data, "m_vecAbsVelocity", vVel);
+	float speed = GetVectorLength(vVel);
+	#if DEBUG
+	if (speed > g_fFallSpeedFatal && GetDistanceToRoof(attacker) > 250.0) {
+		vVel[0] = vVel[1] = 0.0;
+		vVel[2] = speed;
+	}
+	else if (vVel[2] > 0.0){
+		vVel[2] = 0.0;
+		NormalizeVector(vVel, vVel);
+		ScaleVector(vVel, speed);
+	}
+	#else
+	if (vVel[2] <= 0.0)
+		return;
+
+	vVel[2] = 0.0;
+	NormalizeVector(vVel, vVel);
+	ScaleVector(vVel, speed);
+	#endif
+
+	TeleportEntity(attacker, NULL_VECTOR, NULL_VECTOR, vVel);
+}
+
+#if DEBUG
+public void L4D_OnFalling(int client) {
+	if (!IsFakeClient(client) || GetClientTeam(client) != 3 || !IsPlayerAlive(client) || GetEntProp(client, Prop_Send, "m_zombieClass") != 6)
+		return;
+
+	int victim = GetEntPropEnt(client, Prop_Send, "m_carryVictim");
+	if (IsAliveSur(victim)) {
+		L4D_CleanupPlayerState(client);
+		ForcePlayerSuicide(client);
+	}
+}
+
+float GetDistanceToRoof(int client, float maxheight = 3000.0) {
+	float vMins[3], vMaxs[3], vOrigin[3], vEnd[3], vStart[3], distance;
+	GetClientAbsOrigin(client, vStart);
+	vStart[2] += 10.0;
+	vEnd[0] = vStart[0];
+	vEnd[1] = vStart[1];
+	vEnd[2] = vStart[2] + maxheight;
+	GetClientMins(client, vMins);
+	GetClientMaxs(client, vMaxs);
+	GetClientAbsOrigin(client, vOrigin);
+	Handle hTrace = TR_TraceHullFilterEx(vOrigin, vEnd, vMins, vMaxs, MASK_PLAYERSOLID, TraceEntityFilter);
+	if (TR_DidHit(hTrace)) {
+		float fEndPos[3];
+		TR_GetEndPosition(fEndPos, hTrace);
+		vStart[2] -= 10.0;
+		distance = GetVectorDistance(vStart, fEndPos);
+	}
+	else
+		distance = maxheight;
+
+	delete hTrace;
+	return distance;
+}
+#endif
+
 int g_iCurTarget[MAXPLAYERS + 1];
 public Action L4D2_OnChooseVictim(int specialInfected, int &curTarget) {
 	g_iCurTarget[specialInfected] = curTarget;
@@ -92,7 +201,7 @@ public Action L4D2_OnChooseVictim(int specialInfected, int &curTarget) {
 
 bool g_bModify[MAXPLAYERS + 1];
 public Action OnPlayerRunCmd(int client, int &buttons) {
-	if (!IsClientInGame(client) || !IsFakeClient(client) || GetClientTeam(client) != 3 || !IsPlayerAlive(client) || GetEntProp(client, Prop_Send, "m_zombieClass") != 6 || GetEntProp(client, Prop_Send, "m_isGhost") )
+	if (!IsClientInGame(client) || !IsFakeClient(client) || GetClientTeam(client) != 3 || !IsPlayerAlive(client) || GetEntProp(client, Prop_Send, "m_zombieClass") != 6 || GetEntProp(client, Prop_Send, "m_isGhost"))
 		return Plugin_Continue;
 
 	if (L4D_IsPlayerStaggering(client))
@@ -260,15 +369,15 @@ bool WontFall(int client, const float vVel[3]) {
 	static float vPlane[3];
 
 	didHit = false;
-	vPos[2] += 10.0;
-	vEnd[2] += 10.0;
-	hTrace = TR_TraceHullFilterEx(vPos, vEnd, vMins, vMaxs, MASK_PLAYERSOLID_BRUSHONLY, TraceEntityFilter);
+	vPos[2] += 20.0;
+	vEnd[2] += 20.0;
+	hTrace = TR_TraceHullFilterEx(vPos, vEnd, vMins, vMaxs, MASK_PLAYERSOLID, TraceEntityFilter);
 	if (TR_DidHit(hTrace)) {
 		didHit = true;
 		TR_GetEndPosition(vVec, hTrace);
 		NormalizeVector(vVel, vNor);
 		TR_GetPlaneNormal(hTrace, vPlane);
-		if (RadToDeg(ArcCosine(GetVectorDotProduct(vNor, vPlane))) > 135.0) {
+		if (RadToDeg(ArcCosine(GetVectorDotProduct(vNor, vPlane))) > 150.0) {
 			delete hTrace;
 			return false;
 		}
@@ -283,7 +392,7 @@ bool WontFall(int client, const float vVel[3]) {
 	vDown[1] = vVec[1];
 	vDown[2] = vVec[2] - 100000.0;
 
-	hTrace = TR_TraceHullFilterEx(vVec, vDown, vMins, vMaxs, MASK_PLAYERSOLID_BRUSHONLY, TraceEntityFilter);
+	hTrace = TR_TraceHullFilterEx(vVec, vDown, vMins, vMaxs, MASK_PLAYERSOLID, TraceEntityFilter);
 	if (TR_DidHit(hTrace)) {
 		TR_GetEndPosition(vEnd, hTrace);
 		if (vVec[2] - vEnd[2] > 104.0) {
@@ -309,7 +418,7 @@ bool WontFall(int client, const float vVel[3]) {
 }
 
 bool TraceEntityFilter(int entity, int contentsMask) {
-	if (entity <= MaxClients)
+	if (/*entity > 0 && */entity <= MaxClients)
 		return false;
 
 	static char cls[10];
@@ -357,8 +466,8 @@ bool HitWall(int client, int target) {
 	static float vTar[3];
 	GetClientAbsOrigin(client, vPos);
 	GetClientAbsOrigin(target, vTar);
-	vPos[2] += 10.0;
-	vTar[2] += 10.0;
+	vPos[2] += 20.0;
+	vTar[2] += 20.0;
 
 	MakeVectorFromPoints(vPos, vTar, vTar);
 	static float dist;
@@ -376,7 +485,7 @@ bool HitWall(int client, int target) {
 
 	static bool didHit;
 	static Handle hTrace;
-	hTrace = TR_TraceHullFilterEx(vPos, vTar, vMins, vMaxs, MASK_PLAYERSOLID_BRUSHONLY, TraceEntityFilter);
+	hTrace = TR_TraceHullFilterEx(vPos, vTar, vMins, vMaxs, MASK_PLAYERSOLID, TraceEntityFilter);
 	didHit = TR_DidHit(hTrace);
 	delete hTrace;
 	return didHit;
