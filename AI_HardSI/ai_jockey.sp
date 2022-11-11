@@ -266,7 +266,7 @@ bool IsVisibleTo(const float vPos[3], const float vTarget[3]) {
 }
 
 bool TraceEntityFilter(int entity, int contentsMask) {
-	if (entity <= MaxClients)
+	if (entity > 0 && entity <= MaxClients)
 		return false;
 
 	static char cls[10];

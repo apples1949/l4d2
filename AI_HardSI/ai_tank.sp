@@ -219,15 +219,15 @@ bool WontFall(int client, const float vVel[3]) {
 	static float vPlane[3];
 
 	didHit = false;
-	vPos[2] += 10.0;
-	vEnd[2] += 10.0;
+	vPos[2] += 20.0;
+	vEnd[2] += 20.0;
 	hTrace = TR_TraceHullFilterEx(vPos, vEnd, vMins, vMaxs, MASK_PLAYERSOLID_BRUSHONLY, TraceEntityFilter);
 	if (TR_DidHit(hTrace)) {
 		didHit = true;
 		TR_GetEndPosition(vVec, hTrace);
 		NormalizeVector(vVel, vNor);
 		TR_GetPlaneNormal(hTrace, vPlane);
-		if (RadToDeg(ArcCosine(GetVectorDotProduct(vNor, vPlane))) > 135.0) {
+		if (RadToDeg(ArcCosine(GetVectorDotProduct(vNor, vPlane))) > 150.0) {
 			delete hTrace;
 			return false;
 		}
@@ -268,7 +268,7 @@ bool WontFall(int client, const float vVel[3]) {
 }
  
 bool TraceEntityFilter(int entity, int contentsMask) {
-	if (entity <= MaxClients)
+	if (entity > 0 && entity <= MaxClients)
 		return false;
 
 	static char cls[10];
