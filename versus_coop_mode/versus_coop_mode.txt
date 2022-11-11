@@ -50,29 +50,20 @@
 					"patch"		"\x90\x90"
 				}
 			}
+		}
 
-			"CDirectorVersusMode::RestartVsMode::Patch1"
+		"Offsets"
+		{
+			/* CDirector->m_bIsFirstRoundFinished (CDirector::OnEndScenario) */
+			"m_bIsFirstRoundFinished"
 			{
-				"signature"		"CDirectorVersusMode::RestartVsMode"
-
-				"linux"
-				{
-					"offset"	"27h"
-					"verify"	"\x75"
-					"patch"		"\xEB"
-				}
+				"linux"		"1061"
 			}
 
-			"CDirectorVersusMode::RestartVsMode::Patch2"
+			/* CDirector->m_bIsSecondRoundFinished (CDirector::OnEndScenario) */
+			"m_bIsSecondRoundFinished"
 			{
-				"signature"		"CDirectorVersusMode::RestartVsMode"
-
-				"linux"
-				{
-					"offset"	"27h"
-					"verify"	"\x75"
-					"patch"		"\x90\x90"
-				}
+				"linux"		"1062"
 			}
 		}
 
