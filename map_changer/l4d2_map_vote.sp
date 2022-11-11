@@ -87,9 +87,8 @@ public void OnLibraryRemoved(const char[] name) {
 }
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max) {
-	MarkNativeAsOptional("MC_SetNextMap");
-
 	RegPluginLibrary("l4d2_map_vote");
+	MarkNativeAsOptional("MC_SetNextMap");
 	return APLRes_Success;
 }
 
