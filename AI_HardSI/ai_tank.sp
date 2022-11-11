@@ -245,7 +245,7 @@ bool WontFall(int client, const float vVel[3]) {
 	hTrace = TR_TraceHullFilterEx(vVec, vDown, vMins, vMaxs, MASK_PLAYERSOLID, TraceEntityFilter);
 	if (TR_DidHit(hTrace)) {
 		TR_GetEndPosition(vEnd, hTrace);
-		if (vVec[2] - vEnd[2] > 72.0) {
+		if (vVec[2] - vEnd[2] > 104.0) {
 			delete hTrace;
 			return false;
 		}
