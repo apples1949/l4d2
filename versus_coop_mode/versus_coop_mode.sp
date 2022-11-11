@@ -19,8 +19,6 @@
 #define PATCH_SWAPTEAMS_PATCH1		"SwapTeams::Patch1"
 #define PATCH_SWAPTEAMS_PATCH2		"SwapTeams::Patch2"
 #define PATCH_CLEANUPMAP_PATCH		"CleanUpMap::ShouldCreateEntity::Patch"
-#define PATCH_RESTARTVSMODE_PATCH1	"CDirectorVersusMode::RestartVsMode::Patch1"
-#define PATCH_RESTARTVSMODE_PATCH2	"CDirectorVersusMode::RestartVsMode::Patch2"
 
 #define DETOUR_RESTARTVSMODE		"DD::CDirectorVersusMode::RestartVsMode"
 
