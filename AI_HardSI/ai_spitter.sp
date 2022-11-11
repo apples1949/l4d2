@@ -169,7 +169,7 @@ bool WontFall(int client, const float vVel[3]) {
 }
 
 bool TraceEntityFilter(int entity, int contentsMask) {
-	if (entity > 0 && entity <= MaxClients)
+	if (/*entity > 0 && */entity <= MaxClients)
 		return false;
 
 	static char cls[10];
