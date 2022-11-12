@@ -95,9 +95,10 @@ public Action OnPlayerRunCmd(int client, int &buttons) {
 		static float curTargetDist;
 		static float nearestSurDist;
 		GetSurDistance(client, curTargetDist, nearestSurDist);
-		if (curTargetDist > 0.5 * g_fTankAttackRange && -1.0 < nearestSurDist < 1000.0) {
+		if (curTargetDist > 0.5 * g_fTankAttackRange && -1.0 < nearestSurDist < 2000.0) {
 			GetClientEyeAngles(client, vAng);
-			return BunnyHop(client, buttons, vAng);
+			if (vAng[0] != 89.0 && vAng[0] != -89.0)
+				return BunnyHop(client, buttons, vAng);
 		}
 	}
 	else {
@@ -189,6 +190,10 @@ Action BunnyHop(int client, int &buttons, const float vAng[3]) {
 		AddVectors(vFwd, vRig, vDir);
 		GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", vVel);
 		AddVectors(vVel, vDir, vVel);
+		GetVectorAngles(vVel, vDir);
+		if (vDir[0] == 89.0 || vDir[0] == -89.0)
+			return Plugin_Continue;
+
 		if (!WontFall(client, vVel))
 			return Plugin_Continue;
 
@@ -213,62 +218,76 @@ bool WontFall(int client, const float vVel[3]) {
 	GetClientMaxs(client, vMaxs);
 
 	static bool didHit;
-	static Handle hTrace;
+	static Handle hndl;
 	static float vVec[3];
 	static float vNor[3];
 	static float vPlane[3];
 
 	didHit = false;
-	vPos[2] += 20.0;
-	vEnd[2] += 20.0;
-	hTrace = TR_TraceHullFilterEx(vPos, vEnd, vMins, vMaxs, MASK_PLAYERSOLID, TraceEntityFilter);
-	if (TR_DidHit(hTrace)) {
+	vPos[2] += 10.0;
+	vEnd[2] += 10.0;
+	hndl = TR_TraceHullFilterEx(vPos, vEnd, vMins, vMaxs, MASK_PLAYERSOLID_BRUSHONLY, TraceEntityFilter);
+	if (TR_DidHit(hndl)) {
 		didHit = true;
-		TR_GetEndPosition(vVec, hTrace);
+		TR_GetEndPosition(vVec, hndl);
 		NormalizeVector(vVel, vNor);
-		TR_GetPlaneNormal(hTrace, vPlane);
+		TR_GetPlaneNormal(hndl, vPlane);
 		if (RadToDeg(ArcCosine(GetVectorDotProduct(vNor, vPlane))) > 150.0) {
-			delete hTrace;
+			delete hndl;
 			return false;
 		}
 	}
 
-	delete hTrace;
+	delete hndl;
+	static float dist;
 	if (!didHit)
 		vVec = vEnd;
+	else {
+		MakeVectorFromPoints(vPos, vEnd, vEnd);
+		dist = GetVectorLength(vEnd) - 0.5 * (FloatAbs(vMaxs[0] - vMins[0])) - 3.0;
+		NormalizeVector(vEnd, vEnd);
+		ScaleVector(vEnd, dist);
+		AddVectors(vPos, vEnd, vVec);
+	}
 
 	static float vDown[3];
 	vDown[0] = vVec[0];
 	vDown[1] = vVec[1];
 	vDown[2] = vVec[2] - 100000.0;
 
-	hTrace = TR_TraceHullFilterEx(vVec, vDown, vMins, vMaxs, MASK_PLAYERSOLID, TraceEntityFilter);
-	if (TR_DidHit(hTrace)) {
-		TR_GetEndPosition(vEnd, hTrace);
-		if (vVec[2] - vEnd[2] > 104.0) {
-			delete hTrace;
-			return false;
-		}
-
-		static int ent;
-		if ((ent = TR_GetEntityIndex(hTrace)) > MaxClients) {
-			static char cls[14];
-			GetEdictClassname(ent, cls, sizeof cls);
-			if (strcmp(cls, "trigger_hurt") == 0) {
-				delete hTrace;
-				return false;
-			}
-		}
-		delete hTrace;
-		return true;
+	hndl = TR_TraceHullFilterEx(vVec, vDown, vMins, vMaxs, MASK_ALL, TraceSelfFilter, client);
+	if (!TR_DidHit(hndl)) {
+		delete hndl;
+		return false;
 	}
 
-	delete hTrace;
-	return false;
+	TR_GetEndPosition(vEnd, hndl);
+	if (vVec[2] - vEnd[2] > 104.0) {
+		delete hndl;
+		return false;
+	}
+
+	static int ent;
+	ent = TR_GetEntityIndex(hndl);
+	if (ent != -1) {
+		static char cls[14];
+		GetEntityClassname(ent, cls, sizeof cls);
+		if (strcmp(cls, "trigger_hurt") == 0) {
+			delete hndl;
+			return false;
+		}
+	}
+
+	delete hndl;
+	return true;
 }
- 
+
+bool TraceSelfFilter(int entity, int contentsMask, any data) {
+	return entity != data;
+}
+
 bool TraceEntityFilter(int entity, int contentsMask) {
-	if (/*entity > 0 && */entity <= MaxClients)
+	if (entity <= MaxClients)
 		return false;
 
 	static char cls[10];
@@ -406,10 +425,10 @@ bool HitWall(int tank, int ent, int target = -1, const float vEnd[3] = NULL_VECT
 	GetEntPropVector(ent, Prop_Send, "m_vecMaxs", vMaxs);
 
 	static bool didHit;
-	static Handle hTrace;
-	hTrace = TR_TraceHullFilterEx(vSrc, vTar, vMins, vMaxs, MASK_SOLID, TraceRockFilter, ent);
-	didHit = TR_DidHit(hTrace);
-	delete hTrace;
+	static Handle hndl;
+	hndl = TR_TraceHullFilterEx(vSrc, vTar, vMins, vMaxs, MASK_SOLID, TraceRockFilter, ent);
+	didHit = TR_DidHit(hndl);
+	delete hndl;
 	return didHit;
 }
 
@@ -417,7 +436,7 @@ bool TraceRockFilter(int entity, int contentsMask, any data) {
 	if (entity == data)
 		return false;
 
-	if (/*entity > 0 && */entity <= MaxClients)
+	if (entity > 0 && entity <= MaxClients)
 		return false;
 
 	static char cls[10];
@@ -494,20 +513,20 @@ bool IsVisibleTo(const float vPos[3], const float vTarget[3]) {
 	MakeVectorFromPoints(vPos, vTarget, vLookAt);
 	GetVectorAngles(vLookAt, vLookAt);
 
-	static Handle hTrace;
-	hTrace = TR_TraceRayFilterEx(vPos, vLookAt, MASK_VISIBLE, RayType_Infinite, TraceEntityFilter);
-	
+	static Handle hndl;
+	hndl = TR_TraceRayFilterEx(vPos, vLookAt, MASK_VISIBLE, RayType_Infinite, TraceEntityFilter);
+
 	static bool isVisible;
 	isVisible = false;
-	if (TR_DidHit(hTrace)) {
+	if (TR_DidHit(hndl)) {
 		static float vStart[3];
-		TR_GetEndPosition(vStart, hTrace);
+		TR_GetEndPosition(vStart, hndl);
 
 		if ((GetVectorDistance(vPos, vStart, false) + 25.0) >= GetVectorDistance(vPos, vTarget))
 			isVisible = true; // if trace ray length plus tolerance equal or bigger absolute distance, you hit the target
 	}
 
-	delete hTrace;
+	delete hndl;
 	return isVisible;
 }
 

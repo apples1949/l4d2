@@ -248,20 +248,20 @@ bool IsVisibleTo(const float vPos[3], const float vTarget[3]) {
 	MakeVectorFromPoints(vPos, vTarget, vLookAt);
 	GetVectorAngles(vLookAt, vLookAt);
 
-	static Handle hTrace;
-	hTrace = TR_TraceRayFilterEx(vPos, vLookAt, MASK_VISIBLE, RayType_Infinite, TraceEntityFilter);
-	
+	static Handle hndl;
+	hndl = TR_TraceRayFilterEx(vPos, vLookAt, MASK_VISIBLE, RayType_Infinite, TraceEntityFilter);
+
 	static bool isVisible;
 	isVisible = false;
-	if (TR_DidHit(hTrace)) {
+	if (TR_DidHit(hndl)) {
 		static float vStart[3];
-		TR_GetEndPosition(vStart, hTrace);
+		TR_GetEndPosition(vStart, hndl);
 
 		if ((GetVectorDistance(vPos, vStart, false) + 25.0) >= GetVectorDistance(vPos, vTarget))
 			isVisible = true; // if trace ray length plus tolerance equal or bigger absolute distance, you hit the target
 	}
 
-	delete hTrace;
+	delete hndl;
 	return isVisible;
 }
 

@@ -51,10 +51,11 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 		if (SquareRoot(Pow(vVel[0], 2.0) + Pow(vVel[1], 2.0)) < GetEntPropFloat(client, Prop_Send, "m_flMaxspeed") - 10.0)
 			return Plugin_Continue;
 	
-		if (150.0 < NearestSurDistance(client) < 1000.0) {
+		if (150.0 < NearestSurDistance(client) < 2000.0) {
 			static float vAng[3];
 			GetClientEyeAngles(client, vAng);
-			return aBunnyHop(client, buttons, vAng);
+			if (vAng[0] != 89.0 && vAng[0] != -89.0)
+				return BunnyHop(client, buttons, vAng);
 		}
 	}
 
@@ -66,7 +67,7 @@ bool IsGrounded(int client) {
 	return ent != -1 && IsValidEntity(ent);
 }
 
-Action aBunnyHop(int client, int &buttons, const float vAng[3]) {
+Action BunnyHop(int client, int &buttons, const float vAng[3]) {
 	float vFwd[3];
 	float vRig[3];
 	float vDir[3];
@@ -90,6 +91,10 @@ Action aBunnyHop(int client, int &buttons, const float vAng[3]) {
 		AddVectors(vFwd, vRig, vDir);
 		GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", vVel);
 		AddVectors(vVel, vDir, vVel);
+		GetVectorAngles(vVel, vDir);
+		if (vDir[0] == 89.0 || vDir[0] == -89.0)
+			return Plugin_Continue;
+
 		if (!WontFall(client, vVel))
 			return Plugin_Continue;
 
@@ -114,62 +119,76 @@ bool WontFall(int client, const float vVel[3]) {
 	GetClientMaxs(client, vMaxs);
 
 	static bool didHit;
-	static Handle hTrace;
+	static Handle hndl;
 	static float vVec[3];
 	static float vNor[3];
 	static float vPlane[3];
 
 	didHit = false;
-	vPos[2] += 20.0;
-	vEnd[2] += 20.0;
-	hTrace = TR_TraceHullFilterEx(vPos, vEnd, vMins, vMaxs, MASK_PLAYERSOLID, TraceEntityFilter);
-	if (TR_DidHit(hTrace)) {
+	vPos[2] += 10.0;
+	vEnd[2] += 10.0;
+	hndl = TR_TraceHullFilterEx(vPos, vEnd, vMins, vMaxs, MASK_PLAYERSOLID_BRUSHONLY, TraceEntityFilter);
+	if (TR_DidHit(hndl)) {
 		didHit = true;
-		TR_GetEndPosition(vVec, hTrace);
+		TR_GetEndPosition(vVec, hndl);
 		NormalizeVector(vVel, vNor);
-		TR_GetPlaneNormal(hTrace, vPlane);
+		TR_GetPlaneNormal(hndl, vPlane);
 		if (RadToDeg(ArcCosine(GetVectorDotProduct(vNor, vPlane))) > 150.0) {
-			delete hTrace;
+			delete hndl;
 			return false;
 		}
 	}
 
-	delete hTrace;
+	delete hndl;
+	static float dist;
 	if (!didHit)
 		vVec = vEnd;
+	else {
+		MakeVectorFromPoints(vPos, vEnd, vEnd);
+		dist = GetVectorLength(vEnd) - 0.5 * (FloatAbs(vMaxs[0] - vMins[0])) - 3.0;
+		NormalizeVector(vEnd, vEnd);
+		ScaleVector(vEnd, dist);
+		AddVectors(vPos, vEnd, vVec);
+	}
 
 	static float vDown[3];
 	vDown[0] = vVec[0];
 	vDown[1] = vVec[1];
 	vDown[2] = vVec[2] - 100000.0;
 
-	hTrace = TR_TraceHullFilterEx(vVec, vDown, vMins, vMaxs, MASK_PLAYERSOLID, TraceEntityFilter);
-	if (TR_DidHit(hTrace)) {
-		TR_GetEndPosition(vEnd, hTrace);
-		if (vVec[2] - vEnd[2] > 104.0) {
-			delete hTrace;
-			return false;
-		}
-
-		static int ent;
-		if ((ent = TR_GetEntityIndex(hTrace)) > MaxClients) {
-			static char cls[13];
-			GetEdictClassname(ent, cls, sizeof cls);
-			if (strcmp(cls, "trigger_hurt") == 0) {
-				delete hTrace;
-				return false;
-			}
-		}
-		delete hTrace;
-		return true;
+	hndl = TR_TraceHullFilterEx(vVec, vDown, vMins, vMaxs, MASK_ALL, TraceSelfFilter, client);
+	if (!TR_DidHit(hndl)) {
+		delete hndl;
+		return false;
 	}
 
-	delete hTrace;
-	return false;
+	TR_GetEndPosition(vEnd, hndl);
+	if (vVec[2] - vEnd[2] > 104.0) {
+		delete hndl;
+		return false;
+	}
+
+	static int ent;
+	ent = TR_GetEntityIndex(hndl);
+	if (ent != -1) {
+		static char cls[14];
+		GetEntityClassname(ent, cls, sizeof cls);
+		if (strcmp(cls, "trigger_hurt") == 0) {
+			delete hndl;
+			return false;
+		}
+	}
+
+	delete hndl;
+	return true;
+}
+
+bool TraceSelfFilter(int entity, int contentsMask, any data) {
+	return entity != data;
 }
 
 bool TraceEntityFilter(int entity, int contentsMask) {
-	if (/*entity > 0 && */entity <= MaxClients)
+	if (entity <= MaxClients)
 		return false;
 
 	static char cls[10];

@@ -220,23 +220,23 @@ bool HitWall(int client, float vStart[3]) {
 	ScaleVector(vEnd, g_fWallDetectionDistance);
 	AddVectors(vStart, vEnd, vEnd);
 
-	static Handle hTrace;
-	hTrace = TR_TraceHullFilterEx(vStart, vEnd, view_as<float>({-16.0, -16.0, 0.0}), view_as<float>({16.0, 16.0, 33.0}), MASK_PLAYERSOLID, TraceEntityFilter);
-	if (TR_DidHit(hTrace)) {
+	static Handle hndl;
+	hndl = TR_TraceHullFilterEx(vStart, vEnd, view_as<float>({-16.0, -16.0, 0.0}), view_as<float>({16.0, 16.0, 33.0}), MASK_PLAYERSOLID_BRUSHONLY, TraceEntityFilter);
+	if (TR_DidHit(hndl)) {
 		static float vPlane[3];
-		TR_GetPlaneNormal(hTrace, vPlane);
+		TR_GetPlaneNormal(hndl, vPlane);
 		if (RadToDeg(ArcCosine(GetVectorDotProduct(vAng, vPlane))) > 150.0) {
-			delete hTrace;
+			delete hndl;
 			return true;
 		}
 	}
 
-	delete hTrace;
+	delete hndl;
 	return false;
 }
 
 bool TraceEntityFilter(int entity, int contentsMask) {
-	if (/*entity > 0 && */entity <= MaxClients)
+	if (entity <= MaxClients)
 		return false;
 
 	static char cls[10];
