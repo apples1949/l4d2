@@ -697,7 +697,7 @@ void NextFrame_CreateInfected(DataPack dPack) {
 //https://github.com/ProdigySim/DirectInfectedSpawn
 int CreateInfected(int client, const char[] zombie) {
 	float vEnd[3];
-	if (!GetDirectionEndPoint(client, vEnd))
+	if (!GetTeleportEndPoint(client, vEnd))
 		return -1;
 
 	return _CreateInfected(zombie, vEnd, NULL_VECTOR);
@@ -1364,7 +1364,7 @@ int iTeleportTarget_MenuHandler(Menu menu, MenuAction action, int client, int pa
 				targetTeam = GetClientTeam(victim);
 
 			if (info[1][0] == 'c')
-				allow = GetSpawnEndPoint(client, vOrigin);
+				allow = GetTeleportEndPoint(client, vOrigin);
 			else {
 				int target = GetClientOfUserId(StringToInt(info[1]));
 				if (target && IsClientInGame(target)) {
@@ -1425,81 +1425,72 @@ void ForceCrouch(int client) {
 	SetEntProp(client, Prop_Send, "m_fFlags", GetEntProp(client, Prop_Send, "m_fFlags")|FL_DUCKING);
 }
 
-//https://forums.alliedmods.net/showthread.php?p=2693455
-bool GetSpawnEndPoint(int client, float vSpawnVec[3]) {
-	float vEnd[3], vEye[3];
-	if (GetDirectionEndPoint(client, vEnd)) {
-		GetClientEyePosition(client, vEye);
-		ScaleVectorDirection(vEye, vEnd, 0.1);
-		if (GetNonCollideEndPoint(client, vEnd, vSpawnVec))
-			return true;
+bool GetTeleportEndPoint(int client, float vPos[3]) {
+	float vAng[3];
+	GetClientEyeAngles(client, vAng);
+	GetClientEyePosition(client, vPos);
+
+	Handle hndl = TR_TraceRayFilterEx(vPos, vAng, MASK_SHOT, RayType_Infinite, TraceEntityFilter);
+	if (TR_DidHit(hndl)) {
+		float vEnd[3];
+		TR_GetEndPosition(vEnd, hndl);
+		delete hndl;
+
+		float vVec[3];
+		MakeVectorFromPoints(vPos, vEnd, vVec);
+
+		float vDown[3];
+		float dist = GetVectorLength(vVec);
+		while (dist > 0.0) {
+			hndl = TR_TraceHullFilterEx(vEnd, vEnd, view_as<float>({-16.0, -16.0, 0.0}), view_as<float>({16.0, 16.0, 72.0}), MASK_PLAYERSOLID, TraceEntityFilter);
+			if (!TR_DidHit(hndl)) {
+				delete hndl;
+				vPos = vEnd;
+				return true;
+			}
+
+			delete hndl;
+
+			dist -= 35.0;
+			if (dist <= 0.0)
+				break;
+
+			NormalizeVector(vVec, vVec);
+			ScaleVector(vVec, dist);
+			AddVectors(vPos, vVec, vEnd);
+
+			vDown[0] = vEnd[0];
+			vDown[1] = vEnd[1];
+			vDown[2] = vEnd[2] - 100000.0;
+			hndl = TR_TraceHullFilterEx(vEnd, vDown, view_as<float>({-16.0, -16.0, 0.0}), view_as<float>({16.0, 16.0, 72.0}), MASK_PLAYERSOLID, TraceEntityFilter);
+			if (TR_DidHit(hndl))
+				TR_GetEndPosition(vEnd, hndl);
+			else {
+				dist -= 35.0;
+				if (dist <= 0.0) {
+					delete hndl;
+					break;
+				}
+
+				NormalizeVector(vVec, vVec);
+				ScaleVector(vVec, dist);
+				AddVectors(vPos, vVec, vEnd);
+			}
+
+			delete hndl;
+		}
 	}
 
-	GetClientAbsOrigin(client, vSpawnVec);
+	delete hndl;
+	GetClientAbsOrigin(client, vPos);
 	return true;
 }
 
-void ScaleVectorDirection(float vStart[3], float vEnd[3], float fMultiple) {
-	float vDir[3];
-	MakeVectorFromPoints(vStart, vEnd, vDir);
-	ScaleVector(vDir, fMultiple);
-	AddVectors(vEnd, vDir, vEnd);
-}
-
-bool GetDirectionEndPoint(int client, float vEnd[3]) {
-	float vDir[3], vPos[3];
-	GetClientEyeAngles(client, vDir);
-	GetClientEyePosition(client, vPos);
-	Handle hTrace = TR_TraceRayFilterEx(vPos, vDir, MASK_PLAYERSOLID_BRUSHONLY, RayType_Infinite, _TraceEntityFilter);
-	if (TR_DidHit(hTrace)) {
-		TR_GetEndPosition(vEnd, hTrace);
-		delete hTrace;
-		return true;
-	}
-
-	delete hTrace;
-	return false;
-}
-
-bool GetNonCollideEndPoint(int client, float vEnd[3], float vNonCol[3], bool bEye = true) {// similar to GetDirectionEndPoint, but with respect to player size
-	float vStart[3];
-	if (bEye) {
-		GetClientEyePosition(client, vStart);
-		if (IsPlayerStuckPos(vStart)) {// If we attempting to spawn from stucked position, let's start our hull trace from the middle of the ray in hope there are no collision
-			float vMid[3];
-			AddVectors(vStart, vEnd, vMid);
-			ScaleVector(vMid, 0.5);
-			vStart = vMid;
-		}
-	}
-	else
-		GetClientAbsOrigin(client, vStart);
-
-	Handle hTrace = TR_TraceHullFilterEx(vStart, vEnd, view_as<float>({-16.0, -16.0, 0.0}), view_as<float>({16.0, 16.0, 72.0}), MASK_PLAYERSOLID_BRUSHONLY, _TraceEntityFilter);
-	if (TR_DidHit(hTrace)) {
-		TR_GetEndPosition(vNonCol, hTrace);
-		if (bEye && IsPlayerStuckPos(vNonCol))
-			GetNonCollideEndPoint(client, vEnd, vNonCol, false); // if eyes position doesn't allow to build reliable TraceHull, repeat from the feet (client's origin)
-		delete hTrace;
-		return true;
-	}
-	delete hTrace;
-	return false;
-}
-
-bool IsPlayerStuckPos(const float vPos[3]) {// check if the position applicable to respawn a client of a given size without collision
-	bool hit;
-	Handle hTrace = TR_TraceHullFilterEx(vPos, vPos, view_as<float>({-16.0, -16.0, 0.0}), view_as<float>({16.0, 16.0, 72.0}), MASK_PLAYERSOLID_BRUSHONLY, _TraceEntityFilter);
-	hit = TR_DidHit(hTrace);
-	delete hTrace;
-	return hit;
-}
-
-bool _TraceEntityFilter(int entity, int contentsMask) {
-	if (entity <= MaxClients)
+bool TraceEntityFilter(int entity, int contentsMask) {
+	if (entity > 0 && entity <= MaxClients)
 		return false;
 
-	static char cls[9];
+	static char cls[10];
 	GetEntityClassname(entity, cls, sizeof cls);
 	if ((cls[0] == 'i' && strcmp(cls[1], "nfected") == 0) || (cls[0] == 'w' && strcmp(cls[1], "itch") == 0))
 		return false;
