@@ -77,11 +77,12 @@ public void OnAllPluginsLoaded() {
 }
 
 public void OnPluginEnd() {
-	FindConVar("hunter_committed_attack_range").RestoreDefault();
-	FindConVar("hunter_pounce_ready_range").RestoreDefault();
-	FindConVar("hunter_leap_away_give_up_range").RestoreDefault();
-	FindConVar("hunter_pounce_max_loft_angle").RestoreDefault();
 	FindConVar("z_pounce_crouch_delay").RestoreDefault();
+	FindConVar("z_pounce_silence_range").RestoreDefault();
+	FindConVar("hunter_pounce_ready_range").RestoreDefault();
+	FindConVar("hunter_pounce_max_loft_angle").RestoreDefault();
+	FindConVar("hunter_committed_attack_range").RestoreDefault();
+	FindConVar("hunter_leap_away_give_up_range").RestoreDefault();
 }
 
 public void OnConfigsExecuted() {
