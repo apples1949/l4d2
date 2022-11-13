@@ -317,7 +317,7 @@ bool IsGrounded(int client) {
 }
 
 bool CheckPlayerMove(int client, float vel) {
-	return vel > GetEntPropFloat(client, Prop_Send, "m_flMaxspeed") - 30.0 > 0.0;
+	return vel > 0.9 * GetEntPropFloat(client, Prop_Send, "m_flMaxspeed") > 0.0;
 }
 
 Action BunnyHop(int client, int &buttons, const float vAng[3]) {
