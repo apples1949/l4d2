@@ -258,7 +258,7 @@ bool IsVisibleTo(const float vPos[3], const float vTarget[3]) {
 		TR_GetEndPosition(vStart, hndl);
 
 		if ((GetVectorDistance(vPos, vStart, false) + 25.0) >= GetVectorDistance(vPos, vTarget))
-			isVisible = true; // if trace ray length plus tolerance equal or bigger absolute distance, you hit the target
+			isVisible = true;
 	}
 
 	delete hndl;

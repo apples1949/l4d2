@@ -225,7 +225,7 @@ bool HitWall(int client, float vStart[3]) {
 	if (TR_DidHit(hndl)) {
 		static float vPlane[3];
 		TR_GetPlaneNormal(hndl, vPlane);
-		if (RadToDeg(ArcCosine(GetVectorDotProduct(vAng, vPlane))) > 150.0) {
+		if (RadToDeg(ArcCosine(GetVectorDotProduct(vAng, vPlane))) > 165.0) {
 			delete hndl;
 			return true;
 		}
@@ -236,15 +236,13 @@ bool HitWall(int client, float vStart[3]) {
 }
 
 bool TraceEntityFilter(int entity, int contentsMask) {
-	if (entity <= MaxClients)
-		return false;
+	if (!entity || entity > MaxClients) {
+		static char cls[5];
+		GetEdictClassname(entity, cls, sizeof cls);
+		return cls[3] != 'e' && cls[3] != 'c';
+	}
 
-	static char cls[10];
-	GetEntityClassname(entity, cls, sizeof cls);
-	if ((cls[0] == 'i' && strcmp(cls[1], "nfected") == 0) || (cls[0] == 'w' && strcmp(cls[1], "itch") == 0))
-		return false;
-
-	return true;
+	return false;
 }
 
 bool IsBeingWatched(int client, float offsetThreshold) {

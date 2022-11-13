@@ -92,7 +92,8 @@ public Action OnPlayerRunCmd(int client, int &buttons) {
 
 	static float vVel[3];
 	GetEntPropVector(client, Prop_Data, "m_vecVelocity", vVel);
-	if (SquareRoot(Pow(vVel[0], 2.0) + Pow(vVel[1], 2.0)) < GetEntPropFloat(client, Prop_Send, "m_flMaxspeed") - 10.0)
+	vVel[2] = 0.0;
+	if (!CheckPlayerMove(client, GetVectorLength(vVel)))
 		return Plugin_Continue;
 
 	static float curTargetDist;
@@ -101,8 +102,7 @@ public Action OnPlayerRunCmd(int client, int &buttons) {
 	if (curTargetDist > 0.50 * g_fVomitRange && -1.0 < nearestSurDist < 2000.0) {
 		static float vAng[3];
 		GetClientEyeAngles(client, vAng);
-		if (vAng[0] != 89.0 && vAng[0] != -89.0)
-			return BunnyHop(client, buttons, vAng);
+		return BunnyHop(client, buttons, vAng);
 	}
 
 	return Plugin_Continue;
@@ -117,6 +117,11 @@ bool TargetSur(int client) {
 	return IsAliveSur(GetClientAimTarget(client, true));
 }
 
+bool CheckPlayerMove(int client, float vel) {
+	return vel > 0.0 && vel + 30.0 > GetEntPropFloat(client, Prop_Send, "m_flMaxspeed");
+}
+
+/*
 Action BunnyHop(int client, int &buttons, const float vAng[3]) {
 	float vFwd[3];
 	float vRig[3];
@@ -141,17 +146,68 @@ Action BunnyHop(int client, int &buttons, const float vAng[3]) {
 		AddVectors(vFwd, vRig, vDir);
 		GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", vVel);
 		AddVectors(vVel, vDir, vVel);
-		GetVectorAngles(vVel, vDir);
-		if (vDir[0] == 89.0 || vDir[0] == -89.0)
-			return Plugin_Continue;
+		if (WontFall(client, vVel)) {
+			buttons |= IN_DUCK;
+			buttons |= IN_JUMP;
+			TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, vVel);
+			return Plugin_Changed;
+		}
+	}
 
-		if (!WontFall(client, vVel))
-			return Plugin_Continue;
+	return Plugin_Continue;
+}*/
 
-		buttons |= IN_DUCK;
-		buttons |= IN_JUMP;
-		TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, vVel);
-		return Plugin_Changed;
+Action BunnyHop(int client, int &buttons, const float vAng[3]) {
+	float vVec[3];
+	float vDir[3];
+	float vVel[3];
+	bool pressed;
+	if (buttons & IN_FORWARD) {
+		GetAngleVectors(vAng, vDir, NULL_VECTOR, NULL_VECTOR);
+		NormalizeVector(vDir, vDir);
+		ScaleVector(vDir, 180.0);
+		pressed = true;
+	}
+
+	if (buttons & IN_BACK) {
+		GetAngleVectors(vAng, vVec, NULL_VECTOR, NULL_VECTOR);
+		NormalizeVector(vVec, vVec);
+		ScaleVector(vVec, -90.0);
+		if (!pressed)
+			pressed = true;
+		else
+			AddVectors(vVec, vDir, vDir);
+	}
+
+	if (buttons & IN_MOVERIGHT) {
+		GetAngleVectors(vAng, NULL_VECTOR, vVec, NULL_VECTOR);
+		NormalizeVector(vVec, vVec);
+		ScaleVector(vVec, 90.0);
+		if (!pressed)
+			pressed = true;
+		else
+			AddVectors(vVec, vDir, vDir);
+	}
+
+	if (buttons & IN_MOVELEFT) {
+		GetAngleVectors(vAng, NULL_VECTOR, vVec, NULL_VECTOR);
+		NormalizeVector(vVec, vVec);
+		ScaleVector(vVec, -90.0);
+		if (!pressed)
+			pressed = true;
+		else
+			AddVectors(vVec, vDir, vDir);
+	}
+
+	if (pressed) {
+		GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", vVel);
+		AddVectors(vVel, vDir, vVel);
+		if (WontFall(client, vVel)) {
+			buttons |= IN_DUCK;
+			buttons |= IN_JUMP;
+			TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, vVel);
+			return Plugin_Changed;
+		}
 	}
 
 	return Plugin_Continue;
@@ -183,7 +239,7 @@ bool WontFall(int client, const float vVel[3]) {
 		TR_GetEndPosition(vVec, hndl);
 		NormalizeVector(vVel, vNor);
 		TR_GetPlaneNormal(hndl, vPlane);
-		if (RadToDeg(ArcCosine(GetVectorDotProduct(vNor, vPlane))) > 150.0) {
+		if (RadToDeg(ArcCosine(GetVectorDotProduct(vNor, vPlane))) > 165.0) {
 			delete hndl;
 			return false;
 		}
@@ -194,7 +250,7 @@ bool WontFall(int client, const float vVel[3]) {
 	if (!didHit)
 		vVec = vEnd;
 	else {
-		MakeVectorFromPoints(vPos, vEnd, vEnd);
+		MakeVectorFromPoints(vPos, vVec, vEnd);
 		dist = GetVectorLength(vEnd) - 0.5 * (FloatAbs(vMaxs[0] - vMins[0])) - 3.0;
 		NormalizeVector(vEnd, vEnd);
 		ScaleVector(vEnd, dist);
@@ -224,6 +280,7 @@ bool WontFall(int client, const float vVel[3]) {
 		static char cls[14];
 		GetEntityClassname(ent, cls, sizeof cls);
 		if (strcmp(cls, "trigger_hurt") == 0) {
+			PrintToChatAll("Hit trigger_hurt");
 			delete hndl;
 			return false;
 		}
@@ -238,15 +295,13 @@ bool TraceSelfFilter(int entity, int contentsMask, any data) {
 }
 
 bool TraceEntityFilter(int entity, int contentsMask) {
-	if (entity <= MaxClients)
-		return false;
+	if (!entity || entity > MaxClients) {
+		static char cls[5];
+		GetEdictClassname(entity, cls, sizeof cls);
+		return cls[3] != 'e' && cls[3] != 'c';
+	}
 
-	static char cls[10];
-	GetEntityClassname(entity, cls, sizeof cls);
-	if ((cls[0] == 'i' && strcmp(cls[1], "nfected") == 0) || (cls[0] == 'w' && strcmp(cls[1], "itch") == 0))
-		return false;
-
-	return true;
+	return false;
 }
 
 void GetSurDistance(int client, float &curTargetDist, float &nearestSurDist) {
@@ -293,20 +348,20 @@ void Boomer_OnVomit(int client) {
 	GetClientEyePosition(target, vTar);
 	MakeVectorFromPoints(vPos, vTar, vVelocity);
 
-	static float length;
-	length = GetVectorLength(vVelocity);
-	if (length < g_fVomitRange)
-		length = 0.5 * g_fVomitRange;
+	static float vel;
+	vel = GetVectorLength(vVelocity);
+	if (vel < g_fVomitRange)
+		vel = 0.5 * g_fVomitRange;
 	else {
 		float height = vTar[2] - vPos[2];
 		if (height > PLAYER_HEIGHT)
-			length += GetVectorDistance(vPos, vTar) / length * PLAYER_HEIGHT;
+			vel += GetVectorDistance(vPos, vTar) / vel * PLAYER_HEIGHT;
 	}
 
 	static float vAngles[3];
 	GetVectorAngles(vVelocity, vAngles);
 	NormalizeVector(vVelocity, vVelocity);
-	ScaleVector(vVelocity, length);
+	ScaleVector(vVelocity, vel);
 	TeleportEntity(client, NULL_VECTOR, vAngles, vVelocity);
 }
 

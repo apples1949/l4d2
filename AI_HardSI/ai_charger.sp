@@ -235,11 +235,12 @@ public Action OnPlayerRunCmd(int client, int &buttons) {
 	if (!g_bChargerBhop || GetEntityMoveType(client) == MOVETYPE_LADDER || GetEntProp(client, Prop_Data, "m_nWaterLevel") > 1 || !GetEntProp(client, Prop_Send, "m_hasVisibleThreats"))
 		return Plugin_Continue;
 
+	static float val;
 	static float vVel[3];
-	static float fSpeed;
 	GetEntPropVector(client, Prop_Data, "m_vecVelocity", vVel);
-	fSpeed = SquareRoot(Pow(vVel[0], 2.0) + Pow(vVel[1], 2.0));
-	if (fSpeed < GetEntPropFloat(client, Prop_Send, "m_flMaxspeed") - 10.0)
+	vVel[2] = 0.0;
+	val = GetVectorLength(vVel);
+	if (!CheckPlayerMove(client, val))
 		return Plugin_Continue;
 
 	static float vAng[3];
@@ -248,12 +249,11 @@ public Action OnPlayerRunCmd(int client, int &buttons) {
 
 		if (CurTargetDistance(client) > 0.5 * g_fChargeProximity && -1.0 < nearestSurDist < 2000.0) {
 			GetClientEyeAngles(client, vAng);
-			if (vAng[0] != 89.0 && vAng[0] != -89.0)
-				return BunnyHop(client, buttons, vAng);
+			return BunnyHop(client, buttons, vAng);
 		}
 	}
 	else {
-		if (g_bModify[client] || fSpeed < GetEntPropFloat(client, Prop_Send, "m_flMaxspeed") + 180.0)
+		if (g_bModify[client] || val < GetEntPropFloat(client, Prop_Send, "m_flMaxspeed") + 90.0)
 			return Plugin_Continue;
 
 		if (IsCharging(client))
@@ -273,8 +273,8 @@ public Action OnPlayerRunCmd(int client, int &buttons) {
 		static float vEye2[3];
 		GetClientAbsOrigin(client, vPos);
 		GetClientAbsOrigin(target, vTar);
-		fSpeed = GetVectorDistance(vPos, vTar);
-		if (fSpeed < 100.0 || fSpeed > 440.0)
+		val = GetVectorDistance(vPos, vTar);
+		if (val < 100.0 || val > 440.0)
 			return Plugin_Continue;
 
 		GetClientEyePosition(client, vEye1);
@@ -316,6 +316,10 @@ bool IsGrounded(int client) {
 	return ent != -1 && IsValidEntity(ent);
 }
 
+bool CheckPlayerMove(int client, float vel) {
+	return vel > 0.0 && vel + 30.0 > GetEntPropFloat(client, Prop_Send, "m_flMaxspeed");
+}
+/*
 Action BunnyHop(int client, int &buttons, const float vAng[3]) {
 	float vFwd[3];
 	float vRig[3];
@@ -340,17 +344,68 @@ Action BunnyHop(int client, int &buttons, const float vAng[3]) {
 		AddVectors(vFwd, vRig, vDir);
 		GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", vVel);
 		AddVectors(vVel, vDir, vVel);
-		GetVectorAngles(vVel, vDir);
-		if (vDir[0] == 89.0 || vDir[0] == -89.0)
-			return Plugin_Continue;
+		if (WontFall(client, vVel)) {
+			buttons |= IN_DUCK;
+			buttons |= IN_JUMP;
+			TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, vVel);
+			return Plugin_Changed;
+		}
+	}
 
-		if (!WontFall(client, vVel))
-			return Plugin_Continue;
+	return Plugin_Continue;
+}*/
 
-		buttons |= IN_DUCK;
-		buttons |= IN_JUMP;
-		TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, vVel);
-		return Plugin_Changed;
+Action BunnyHop(int client, int &buttons, const float vAng[3]) {
+	float vVec[3];
+	float vDir[3];
+	float vVel[3];
+	bool pressed;
+	if (buttons & IN_FORWARD) {
+		GetAngleVectors(vAng, vDir, NULL_VECTOR, NULL_VECTOR);
+		NormalizeVector(vDir, vDir);
+		ScaleVector(vDir, 180.0);
+		pressed = true;
+	}
+
+	if (buttons & IN_BACK) {
+		GetAngleVectors(vAng, vVec, NULL_VECTOR, NULL_VECTOR);
+		NormalizeVector(vVec, vVec);
+		ScaleVector(vVec, -90.0);
+		if (!pressed)
+			pressed = true;
+		else
+			AddVectors(vVec, vDir, vDir);
+	}
+
+	if (buttons & IN_MOVERIGHT) {
+		GetAngleVectors(vAng, NULL_VECTOR, vVec, NULL_VECTOR);
+		NormalizeVector(vVec, vVec);
+		ScaleVector(vVec, 90.0);
+		if (!pressed)
+			pressed = true;
+		else
+			AddVectors(vVec, vDir, vDir);
+	}
+
+	if (buttons & IN_MOVELEFT) {
+		GetAngleVectors(vAng, NULL_VECTOR, vVec, NULL_VECTOR);
+		NormalizeVector(vVec, vVec);
+		ScaleVector(vVec, -90.0);
+		if (!pressed)
+			pressed = true;
+		else
+			AddVectors(vVec, vDir, vDir);
+	}
+
+	if (pressed) {
+		GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", vVel);
+		AddVectors(vVel, vDir, vVel);
+		if (WontFall(client, vVel)) {
+			buttons |= IN_DUCK;
+			buttons |= IN_JUMP;
+			TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, vVel);
+			return Plugin_Changed;
+		}
 	}
 
 	return Plugin_Continue;
@@ -382,7 +437,7 @@ bool WontFall(int client, const float vVel[3]) {
 		TR_GetEndPosition(vVec, hndl);
 		NormalizeVector(vVel, vNor);
 		TR_GetPlaneNormal(hndl, vPlane);
-		if (RadToDeg(ArcCosine(GetVectorDotProduct(vNor, vPlane))) > 150.0) {
+		if (RadToDeg(ArcCosine(GetVectorDotProduct(vNor, vPlane))) > 165.0) {
 			delete hndl;
 			return false;
 		}
@@ -393,7 +448,7 @@ bool WontFall(int client, const float vVel[3]) {
 	if (!didHit)
 		vVec = vEnd;
 	else {
-		MakeVectorFromPoints(vPos, vEnd, vEnd);
+		MakeVectorFromPoints(vPos, vVec, vEnd);
 		dist = GetVectorLength(vEnd) - 0.5 * (FloatAbs(vMaxs[0] - vMins[0])) - 3.0;
 		NormalizeVector(vEnd, vEnd);
 		ScaleVector(vEnd, dist);
@@ -437,15 +492,13 @@ bool TraceSelfFilter(int entity, int contentsMask, any data) {
 }
 
 bool TraceEntityFilter(int entity, int contentsMask) {
-	if (entity <= MaxClients)
-		return false;
+	if (!entity || entity > MaxClients) {
+		static char cls[5];
+		GetEdictClassname(entity, cls, sizeof cls);
+		return cls[3] != 'e' && cls[3] != 'c';
+	}
 
-	static char cls[10];
-	GetEntityClassname(entity, cls, sizeof cls);
-	if ((cls[0] == 'i' && strcmp(cls[1], "nfected") == 0) || (cls[0] == 'w' && strcmp(cls[1], "itch") == 0))
-		return false;
-
-	return true;
+	return false;
 }
 
 float CurTargetDistance(int client) {
@@ -543,11 +596,11 @@ void Charger_OnCharge(int client) {
 		return;
 
 	static float vVelocity[3];
-	GetEntPropVector(client, Prop_Data, "m_vecVelocity", vVelocity);
+	GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", vVelocity);
 
-	static float length;
-	length = GetVectorLength(vVelocity);
-	length = length < g_fChargeStartSpeed ? g_fChargeStartSpeed : length;
+	static float vel;
+	vel = GetVectorLength(vVelocity);
+	vel = vel < g_fChargeStartSpeed ? g_fChargeStartSpeed : vel;
 
 	static float vPos[3];
 	static float vTar[3];
@@ -555,18 +608,18 @@ void Charger_OnCharge(int client) {
 	GetClientEyePosition(target, vTar);
 	float fDelta = vTar[2] - vPos[2];
 	if (fDelta > PLAYER_HEIGHT)
-		length += fDelta;
+		vel += fDelta;
 
-	if (GetEntPropEnt(client, Prop_Send, "m_hGroundEntity") == -1)
-		length += g_fChargeMaxSpeed;
+	if (!IsGrounded(client))
+		vel += g_fChargeMaxSpeed;
 
-	vTar[2] += GetVectorDistance(vPos, vTar) / length * PLAYER_HEIGHT;
+	vTar[2] += GetVectorDistance(vPos, vTar) / vel * PLAYER_HEIGHT;
 	MakeVectorFromPoints(vPos, vTar, vVelocity);
 
 	static float vAngles[3];
 	GetVectorAngles(vVelocity, vAngles);
 	NormalizeVector(vVelocity, vVelocity);
-	ScaleVector(vVelocity, length);
+	ScaleVector(vVelocity, vel);
 	TeleportEntity(client, NULL_VECTOR, vAngles, vVelocity);
 }
 
@@ -668,7 +721,7 @@ bool IsVisibleTo(const float vPos[3], const float vTarget[3]) {
 		TR_GetEndPosition(vStart, hndl);
 
 		if ((GetVectorDistance(vPos, vStart, false) + 25.0) >= GetVectorDistance(vPos, vTarget))
-			isVisible = true; // if trace ray length plus tolerance equal or bigger absolute distance, you hit the target
+			isVisible = true;
 	}
 
 	delete hndl;
