@@ -266,15 +266,13 @@ bool IsVisibleTo(const float vPos[3], const float vTarget[3]) {
 }
 
 bool TraceEntityFilter(int entity, int contentsMask) {
-	if (entity > 0 && entity <= MaxClients)
-		return false;
+	if (!entity || entity > MaxClients) {
+		static char cls[5];
+		GetEdictClassname(entity, cls, sizeof cls);
+		return cls[3] != 'e' && cls[3] != 'c';
+	}
 
-	static char cls[10];
-	GetEntityClassname(entity, cls, sizeof cls);
-	if ((cls[0] == 'i' && strcmp(cls[1], "nfected") == 0) || (cls[0] == 'w' && strcmp(cls[1], "itch") == 0))
-		return false;
-
-	return true;
+	return false;
 }
 
 // https://github.com/nosoop/stocksoup
