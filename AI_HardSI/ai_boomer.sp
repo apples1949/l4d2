@@ -280,7 +280,6 @@ bool WontFall(int client, const float vVel[3]) {
 		static char cls[14];
 		GetEntityClassname(ent, cls, sizeof cls);
 		if (strcmp(cls, "trigger_hurt") == 0) {
-			PrintToChatAll("Hit trigger_hurt");
 			delete hndl;
 			return false;
 		}
