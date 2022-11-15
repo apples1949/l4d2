@@ -133,16 +133,16 @@ void NextFrame_SetVelocity(DataPack dPack) {
 
 	float vVel[3];
 	GetEntPropVector(attacker, Prop_Data, "m_vecVelocity", vVel);
-	float speed = GetVectorLength(vVel);
+	float vel = GetVectorLength(vVel);
 	#if DEBUG
-	if (speed > g_fFallSpeedFatal && GetDistanceToRoof(attacker) > 250.0) {
+	if (vel > g_fFallSpeedFatal && GetDistanceToRoof(attacker) > 250.0) {
 		vVel[0] = vVel[1] = 0.0;
-		vVel[2] = speed;
+		vVel[2] = vel;
 	}
 	else if (vVel[2] > 0.0){
 		vVel[2] = 0.0;
 		NormalizeVector(vVel, vVel);
-		ScaleVector(vVel, speed);
+		ScaleVector(vVel, vel);
 	}
 	#else
 	if (vVel[2] <= 0.0)
@@ -150,7 +150,7 @@ void NextFrame_SetVelocity(DataPack dPack) {
 
 	vVel[2] = 0.0;
 	NormalizeVector(vVel, vVel);
-	ScaleVector(vVel, speed);
+	ScaleVector(vVel, vel);
 	#endif
 
 	TeleportEntity(attacker, NULL_VECTOR, NULL_VECTOR, vVel);
