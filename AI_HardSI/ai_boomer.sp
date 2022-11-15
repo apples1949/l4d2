@@ -170,15 +170,16 @@ Action BunnyHop(int client, int &buttons, const float vAng[3]) {
 }
 
 bool CheckHopVel(int client, const float vVel[3]) {
-	static float vPos[3];
-	static float vEnd[3];
-	GetClientAbsOrigin(client, vPos);
-	AddVectors(vPos, vVel, vEnd);
-
-	static float vMins[3];
-	static float vMaxs[3];
+	static float vMins[3], vMaxs[3];
 	GetClientMins(client, vMins);
 	GetClientMaxs(client, vMaxs);
+
+	static float vPos[3], vEnd[3];
+	GetClientAbsOrigin(client, vPos);
+	float vel = GetVectorLength(vVel);
+	NormalizeVector(vVel, vEnd);
+	ScaleVector(vEnd, vel + FloatAbs(vMaxs[0] - vMins[0]) + 3.0);
+	AddVectors(vPos, vEnd, vEnd);
 
 	static bool hit;
 	static float val;
@@ -206,16 +207,6 @@ bool CheckHopVel(int client, const float vVel[3]) {
 	delete hndl;
 	if (!hit)
 		vVec = vEnd;
-	else {
-		MakeVectorFromPoints(vPos, vVec, vEnd);
-		val = GetVectorLength(vEnd) - 0.5 * (FloatAbs(vMaxs[0] - vMins[0])) - 3.0;
-		if (val < 0.0)
-			return false;
-
-		NormalizeVector(vEnd, vEnd);
-		ScaleVector(vEnd, val);
-		AddVectors(vPos, vEnd, vVec);
-	}
 
 	static float vDown[3];
 	vDown[0] = vVec[0];
