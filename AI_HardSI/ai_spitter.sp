@@ -52,7 +52,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 		if (!CheckPlayerMove(client, GetVectorLength(vVel)))
 			return Plugin_Continue;
 	
-		if (150.0 < NearestSurDistance(client) < 2000.0) {
+		if (150.0 < NearestSurDistance(client) < 1500.0) {
 			static float vAng[3];
 			GetClientEyeAngles(client, vAng);
 			return BunnyHop(client, buttons, vAng);
@@ -63,8 +63,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 }
 
 bool IsGrounded(int client) {
-	int ent = GetEntPropEnt(client, Prop_Send, "m_hGroundEntity");
-	return ent != -1 && IsValidEntity(ent);
+	return GetEntPropEnt(client, Prop_Send, "m_hGroundEntity") != -1;
 }
 
 bool CheckPlayerMove(int client, float vel) {
@@ -74,8 +73,8 @@ bool CheckPlayerMove(int client, float vel) {
 Action BunnyHop(int client, int &buttons, const float vAng[3]) {
 	float fwd[3];
 	float rig[3];
-	float vDir[3];
-	float vVel[3];
+	float dir[3];
+	float vel[3];
 	bool pressed;
 	if (buttons & IN_FORWARD && !(buttons & IN_BACK)) {
 		GetAngleVectors(vAng, fwd, NULL_VECTOR, NULL_VECTOR);
@@ -104,13 +103,13 @@ Action BunnyHop(int client, int &buttons, const float vAng[3]) {
 	}
 
 	if (pressed) {
-		AddVectors(fwd, rig, vDir);
-		GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", vVel);
-		AddVectors(vVel, vDir, vVel);
-		if (CheckHopVel(client, vVel)) {
+		AddVectors(fwd, rig, dir);
+		GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", vel);
+		AddVectors(vel, dir, vel);
+		if (CheckHopVel(client, vel)) {
 			buttons |= IN_DUCK;
 			buttons |= IN_JUMP;
-			TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, vVel);
+			TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, vel);
 			return Plugin_Changed;
 		}
 	}
@@ -146,7 +145,7 @@ bool CheckHopVel(int client, const float vVel[3]) {
 		NormalizeVector(vVel, vNor);
 		TR_GetPlaneNormal(hndl, vPlane);
 		val = RadToDeg(ArcCosine(GetVectorDotProduct(vNor, vPlane)));
-		if (val <= 90.0 || val > 165.0) {
+		if (val <= 90.0 || val > 135.0) {
 			delete hndl;
 			return false;
 		}

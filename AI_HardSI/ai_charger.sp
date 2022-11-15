@@ -4,7 +4,7 @@
 #include <sdktools>
 #include <left4dhooks>
 
-#define DEBUG	1
+#define DEBUG	0
 
 ConVar
 	g_hChargerBhop,
@@ -97,7 +97,7 @@ void Event_ChargerChargeStart(Event event, const char[] name, bool dontBroadcast
 
 	int flags = GetEntityFlags(client);
 	SetEntityFlags(client, (flags & ~FL_FROZEN) & ~FL_ONGROUND);
-	Charger_OnCharge(client);
+	ChargerCharge(client);
 	SetEntityFlags(client, flags);
 }
 
@@ -218,7 +218,7 @@ public Action OnPlayerRunCmd(int client, int &buttons) {
 		
 	if (g_bShouldCharge[client] && CanCharge(client)) {
 		static int target;
-		target = GetClientAimTarget(client, true);
+		target = GetClientAimTarget(client, false);
 		if (IsAliveSur(target) && !Incapacitated(target) && GetEntPropEnt(target, Prop_Send, "m_carryAttacker") == -1) {
 			static float vPos[3];
 			static float vTar[3];
@@ -247,7 +247,7 @@ public Action OnPlayerRunCmd(int client, int &buttons) {
 	if (IsGrounded(client)) {
 		g_bModify[client] = false;
 
-		if (CurTargetDistance(client) > 0.5 * g_fChargeProximity && -1.0 < nearestSurDist < 2000.0) {
+		if (CurTargetDistance(client) > 0.5 * g_fChargeProximity && -1.0 < nearestSurDist < 1500.0) {
 			GetClientEyeAngles(client, vAng);
 			return BunnyHop(client, buttons, vAng);
 		}
@@ -260,9 +260,9 @@ public Action OnPlayerRunCmd(int client, int &buttons) {
 			return Plugin_Continue;
 
 		static int target;
-		target = g_iCurTarget[client];//GetClientAimTarget(client, true);
-		/*if (!IsAliveSur(target))
-			target = g_iCurTarget[client];*/
+		target = GetClientAimTarget(client, false);
+		if (!IsAliveSur(target))
+			target = g_iCurTarget[client];
 
 		if (!IsAliveSur(target))
 			return Plugin_Continue;
@@ -312,8 +312,7 @@ public Action OnPlayerRunCmd(int client, int &buttons) {
 }
 
 bool IsGrounded(int client) {
-	int ent = GetEntPropEnt(client, Prop_Send, "m_hGroundEntity");
-	return ent != -1 && IsValidEntity(ent);
+	return GetEntPropEnt(client, Prop_Send, "m_hGroundEntity") != -1;
 }
 
 bool CheckPlayerMove(int client, float vel) {
@@ -323,8 +322,8 @@ bool CheckPlayerMove(int client, float vel) {
 Action BunnyHop(int client, int &buttons, const float vAng[3]) {
 	float fwd[3];
 	float rig[3];
-	float vDir[3];
-	float vVel[3];
+	float dir[3];
+	float vel[3];
 	bool pressed;
 	if (buttons & IN_FORWARD && !(buttons & IN_BACK)) {
 		GetAngleVectors(vAng, fwd, NULL_VECTOR, NULL_VECTOR);
@@ -353,13 +352,13 @@ Action BunnyHop(int client, int &buttons, const float vAng[3]) {
 	}
 
 	if (pressed) {
-		AddVectors(fwd, rig, vDir);
-		GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", vVel);
-		AddVectors(vVel, vDir, vVel);
-		if (CheckHopVel(client, vVel)) {
+		AddVectors(fwd, rig, dir);
+		GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", vel);
+		AddVectors(vel, dir, vel);
+		if (CheckHopVel(client, vel)) {
 			buttons |= IN_DUCK;
 			buttons |= IN_JUMP;
-			TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, vVel);
+			TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, vel);
 			return Plugin_Changed;
 		}
 	}
@@ -395,7 +394,7 @@ bool CheckHopVel(int client, const float vVel[3]) {
 		NormalizeVector(vVel, vNor);
 		TR_GetPlaneNormal(hndl, vPlane);
 		val = RadToDeg(ArcCosine(GetVectorDotProduct(vNor, vPlane)));
-		if (val <= 90.0 || val > 165.0) {
+		if (val <= 90.0 || val > 135.0) {
 			delete hndl;
 			return false;
 		}
@@ -522,49 +521,46 @@ bool CanCharge(int client) {
 	return ent > MaxClients && !GetEntProp(ent, Prop_Send, "m_isCharging") && GetEntPropFloat(ent, Prop_Send, "m_timestamp") < GetGameTime();
 }
 
-void ResetAbilityTime(int client, float fTime) {
+void ResetAbilityTime(int client, float time) {
 	static int ent;
 	ent = GetEntPropEnt(client, Prop_Send, "m_customAbility");
 	if (ent > MaxClients)
-		SetEntPropFloat(ent, Prop_Send, "m_timestamp", GetGameTime() + fTime);
+		SetEntPropFloat(ent, Prop_Send, "m_timestamp", GetGameTime() + time);
 }
 
 #define PLAYER_HEIGHT	72.0
-void Charger_OnCharge(int client) {
-	static int target;
-	target = g_iCurTarget[client];//GetClientAimTarget(client, true);
+void ChargerCharge(int client) {
+	int target = GetClientAimTarget(client, false); //g_iCurTarget[client];
 	if (!IsAliveSur(target) || Incapacitated(target) || IsPinned(target) || HitWall(client, target) || WithinViewAngle(client, target, g_fAimOffsetSensitivity))
-		target = GetClosestSur(client, target, g_fChargeMaxSpeed);
+		target = GetClosestSur(client, g_fChargeMaxSpeed, target);
 
-	if (target == -1)
+	if (!IsAliveSur(target))
 		return;
 
-	static float vVelocity[3];
-	GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", vVelocity);
+	float vVel[3];
+	GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", vVel);
 
-	static float vel;
-	vel = GetVectorLength(vVelocity);
+	float vel = GetVectorLength(vVel);
 	vel = vel < g_fChargeStartSpeed ? g_fChargeStartSpeed : vel;
 
-	static float vPos[3];
-	static float vTar[3];
+	float vPos[3], vTar[3];
 	GetClientAbsOrigin(client, vPos);
 	GetClientEyePosition(target, vTar);
-	float fDelta = vTar[2] - vPos[2];
-	if (fDelta > PLAYER_HEIGHT)
-		vel += fDelta;
+	float delta = vTar[2] - vPos[2];
+	if (delta > PLAYER_HEIGHT)
+		vel += delta;
 
 	if (!IsGrounded(client))
 		vel += g_fChargeMaxSpeed;
 
 	vTar[2] += GetVectorDistance(vPos, vTar) / vel * PLAYER_HEIGHT;
-	MakeVectorFromPoints(vPos, vTar, vVelocity);
+	MakeVectorFromPoints(vPos, vTar, vVel);
 
-	static float vAngles[3];
-	GetVectorAngles(vVelocity, vAngles);
-	NormalizeVector(vVelocity, vVelocity);
-	ScaleVector(vVelocity, vel);
-	TeleportEntity(client, NULL_VECTOR, vAngles, vVelocity);
+	static float vAng[3];
+	GetVectorAngles(vVel, vAng);
+	NormalizeVector(vVel, vVel);
+	ScaleVector(vVel, vel);
+	TeleportEntity(client, NULL_VECTOR, vAng, vVel);
 }
 
 bool IsAliveSur(int client) {
@@ -589,7 +585,7 @@ bool IsPinned(int client) {
 	return false;
 }
 
-int GetClosestSur(int client, int exclude = -1, float distance) {
+int GetClosestSur(int client, float range, int exclude = -1) {
 	static int i;
 	static int num;
 	static int index;
@@ -604,34 +600,38 @@ int GetClosestSur(int client, int exclude = -1, float distance) {
 	num = GetClientsInRange(vSrc, RangeType_Visibility, clients, MAXPLAYERS);
 
 	if (!num)
-		return -1;
+		return exclude;
 
-	static ArrayList aClients;
-	aClients = new ArrayList(3);
-	float fFOV = GetFOVDotProduct(g_fAimOffsetSensitivity);
+	static ArrayList al_targets;
+	al_targets = new ArrayList(3);
+	float fov = GetFOVDotProduct(g_fAimOffsetSensitivity);
 	for (i = 0; i < num; i++) {
-		if (clients[i] && clients[i] != exclude && GetClientTeam(clients[i]) == 2 && IsPlayerAlive(clients[i]) && !Incapacitated(clients[i]) && !IsPinned(clients[i]) && !HitWall(client, clients[i])) {
-			GetClientEyePosition(clients[i], vTar);
-			dist = GetVectorDistance(vSrc, vTar);
-			if (dist < distance) {
-				index = aClients.Push(dist);
-				aClients.Set(index, clients[i], 1);
+		if (!clients[i] || clients[i] == exclude)
+			continue;
 
-				GetClientEyeAngles(clients[i], vAng);
-				aClients.Set(index, !PointWithinViewAngle(vTar, vSrc, vAng, fFOV) ? 0 : 1, 2);
-			}
+		if (GetClientTeam(clients[i]) != 2 || !IsPlayerAlive(clients[i]) || Incapacitated(clients[i]) || IsPinned(clients[i]) || HitWall(client, clients[i]))
+			continue;
+
+		GetClientEyePosition(clients[i], vTar);
+		dist = GetVectorDistance(vSrc, vTar);
+		if (dist < range) {
+			index = al_targets.Push(dist);
+			al_targets.Set(index, clients[i], 1);
+
+			GetClientEyeAngles(clients[i], vAng);
+			al_targets.Set(index, !PointWithinViewAngle(vTar, vSrc, vAng, fov) ? 0 : 1, 2);
 		}
 	}
 
-	if (!aClients.Length) {
-		delete aClients;
-		return -1;
+	if (!al_targets.Length) {
+		delete al_targets;
+		return exclude;
 	}
 
-	aClients.Sort(Sort_Ascending, Sort_Float);
-	index = aClients.FindValue(0, 2);
-	i = aClients.Get(index != -1 && aClients.Get(index, 0) < 0.5 * distance ? index : 0, 1);
-	delete aClients;
+	al_targets.Sort(Sort_Ascending, Sort_Float);
+	index = al_targets.FindValue(0, 2);
+	i = al_targets.Get(index != -1 && al_targets.Get(index, 0) < 0.5 * range ? index : 0, 1);
+	delete al_targets;
 	return i;
 }
 

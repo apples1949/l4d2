@@ -4,6 +4,8 @@
 #include <sdktools>
 #include <left4dhooks>
 
+#define PLAYER_HEIGHT 72.0
+
 ConVar
 	g_hBoomerBhop,
 	g_hVomitRange;
@@ -64,9 +66,9 @@ void Event_AbilityUse(Event event, const char[] name, bool dontBroadcast) {
 	static char ability[16];
 	event.GetString("ability", ability, sizeof ability);
 	if (strcmp(ability, "ability_vomit") == 0) {
-		int flags = GetEntityFlags(client) & ~FL_ONGROUND;
-		SetEntityFlags(client, flags & ~FL_FROZEN);
-		Boomer_OnVomit(client);
+		int flags = GetEntityFlags(client);
+		SetEntityFlags(client, (flags & ~FL_FROZEN) & ~FL_ONGROUND);
+		BoomerVomit(client);
 		SetEntityFlags(client, flags);
 	}
 }
@@ -81,7 +83,7 @@ public Action OnPlayerRunCmd(int client, int &buttons) {
 	if (!g_bBoomerBhop)
 		return Plugin_Continue;
 
-	if (!IsClientInGame(client) || !IsFakeClient(client) || GetClientTeam(client) != 3 || !IsPlayerAlive(client) || GetEntProp(client, Prop_Send, "m_zombieClass") != 2 || GetEntProp(client, Prop_Send, "m_isGhost") )
+	if (!IsClientInGame(client) || !IsFakeClient(client) || GetClientTeam(client) != 3 || !IsPlayerAlive(client) || GetEntProp(client, Prop_Send, "m_zombieClass") != 2 || GetEntProp(client, Prop_Send, "m_isGhost"))
 		return Plugin_Continue;
 
 	if (L4D_IsPlayerStaggering(client))
@@ -99,7 +101,7 @@ public Action OnPlayerRunCmd(int client, int &buttons) {
 	static float curTargetDist;
 	static float nearestSurDist;
 	GetSurDistance(client, curTargetDist, nearestSurDist);
-	if (curTargetDist > 0.50 * g_fVomitRange && -1.0 < nearestSurDist < 2000.0) {
+	if (curTargetDist > 0.50 * g_fVomitRange && -1.0 < nearestSurDist < 1500.0) {
 		static float vAng[3];
 		GetClientEyeAngles(client, vAng);
 		return BunnyHop(client, buttons, vAng);
@@ -109,8 +111,7 @@ public Action OnPlayerRunCmd(int client, int &buttons) {
 }
 
 bool IsGrounded(int client) {
-	int ent = GetEntPropEnt(client, Prop_Send, "m_hGroundEntity");
-	return ent != -1 && IsValidEntity(ent);
+	return GetEntPropEnt(client, Prop_Send, "m_hGroundEntity") != -1;
 }
 
 bool TargetSur(int client) {
@@ -124,8 +125,8 @@ bool CheckPlayerMove(int client, float vel) {
 Action BunnyHop(int client, int &buttons, const float vAng[3]) {
 	float fwd[3];
 	float rig[3];
-	float vDir[3];
-	float vVel[3];
+	float dir[3];
+	float vel[3];
 	bool pressed;
 	if (buttons & IN_FORWARD && !(buttons & IN_BACK)) {
 		GetAngleVectors(vAng, fwd, NULL_VECTOR, NULL_VECTOR);
@@ -154,13 +155,13 @@ Action BunnyHop(int client, int &buttons, const float vAng[3]) {
 	}
 
 	if (pressed) {
-		AddVectors(fwd, rig, vDir);
-		GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", vVel);
-		AddVectors(vVel, vDir, vVel);
-		if (CheckHopVel(client, vVel)) {
+		AddVectors(fwd, rig, dir);
+		GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", vel);
+		AddVectors(vel, dir, vel);
+		if (CheckHopVel(client, vel)) {
 			buttons |= IN_DUCK;
 			buttons |= IN_JUMP;
-			TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, vVel);
+			TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, vel);
 			return Plugin_Changed;
 		}
 	}
@@ -196,7 +197,7 @@ bool CheckHopVel(int client, const float vVel[3]) {
 		NormalizeVector(vVel, vNor);
 		TR_GetPlaneNormal(hndl, vPlane);
 		val = RadToDeg(ArcCosine(GetVectorDotProduct(vNor, vPlane)));
-		if (val <= 90.0 || val > 165.0) {
+		if (val <= 90.0 || val > 135.0) {
 			delete hndl;
 			return false;
 		}
@@ -273,79 +274,75 @@ void GetSurDistance(int client, float &curTargetDist, float &nearestSurDist) {
 	}
 }
 
-#define PLAYER_HEIGHT 72.0
-void Boomer_OnVomit(int client) {
-	static int target;
-	target = g_iCurTarget[client];//GetClientAimTarget(client, true);
-	if (!IsAliveSur(target))
-		target = GetClosestSur(client, target, g_fVomitRange);
+void BoomerVomit(int client) {
+	int target = GetClientAimTarget(client, false); //g_iCurTarget[client];
+	if (!IsAliveSur(target) || GetEntPropFloat(target, Prop_Send, "m_itTimer", 1) != -1.0)
+		target = FindVomitTarget(client, g_fVomitRange + 2.0 * PLAYER_HEIGHT, target);
 
-	if (target == -1)
+	if (!IsAliveSur(target))
 		return;
 
-	static float vPos[3];
-	static float vTar[3];
-	static float vVelocity[3];
+	float vPos[3], vTar[3], vVel[3];
 	GetClientAbsOrigin(client, vPos);
 	GetClientEyePosition(target, vTar);
-	MakeVectorFromPoints(vPos, vTar, vVelocity);
+	MakeVectorFromPoints(vPos, vTar, vVel);
 
-	static float vel;
-	vel = GetVectorLength(vVelocity);
+	float vel = GetVectorLength(vVel);
 	if (vel < g_fVomitRange)
 		vel = 0.5 * g_fVomitRange;
-	else {
-		float height = vTar[2] - vPos[2];
-		if (height > PLAYER_HEIGHT)
-			vel += GetVectorDistance(vPos, vTar) / vel * PLAYER_HEIGHT;
-	}
 
-	static float vAngles[3];
-	GetVectorAngles(vVelocity, vAngles);
-	NormalizeVector(vVelocity, vVelocity);
-	ScaleVector(vVelocity, vel);
-	TeleportEntity(client, NULL_VECTOR, vAngles, vVelocity);
+	float height = vTar[2] - vPos[2];
+	if (height > PLAYER_HEIGHT)
+		vel += GetVectorDistance(vPos, vTar) / vel * PLAYER_HEIGHT;
+
+	float vAng[3];
+	GetVectorAngles(vVel, vAng);
+	NormalizeVector(vVel, vVel);
+	ScaleVector(vVel, vel);
+	TeleportEntity(client, NULL_VECTOR, vAng, vVel);
 }
 
 bool IsAliveSur(int client) {
 	return client > 0 && client <= MaxClients && IsClientInGame(client) && GetClientTeam(client) == 2 && IsPlayerAlive(client);
 }
 
-int GetClosestSur(int client, int exclude = -1, float distance) {
+int FindVomitTarget(int client, float range, int exclude = -1) {
 	static int i;
 	static int num;
 	static float dist;
-	static float vPos[3];
-	static float vTar[3];
+	static float vecPos[3];
+	static float vecTarget[3];
 	static int clients[MAXPLAYERS + 1];
 	
 	num = 0;
-	GetClientEyePosition(client, vPos);
-	num = GetClientsInRange(vPos, RangeType_Visibility, clients, MAXPLAYERS);
+	GetClientEyePosition(client, vecPos);
+	num = GetClientsInRange(vecPos, RangeType_Visibility, clients, MAXPLAYERS);
 	
 	if (!num)
-		return -1;
+		return exclude;
 
-	static int target;
-	static ArrayList aClients;
-	aClients = new ArrayList(2);
+	static ArrayList al_targets;
+	al_targets = new ArrayList(2);
 	for (i = 0; i < num; i++) {
-		target = clients[i];
-		if (target && target != exclude && GetClientTeam(target) == 2 && IsPlayerAlive(target) && !GetEntProp(target, Prop_Send, "m_isIncapacitated")) {
-			GetClientAbsOrigin(target, vTar);
-			dist = GetVectorDistance(vPos, vTar);
-			if (dist < distance)
-				aClients.Set(aClients.Push(dist), target, 1);
-		}
+		if (!clients[i] || clients[i] == exclude)
+			continue;
+		
+		if (GetClientTeam(clients[i]) != 2 || !IsPlayerAlive(clients[i]) || GetEntPropFloat(clients[i], Prop_Send, "m_itTimer", 1) != -1.0)
+			continue;
+
+		GetClientAbsOrigin(clients[i], vecTarget);
+		dist = GetVectorDistance(vecPos, vecTarget);
+		if (dist < range)
+			al_targets.Set(al_targets.Push(dist), clients[i], 1);
 	}
 
-	if (!aClients.Length) {
-		delete aClients;
-		return -1;
+	if (!al_targets.Length) {
+		delete al_targets;
+		return exclude;
 	}
 
-	aClients.Sort(Sort_Ascending, Sort_Float);
-	target = aClients.Get(0, 1);
-	delete aClients;
-	return target;
+	al_targets.Sort(Sort_Ascending, Sort_Float);
+	num = al_targets.Get(0, 1);
+	delete al_targets;
+	return num;
 }

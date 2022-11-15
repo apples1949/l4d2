@@ -94,7 +94,7 @@ public Action OnPlayerRunCmd(int client, int &buttons) {
 		static float curTargetDist;
 		static float nearestSurDist;
 		GetSurDistance(client, curTargetDist, nearestSurDist);
-		if (curTargetDist > 0.5 * g_fTankAttackRange && -1.0 < nearestSurDist < 2000.0) {
+		if (curTargetDist > 0.5 * g_fTankAttackRange && -1.0 < nearestSurDist < 1500.0) {
 			GetClientEyeAngles(client, vAng);
 			return BunnyHop(client, buttons, vAng);
 		}
@@ -156,8 +156,7 @@ public Action OnPlayerRunCmd(int client, int &buttons) {
 }
 
 bool IsGrounded(int client) {
-	int ent = GetEntPropEnt(client, Prop_Send, "m_hGroundEntity");
-	return ent != -1 && IsValidEntity(ent);
+	return GetEntPropEnt(client, Prop_Send, "m_hGroundEntity") != -1;
 }
 
 bool TargetSur(int client) {
@@ -171,8 +170,8 @@ bool CheckPlayerMove(int client, float vel) {
 Action BunnyHop(int client, int &buttons, const float vAng[3]) {
 	float fwd[3];
 	float rig[3];
-	float vDir[3];
-	float vVel[3];
+	float dir[3];
+	float vel[3];
 	bool pressed;
 	if (buttons & IN_FORWARD && !(buttons & IN_BACK)) {
 		GetAngleVectors(vAng, fwd, NULL_VECTOR, NULL_VECTOR);
@@ -201,13 +200,13 @@ Action BunnyHop(int client, int &buttons, const float vAng[3]) {
 	}
 
 	if (pressed) {
-		AddVectors(fwd, rig, vDir);
-		GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", vVel);
-		AddVectors(vVel, vDir, vVel);
-		if (CheckHopVel(client, vVel)) {
+		AddVectors(fwd, rig, dir);
+		GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", vel);
+		AddVectors(vel, dir, vel);
+		if (CheckHopVel(client, vel)) {
 			buttons |= IN_DUCK;
 			buttons |= IN_JUMP;
-			TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, vVel);
+			TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, vel);
 			return Plugin_Changed;
 		}
 	}
@@ -243,7 +242,7 @@ bool CheckHopVel(int client, const float vVel[3]) {
 		NormalizeVector(vVel, vNor);
 		TR_GetPlaneNormal(hndl, vPlane);
 		val = RadToDeg(ArcCosine(GetVectorDotProduct(vNor, vPlane)));
-		if (val <= 90.0 || val > 165.0) {
+		if (val <= 90.0 || val > 135.0) {
 			delete hndl;
 			return false;
 		}
@@ -344,8 +343,8 @@ public Action L4D_TankRock_OnRelease(int tank, int rock, float vecPos[3], float 
 	if (IsAliveSur(target) && !Incapacitated(target) && !IsPinned(target) && !HitWall(tank, rock, target) && !WithinViewAngle(tank, target, g_fAimOffsetSensitivity))
 		return Plugin_Continue;
 	
-	target = GetClosestSur(tank, target, rock, 2.0 * g_fTankThrowForce);
-	if (target == -1)
+	target = GetClosestSur(tank, rock, 2.0 * g_fTankThrowForce, target);
+	if (!IsAliveSur(target))
 		return Plugin_Continue;
 
 	static float vRock[3];
@@ -353,20 +352,20 @@ public Action L4D_TankRock_OnRelease(int tank, int rock, float vecPos[3], float 
 	static float vVectors[3];
 	GetClientAbsOrigin(target, vTar);
 	GetClientAbsOrigin(tank, vRock);
-	float fDelta = GetVectorDistance(vRock, vTar) / g_fTankThrowForce * PLAYER_HEIGHT;
 
-	vTar[2] += fDelta;
-	while (fDelta < PLAYER_HEIGHT) {
+	float delta = GetVectorDistance(vRock, vTar) / g_fTankThrowForce * PLAYER_HEIGHT;
+	vTar[2] += delta;
+	while (delta < PLAYER_HEIGHT) {
 		if (!HitWall(tank, rock, -1, vTar))
 			break;
 
-		fDelta += 10.0;
+		delta += 10.0;
 		vTar[2] += 10.0;
 	}
 
-	fDelta = vTar[2] - vRock[2];
-	if (fDelta > PLAYER_HEIGHT)
-		vTar[2] += fDelta / PLAYER_HEIGHT * 10.0;
+	delta = vTar[2] - vRock[2];
+	if (delta > PLAYER_HEIGHT)
+		vTar[2] += delta / PLAYER_HEIGHT * 10.0;
 
 	GetClientEyePosition(tank, vRock);
 	MakeVectorFromPoints(vRock, vTar, vVectors);
@@ -431,18 +430,16 @@ bool TraceRockFilter(int entity, int contentsMask, any data) {
 	if (entity == data)
 		return false;
 
-	if (entity > 0 && entity <= MaxClients)
-		return false;
+	if (!entity || entity > MaxClients) {
+		static char cls[5];
+		GetEdictClassname(entity, cls, sizeof cls);
+		return cls[3] != 'e' && cls[3] != 'c';
+	}
 
-	static char cls[10];
-	GetEntityClassname(entity, cls, sizeof cls);
-	if ((cls[0] == 'i' && strcmp(cls[1], "nfected") == 0) || (cls[0] == 'w' && strcmp(cls[1], "itch") == 0))
-		return false;
-
-	return true;
+	return false;
 }
 
-int GetClosestSur(int client, int exclude = -1, int ent, float distance) {
+int GetClosestSur(int client, int ent, float range, int exclude = -1) {
 	static int i;
 	static int num;
 	static int index;
@@ -457,34 +454,38 @@ int GetClosestSur(int client, int exclude = -1, int ent, float distance) {
 	num = GetClientsInRange(vSrc, RangeType_Visibility, clients, MAXPLAYERS);
 
 	if (!num)
-		return -1;
+		return exclude;
 
-	static ArrayList aClients;
-	aClients = new ArrayList(3);
-	float fFOV = GetFOVDotProduct(g_fAimOffsetSensitivity);
+	static ArrayList al_targets;
+	al_targets = new ArrayList(3);
+	float fov = GetFOVDotProduct(g_fAimOffsetSensitivity);
 	for (i = 0; i < num; i++) {
-		if (clients[i] && clients[i] != exclude && GetClientTeam(clients[i]) == 2 && IsPlayerAlive(clients[i]) && !Incapacitated(clients[i]) && !IsPinned(clients[i]) && !HitWall(client, ent, clients[i])) {
-			GetClientEyePosition(clients[i], vTar);
-			dist = GetVectorDistance(vSrc, vTar);
-			if (dist < distance) {
-				index = aClients.Push(dist);
-				aClients.Set(index, clients[i], 1);
+		if (!clients[i] || clients[i] == exclude)
+			continue;
 
-				GetClientEyeAngles(clients[i], vAng);
-				aClients.Set(index, !PointWithinViewAngle(vTar, vSrc, vAng, fFOV) ? 0 : 1, 2);
-			}
+		if (GetClientTeam(clients[i]) != 2 || !IsPlayerAlive(clients[i]) || Incapacitated(clients[i]) || IsPinned(clients[i]) || HitWall(client, ent, clients[i]))
+			continue;
+
+		GetClientEyePosition(clients[i], vTar);
+		dist = GetVectorDistance(vSrc, vTar);
+		if (dist < range) {
+			index = al_targets.Push(dist);
+			al_targets.Set(index, clients[i], 1);
+
+			GetClientEyeAngles(clients[i], vAng);
+			al_targets.Set(index, !PointWithinViewAngle(vTar, vSrc, vAng, fov) ? 0 : 1, 2);
 		}
 	}
 
-	if (!aClients.Length) {
-		delete aClients;
-		return -1;
+	if (!al_targets.Length) {
+		delete al_targets;
+		return exclude;
 	}
 
-	aClients.Sort(Sort_Ascending, Sort_Float);
-	index = aClients.FindValue(0, 2);
-	i = aClients.Get(index != -1 && aClients.Get(index, 0) < g_fTankThrowForce ? index : Math_GetRandomInt(0, RoundToCeil((aClients.Length - 1) * 0.8)), 1);
-	delete aClients;
+	al_targets.Sort(Sort_Ascending, Sort_Float);
+	index = al_targets.FindValue(0, 2);
+	i = al_targets.Get(index != -1 && al_targets.Get(index, 0) < g_fTankThrowForce ? index : Math_GetRandomInt(0, RoundToCeil((al_targets.Length - 1) * 0.8)), 1);
+	delete al_targets;
 	return i;
 }
 
