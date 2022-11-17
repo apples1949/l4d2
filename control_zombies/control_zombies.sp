@@ -1825,6 +1825,7 @@ Action tmrPlayerStatus(Handle timer) {
 					}
 					else if (!GetEntProp(i, Prop_Send, "m_isGhost")) {
 						if (tankFrustrated[i] && GetEntProp(i, Prop_Send, "m_frustration") > 99 && GetEntityFlags(i) & FL_ONFIRE == 0) {
+							tankFrustrated[i] = false;
 							// CTerrorPlayer::UpdateZombieFrustration(CTerrorPlayer *__hidden this)函数里面的原生方法
 							Event event = CreateEvent("tank_frustrated", true);
 							event.SetInt("userid", GetClientUserId(i));
