@@ -71,42 +71,42 @@ bool CheckPlayerMove(int client, float vel) {
 }
 
 Action BunnyHop(int client, int &buttons, const float vAng[3]) {
-	float fwd[3];
-	float rig[3];
 	float dir[3];
-	float vel[3];
-	bool pressed;
+	float vec[3];
+	bool speedBoost;
 	if (buttons & IN_FORWARD && !(buttons & IN_BACK)) {
-		GetAngleVectors(vAng, fwd, NULL_VECTOR, NULL_VECTOR);
-		NormalizeVector(fwd, fwd);
-		ScaleVector(fwd, 180.0);
-		pressed = true;
+		GetAngleVectors(vAng, dir, NULL_VECTOR, NULL_VECTOR);
+		NormalizeVector(dir, dir);
+		ScaleVector(dir, 180.0);
+		speedBoost = true;
 	}
 	else if (buttons & IN_BACK && !(buttons & IN_FORWARD)) {
-		GetAngleVectors(vAng, fwd, NULL_VECTOR, NULL_VECTOR);
-		NormalizeVector(fwd, fwd);
-		ScaleVector(fwd, -90.0);
-		pressed = true;
+		GetAngleVectors(vAng, dir, NULL_VECTOR, NULL_VECTOR);
+		NormalizeVector(dir, dir);
+		ScaleVector(dir, -90.0);
+		speedBoost = true;
 	}
 
 	if (buttons & IN_MOVERIGHT && !(buttons & IN_MOVELEFT)) {
-		GetAngleVectors(vAng, NULL_VECTOR, rig, NULL_VECTOR);
-		NormalizeVector(rig, rig);
-		ScaleVector(rig, 90.0);
-		pressed = true;
+		GetAngleVectors(vAng, NULL_VECTOR, vec, NULL_VECTOR);
+		NormalizeVector(vec, vec);
+		ScaleVector(vec, 90.0);
+		AddVectors(vec, dir, dir);
+		speedBoost = true;
 	}
 	else if (buttons & IN_MOVELEFT && !(buttons & IN_MOVERIGHT)) {
-		GetAngleVectors(vAng, NULL_VECTOR, rig, NULL_VECTOR);
-		NormalizeVector(rig, rig);
-		ScaleVector(rig, -90.0);
-		pressed = true;
+		GetAngleVectors(vAng, NULL_VECTOR, vec, NULL_VECTOR);
+		NormalizeVector(vec, vec);
+		ScaleVector(vec, -90.0);
+		AddVectors(vec, dir, dir);
+		speedBoost = true;
 	}
 
-	if (pressed) {
-		AddVectors(fwd, rig, dir);
+	if (speedBoost) {
+		float vel[3];
 		GetEntPropVector(client, Prop_Data, "m_vecAbsVelocity", vel);
 		AddVectors(vel, dir, vel);
-		if (CheckHopVel(client, vel)) {
+		if (CheckHopVel(client, vAng, vel)) {
 			buttons |= IN_DUCK;
 			buttons |= IN_JUMP;
 			TeleportEntity(client, NULL_VECTOR, NULL_VECTOR, vel);
@@ -117,12 +117,14 @@ Action BunnyHop(int client, int &buttons, const float vAng[3]) {
 	return Plugin_Continue;
 }
 
-bool CheckHopVel(int client, const float vVel[3]) {
-	static float vMins[3], vMaxs[3];
+bool CheckHopVel(int client, const float vAng[3], const float vVel[3]) {
+	static float vMins[3];
+	static float vMaxs[3];
 	GetClientMins(client, vMins);
 	GetClientMaxs(client, vMaxs);
 
-	static float vPos[3], vEnd[3];
+	static float vPos[3];
+	static float vEnd[3];
 	GetClientAbsOrigin(client, vPos);
 	float vel = GetVectorLength(vVel);
 	NormalizeVector(vVel, vEnd);
@@ -130,7 +132,6 @@ bool CheckHopVel(int client, const float vVel[3]) {
 	AddVectors(vPos, vEnd, vEnd);
 
 	static bool hit;
-	static float val;
 	static Handle hndl;
 	static float vVec[3];
 	static float vNor[3];
@@ -143,13 +144,42 @@ bool CheckHopVel(int client, const float vVel[3]) {
 	if (TR_DidHit(hndl)) {
 		hit = true;
 		TR_GetEndPosition(vVec, hndl);
+
 		NormalizeVector(vVel, vNor);
 		TR_GetPlaneNormal(hndl, vPlane);
-		val = RadToDeg(ArcCosine(GetVectorDotProduct(vNor, vPlane)));
-		if (val <= 90.0 || val > 135.0) {
+		if (RadToDeg(ArcCosine(GetVectorDotProduct(vNor, vPlane))) > 165.0) {
 			delete hndl;
 			return false;
 		}
+
+		vNor[1] = vAng[1];
+		vNor[0] = vNor[2] = 0.0;
+		GetAngleVectors(vNor, vNor, NULL_VECTOR, NULL_VECTOR);
+		NormalizeVector(vNor, vNor);
+		if (RadToDeg(ArcCosine(GetVectorDotProduct(vNor, vPlane))) > 165.0) {
+			delete hndl;
+			return false;
+		}
+	}
+	else {
+		vNor[1] = vAng[1];
+		vNor[0] = vNor[2] = 0.0;
+		GetAngleVectors(vNor, vNor, NULL_VECTOR, NULL_VECTOR);
+		NormalizeVector(vNor, vNor);
+		vPlane = vNor;
+		ScaleVector(vPlane, 128.0);
+		AddVectors(vPos, vPlane, vPlane);
+		delete hndl;
+		hndl = TR_TraceHullFilterEx(vPos, vPlane, view_as<float>({-16.0, -16.0, 0.0}), view_as<float>({16.0, 16.0, 33.0}), MASK_PLAYERSOLID, TraceWallFilter, client);
+		if (TR_DidHit(hndl)) {
+			TR_GetPlaneNormal(hndl, vPlane);
+			if (RadToDeg(ArcCosine(GetVectorDotProduct(vNor, vPlane))) > 165.0) {
+				delete hndl;
+				return false;
+			}
+		}
+
+		delete hndl;
 	}
 
 	delete hndl;
@@ -174,6 +204,16 @@ bool CheckHopVel(int client, const float vVel[3]) {
 
 bool TraceSelfFilter(int entity, int contentsMask, any data) {
 	return entity != data;
+}
+
+bool TraceWallFilter(int entity, int contentsMask, any data) {
+	if (entity != data) {
+		static char cls[5];
+		GetEdictClassname(entity, cls, sizeof cls);
+		return cls[3] != 'e' && cls[3] != 'c';
+	}
+
+	return false;
 }
 
 bool TraceEntityFilter(int entity, int contentsMask) {
