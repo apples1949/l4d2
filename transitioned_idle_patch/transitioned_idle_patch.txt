@@ -18,5 +18,6 @@
 
 "Patches"
 {
-	"transitioned_idle_sig"	"PlayerSaveData::Restore::idle"
+	"transitioned_idle_sig"	"PlayerSaveData::Restore::Patch1"
+	"transitioned_idle_sig"	"PlayerSaveData::Restore::Patch2"
 }

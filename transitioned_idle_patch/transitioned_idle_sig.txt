@@ -4,7 +4,26 @@
 	{
 		"MemPatches"
 		{
-			"PlayerSaveData::Restore::idle"
+			"PlayerSaveData::Restore::Patch1"
+			{
+				"signature"		"PlayerSaveData::Restore"
+
+				"linux"
+				{
+					"offset"	"15Ah"
+					"verify"	"\x0F\x85"
+					"patch"		"\x90\x90\x90\x90\x90\x90"
+				}
+				
+				"windows"
+				{
+					"offset"	"ECh"
+					"verify"	"\x0F\x84"
+					"patch"		"\x90\xE9"
+				}
+			}
+
+			"PlayerSaveData::Restore::Patch2"
 			{
 				"signature"		"PlayerSaveData::Restore"
 
