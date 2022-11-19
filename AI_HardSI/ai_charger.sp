@@ -96,10 +96,7 @@ void Event_ChargerChargeStart(Event event, const char[] name, bool dontBroadcast
 	if (!client || !IsClientInGame(client) || !IsFakeClient(client))
 		return;
 
-	int flags = GetEntityFlags(client);
-	SetEntityFlags(client, (flags & ~FL_FROZEN) & ~FL_ONGROUND);
 	ChargerCharge(client);
-	SetEntityFlags(client, flags);
 }
 
 #if FIXFLY
@@ -228,7 +225,7 @@ public Action OnPlayerRunCmd(int client, int &buttons) {
 			static float vTar[3];
 			GetClientAbsOrigin(client, vPos);
 			GetClientAbsOrigin(target, vTar);
-			if (GetVectorDistance(vPos, vTar) < 100.0 && !HitWall(client, target)) {
+			if (GetVectorDistance(vPos, vTar) < 100.0 && !entHitWall(client, target)) {
 				buttons |= IN_ATTACK;
 				buttons |= IN_ATTACK2;
 				return Plugin_Changed;
@@ -289,9 +286,6 @@ public Action OnPlayerRunCmd(int client, int &buttons) {
 		if (vPos[2] > vEye2[2])
 			return Plugin_Continue;
 
-		if (!IsVisibleTo(vEye2, vEye1))
-			return Plugin_Continue;
-
 		GetVectorAngles(vVel, vAng);
 		vVel = vAng;
 		vAng[0] = vAng[2] = 0.0;
@@ -305,6 +299,9 @@ public Action OnPlayerRunCmd(int client, int &buttons) {
 		MakeVectorFromPoints(vPos, vEye2, vPos);
 		NormalizeVector(vPos, vPos);
 		if (RadToDeg(ArcCosine(GetVectorDotProduct(vAng, vPos))) < 90.0)
+			return Plugin_Continue;
+
+		if (vecHitWall(client, vPos, vTar))
 			return Plugin_Continue;
 
 		MakeVectorFromPoints(vDir[0], vDir[1], vDir[0]);
@@ -511,7 +508,7 @@ float NearestSurDistance(int client) {
 	return minDist;
 }
 
-bool HitWall(int client, int target) {
+bool entHitWall(int client, int target) {
 	static float vPos[3];
 	static float vTar[3];
 	GetClientAbsOrigin(client, vPos);
@@ -530,8 +527,31 @@ bool HitWall(int client, int target) {
 	static float vMaxs[3];
 	GetClientMins(client, vMins);
 	GetClientMaxs(client, vMaxs);
-	vMins[2] += dist > 49.0 ? 10.0 : 45.0;
+	vMins[2] += dist > 49.0 ? 10.0 : 44.0;
 	vMaxs[2] -= 10.0;
+
+	static bool hit;
+	static Handle hndl;
+	hndl = TR_TraceHullFilterEx(vPos, vTar, vMins, vMaxs, MASK_PLAYERSOLID, TraceEntityFilter);
+	hit = TR_DidHit(hndl);
+	delete hndl;
+	return hit;
+}
+
+bool vecHitWall(int client, float vPos[3], float vTar[3]) {
+	vPos[2] += 10.0;
+	vTar[2] += 10.0;
+	MakeVectorFromPoints(vPos, vTar, vTar);
+	static float dist;
+	dist = GetVectorLength(vTar);
+	NormalizeVector(vTar, vTar);
+	ScaleVector(vTar, dist);
+	AddVectors(vPos, vTar, vTar);
+
+	static float vMins[3];
+	static float vMaxs[3];
+	GetClientMins(client, vMins);
+	GetClientMaxs(client, vMaxs);
 
 	static bool hit;
 	static Handle hndl;
@@ -566,7 +586,7 @@ void ResetAbilityTime(int client, float time) {
 #define PLAYER_HEIGHT	72.0
 void ChargerCharge(int client) {
 	int target = GetClientAimTarget(client, false); //g_iCurTarget[client];
-	if (!IsAliveSur(target) || Incapacitated(target) || IsPinned(target) || HitWall(client, target) || WithinViewAngle(client, target, g_fAimOffsetSensitivity))
+	if (!IsAliveSur(target) || Incapacitated(target) || IsPinned(target) || entHitWall(client, target) || WithinViewAngle(client, target, g_fAimOffsetSensitivity))
 		target = GetClosestSur(client, g_fChargeMaxSpeed, target);
 
 	if (!IsAliveSur(target))
@@ -581,25 +601,27 @@ void ChargerCharge(int client) {
 	float vPos[3], vTar[3];
 	GetClientAbsOrigin(client, vPos);
 	GetClientAbsOrigin(target, vTar);
-	float delta = vPos[2] - vTar[2];
-	if (delta >= 0.0)
-		vTar[2] = vPos[2];
-	else {
-		vTar[2] += 45.0;
-		vel += FloatAbs(delta);
+	float height = vTar[2] - vPos[2];
+	if (height >= 44.0) {
+		vTar[2] += 44.0;
+		vel += FloatAbs(height);
+		vTar[2] += GetVectorDistance(vPos, vTar) / vel * PLAYER_HEIGHT;
 	}
 
 	if (!IsGrounded(client))
 		vel += g_fChargeMaxSpeed;
 
-	vTar[2] += GetVectorDistance(vPos, vTar) / vel * PLAYER_HEIGHT;
 	MakeVectorFromPoints(vPos, vTar, vVel);
 
-	static float vAng[3];
+	float vAng[3];
 	GetVectorAngles(vVel, vAng);
 	NormalizeVector(vVel, vVel);
 	ScaleVector(vVel, vel);
+
+	int flags = GetEntityFlags(client);
+	SetEntityFlags(client, (flags & ~FL_FROZEN) & ~FL_ONGROUND);
 	TeleportEntity(client, NULL_VECTOR, vAng, vVel);
+	SetEntityFlags(client, flags);
 }
 
 bool IsAliveSur(int client) {
@@ -648,7 +670,7 @@ int GetClosestSur(int client, float range, int exclude = -1) {
 		if (!clients[i] || clients[i] == exclude)
 			continue;
 
-		if (GetClientTeam(clients[i]) != 2 || !IsPlayerAlive(clients[i]) || Incapacitated(clients[i]) || IsPinned(clients[i]) || HitWall(client, clients[i]))
+		if (GetClientTeam(clients[i]) != 2 || !IsPlayerAlive(clients[i]) || Incapacitated(clients[i]) || IsPinned(clients[i]) || entHitWall(client, clients[i]))
 			continue;
 
 		GetClientEyePosition(clients[i], vTar);

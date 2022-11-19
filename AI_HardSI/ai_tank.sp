@@ -147,6 +147,9 @@ public Action OnPlayerRunCmd(int client, int &buttons) {
 		if (RadToDeg(ArcCosine(GetVectorDotProduct(vAng, vPos))) < 90.0)
 			return Plugin_Continue;
 
+		if (vecHitWall(client, vPos, vTar))
+			return Plugin_Continue;
+
 		MakeVectorFromPoints(vDir[0], vDir[1], vDir[0]);
 		TeleportEntity(client, NULL_VECTOR, vVel, vDir[0]);
 		g_bModify[client] = true;
@@ -371,7 +374,7 @@ public Action L4D_TankRock_OnRelease(int tank, int rock, float vecPos[3], float 
 
 	static int target;
 	target = GetClientAimTarget(tank, true);
-	if (IsAliveSur(target) && !Incapacitated(target) && !IsPinned(target) && !HitWall(tank, rock, target) && !WithinViewAngle(tank, target, g_fAimOffsetSensitivity))
+	if (IsAliveSur(target) && !Incapacitated(target) && !IsPinned(target) && !RockHitWall(tank, rock, target) && !WithinViewAngle(tank, target, g_fAimOffsetSensitivity))
 		return Plugin_Continue;
 	
 	target = GetClosestSur(tank, rock, 2.0 * g_fTankThrowForce, target);
@@ -387,7 +390,7 @@ public Action L4D_TankRock_OnRelease(int tank, int rock, float vecPos[3], float 
 	float delta = GetVectorDistance(vRock, vTar) / g_fTankThrowForce * PLAYER_HEIGHT;
 	vTar[2] += delta;
 	while (delta < PLAYER_HEIGHT) {
-		if (!HitWall(tank, rock, -1, vTar))
+		if (!RockHitWall(tank, rock, -1, vTar))
 			break;
 
 		delta += 10.0;
@@ -434,7 +437,30 @@ bool IsPinned(int client) {
 	return false;
 }
 
-bool HitWall(int tank, int ent, int target = -1, const float vEnd[3] = NULL_VECTOR) {
+bool vecHitWall(int client, float vPos[3], float vTar[3]) {
+	vPos[2] += 10.0;
+	vTar[2] += 10.0;
+	MakeVectorFromPoints(vPos, vTar, vTar);
+	static float dist;
+	dist = GetVectorLength(vTar);
+	NormalizeVector(vTar, vTar);
+	ScaleVector(vTar, dist);
+	AddVectors(vPos, vTar, vTar);
+
+	static float vMins[3];
+	static float vMaxs[3];
+	GetClientMins(client, vMins);
+	GetClientMaxs(client, vMaxs);
+
+	static bool hit;
+	static Handle hndl;
+	hndl = TR_TraceHullFilterEx(vPos, vTar, vMins, vMaxs, MASK_PLAYERSOLID, TraceEntityFilter);
+	hit = TR_DidHit(hndl);
+	delete hndl;
+	return hit;
+}
+
+bool RockHitWall(int tank, int ent, int target = -1, const float vEnd[3] = NULL_VECTOR) {
 	static float vSrc[3];
 	static float vTar[3];
 	GetClientEyePosition(tank, vSrc);
@@ -494,7 +520,7 @@ int GetClosestSur(int client, int ent, float range, int exclude = -1) {
 		if (!clients[i] || clients[i] == exclude)
 			continue;
 
-		if (GetClientTeam(clients[i]) != 2 || !IsPlayerAlive(clients[i]) || Incapacitated(clients[i]) || IsPinned(clients[i]) || HitWall(client, ent, clients[i]))
+		if (GetClientTeam(clients[i]) != 2 || !IsPlayerAlive(clients[i]) || Incapacitated(clients[i]) || IsPinned(clients[i]) || RockHitWall(client, ent, clients[i]))
 			continue;
 
 		GetClientEyePosition(clients[i], vTar);

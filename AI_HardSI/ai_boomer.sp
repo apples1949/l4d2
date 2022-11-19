@@ -65,12 +65,8 @@ void Event_AbilityUse(Event event, const char[] name, bool dontBroadcast) {
 
 	static char ability[16];
 	event.GetString("ability", ability, sizeof ability);
-	if (strcmp(ability, "ability_vomit") == 0) {
-		int flags = GetEntityFlags(client);
-		SetEntityFlags(client, (flags & ~FL_FROZEN) & ~FL_ONGROUND);
+	if (strcmp(ability, "ability_vomit") == 0)
 		BoomerVomit(client);
-		SetEntityFlags(client, flags);
-	}
 }
 
 int g_iCurTarget[MAXPLAYERS + 1];
@@ -330,7 +326,11 @@ void BoomerVomit(int client) {
 	GetVectorAngles(vVel, vAng);
 	NormalizeVector(vVel, vVel);
 	ScaleVector(vVel, vel);
+
+	int flags = GetEntityFlags(client);
+	SetEntityFlags(client, (flags & ~FL_FROZEN) & ~FL_ONGROUND);
 	TeleportEntity(client, NULL_VECTOR, vAng, vVel);
+	SetEntityFlags(client, flags);
 }
 
 bool IsAliveSur(int client) {
