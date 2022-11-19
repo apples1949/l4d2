@@ -7,7 +7,7 @@
 #define PLUGIN_NAME				"Coop Boss Spawning"
 #define PLUGIN_AUTHOR			"sorallll"
 #define PLUGIN_DESCRIPTION		""
-#define PLUGIN_VERSION			"1.0.0"
+#define PLUGIN_VERSION			"1.0.1"
 #define PLUGIN_URL				""
 
 ConVar
@@ -47,6 +47,14 @@ public Action L4D_OnGetScriptValueInt(const char[] key, int &retVal) {
 }
 
 public void L4D_OnFirstSurvivorLeftSafeArea_Post(int client) {
-	int round = GameRules_GetProp("m_bInSecondHalfOfRound") ? 1 : 0;
-	CPrintToChatAll("{olive}Tank{default}: {red}%d%%\n{olive}Witch{default}: {red}%d%%", RoundToNearest(L4D2Direct_GetVSTankFlowPercent(round) * 100.0), RoundToNearest(L4D2Direct_GetVSWitchFlowPercent(round) * 100.0));
+	int round = GameRules_GetProp("m_bInSecondHalfOfRound");
+	if (!L4D2Direct_GetVSTankToSpawnThisRound(round))
+		CPrintToChatAll("{olive}Tank{default}: {red}none");
+	else
+		CPrintToChatAll("{olive}Tank{default}: {red}%d%%", RoundToNearest(L4D2Direct_GetVSTankFlowPercent(round) * 100.0));
+
+	if (!L4D2Direct_GetVSWitchToSpawnThisRound(round))
+		CPrintToChatAll("{olive}Witch{default}: {red}none");
+	else
+		CPrintToChatAll("{olive}Witch{default}: {red}%d%%", RoundToNearest(L4D2Direct_GetVSWitchFlowPercent(round) * 100.0));
 }
