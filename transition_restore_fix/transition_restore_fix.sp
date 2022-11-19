@@ -7,7 +7,7 @@
 #define PLUGIN_NAME				"Transition Restore Fix"
 #define PLUGIN_AUTHOR			"sorallll"
 #define PLUGIN_DESCRIPTION		"Restoring transition data by player's UserId instead of character"
-#define PLUGIN_VERSION			"1.2.3"
+#define PLUGIN_VERSION			"1.2.4"
 #define PLUGIN_URL				"https://forums.alliedmods.net/showthread.php?t=336287"
 
 #define GAMEDATA				"transition_restore_fix"
@@ -36,11 +36,11 @@ MemoryPatch
 	g_mpRestoreByUserId;
 
 bool
-	g_bRestart,
+	g_bOnRestart,
 	g_bChooseBotData;
 
 enum struct PlayerSaveData {
-	char ModelName[PLATFORM_MAX_PATH];
+	char ModelName[128];
 	char character[4];
 }
 
@@ -153,7 +153,7 @@ void InitPatchs(GameData hGameData = null) {
 	if (!patch.Validate())
 		SetFailState("Failed to verify patch: \"RestoreTransitionedSurvivorBots::MaxRestoreSurvivorBots\"");
 	else if (patch.Enable()) {
-		StoreToAddress(patch.Address + view_as<Address>(2), hGameData.GetOffset("OS") ? MaxClients : MaxClients + 1, NumberType_Int8);
+		StoreToAddress(patch.Address + view_as<Address>(2), !hGameData.GetOffset("OS") ? MaxClients : MaxClients - 1, NumberType_Int8);
 		PrintToServer("[%s] Enabled patch: \"RestoreTransitionedSurvivorBots::MaxRestoreSurvivorBots\"", GAMEDATA);
 	}
 }
@@ -205,13 +205,13 @@ void SetupDetours(GameData hGameData = null) {
 }
 
 MRESReturn DD_CDirector_Restart_Pre(Address pThis, DHookReturn hReturn) {
-	g_bRestart = true;
 	g_aBotData.Clear();
+	g_bOnRestart = true;
 	return MRES_Ignored;
 }
 
 MRESReturn DD_CDirector_Restart_Post(Address pThis, DHookReturn hReturn) {
-	g_bRestart = false;
+	g_bOnRestart = false;
 	return MRES_Ignored;
 }
 
@@ -238,7 +238,7 @@ MRESReturn DD_CTerrorPlayer_TransitionRestore_Post(int pThis, DHookReturn hRetur
 }
 
 MRESReturn DD_PlayerSaveData_Restore_Pre(Address pThis, DHookParam hParams) {
-	if (!g_bRestart)
+	if (!g_bOnRestart)
 		return MRES_Ignored;
 
 	int player = hParams.Get(1);
@@ -246,7 +246,7 @@ MRESReturn DD_PlayerSaveData_Restore_Pre(Address pThis, DHookParam hParams) {
 		return MRES_Ignored;
 
 	Address pData;
-	char ModelName[PLATFORM_MAX_PATH];
+	char ModelName[128];
 	int m_survivorCharacter = GetEntProp(player, Prop_Send, "m_survivorCharacter");
 	if (IsFakeClient(player) || !FindPlayerDataByUserId(GetClientUserId(player))) {
 		GetClientModel(player, ModelName, sizeof ModelName);
@@ -283,7 +283,7 @@ MRESReturn DD_PlayerSaveData_Restore_Pre(Address pThis, DHookParam hParams) {
 }
 
 MRESReturn DD_PlayerSaveData_Restore_Post(Address pThis, DHookParam hParams) {
-	if (!g_bRestart)
+	if (!g_bOnRestart)
 		return MRES_Ignored;
 
 	if (g_esSavedData.character[0]) {
@@ -367,7 +367,7 @@ Address FindBotDataByModelName(const char[] model) {
 		return Address_Null;
 
 	Address ptr;
-	char value[PLATFORM_MAX_PATH];
+	char value[128];
 	ArrayList al_Kv = new ArrayList(2);
 	for (int i; i < count; i++) {
 		ptr = view_as<Address>(LoadFromAddress(kv + view_as<Address>(4 * i), NumberType_Int32));
@@ -407,7 +407,7 @@ Address FindBotDataByCharacter(int character) {
 		return Address_Null;
 
 	Address ptr;
-	char value[PLATFORM_MAX_PATH];
+	char value[128];
 	ArrayList al_Kv = new ArrayList(2);
 	for (int i; i < count; i++) {
 		ptr = view_as<Address>(LoadFromAddress(kv + view_as<Address>(4 * i), NumberType_Int32));
