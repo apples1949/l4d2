@@ -82,8 +82,8 @@ void GetCvars() {
 	g_fAimOffsetSensitivity =	g_hAimOffsetSensitivity.FloatValue;
 	#if DEBUG
 	g_fFallSpeedFatal = 		g_hFallSpeedFatal.FloatValue;
-	g_fChargeMaxSpeed =			g_hChargeMaxSpeed.FloatValue;
 	#endif
+	g_fChargeMaxSpeed =			g_hChargeMaxSpeed.FloatValue;
 	g_fChargeStartSpeed =		g_hChargeStartSpeed.FloatValue;
 }
 
