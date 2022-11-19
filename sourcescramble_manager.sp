@@ -11,7 +11,7 @@
 #define PLUGIN_NAME				"Source Scramble Manager"
 #define PLUGIN_AUTHOR			"nosoop, sorallll"
 #define PLUGIN_DESCRIPTION		"Helper plugin to load simple assembly patches from a configuration file."
-#define PLUGIN_VERSION			"1.2.1"
+#define PLUGIN_VERSION			"1.2.2"
 #define PLUGIN_URL				"https://github.com/nosoop/SMExt-SourceScramble"
 
 enum struct Patchs {
@@ -40,18 +40,20 @@ public void OnPluginStart() {
 	RegServerCmd("ssm_list", cmdList);
 	RegServerCmd("ssm_patch", cmdPatch);
 	RegServerCmd("ssm_unpatch", cmdUnpatch);
+
+	RegServerCmd("ssm_reload", cmdReloadData);
 }
 
 Action cmdList(int args) {
 	Patchs patch;
-	int maxPatch = g_Patchs.Length;
+	int patchCount = g_Patchs.Length;
 
-	if (!maxPatch) {
+	if (!patchCount) {
 		PrintToServer("No patches");
 		return Plugin_Handled;
 	}
 
-	for (int i; i < maxPatch; i++) {
+	for (int i; i < patchCount; i++) {
 		g_Patchs.GetArray(i, patch);
 		PrintToServer("[%s] \"%s\" \t\"%s\"", patch.patched ? "●" : "○", patch.file, patch.name);
 	}
@@ -88,6 +90,21 @@ void PatchCommand(int args, bool enable) {
 			TogglePatch(file, name, enable);
 		}
 	}
+}
+
+Action cmdReloadData(int args) {
+	Patchs patch;
+	int patchCount = g_Patchs.Length;
+	for (int i; i < patchCount; i++) {
+		g_Patchs.GetArray(i, patch);
+		delete patch.patch;
+	}
+
+	g_Patchs.Clear();
+	ParseConfigs();
+
+	PrintToServer("[sourcescramble] Data config reloaded.");
+	return Plugin_Handled;
 }
 
 void ParseConfigs() {
@@ -170,9 +187,8 @@ SMCResult smcPatchMemConfigEntry(SMCParser smc, const char[] key, const char[] v
 
 void TogglePatch(const char[] file, const char[] name, bool enable) {
 	Patchs patch;
-	int maxPatch = g_Patchs.Length;
-
-	for (int i; i < maxPatch; i++) {
+	int patchCount = g_Patchs.Length;
+	for (int i; i < patchCount; i++) {
 		g_Patchs.GetArray(i, patch);
 
 		if (file[0]) {
