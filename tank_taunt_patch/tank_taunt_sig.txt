@@ -10,16 +10,16 @@
 
 				"linux"
 				{
-					"offset"	"1Dh"
-					"verify"	"\x74"
-					"patch"		"\x90\x90"
+					"offset"	"0"
+					"verify"	"\x55"
+					"patch"		"\x55\x89\xE5\x5D\xC3"
 				}
 				
 				"windows"
 				{
-					"offset"	"Eh"
-					"verify"	"\x0F\x85"
-					"patch"		"\x90\xE9"
+					"offset"	"0"
+					"verify"	"\x55"
+					"patch"		"\x55\x89\xE5\x5D\xC3"
 				}
 			}
 		}
