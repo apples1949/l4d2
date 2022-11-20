@@ -68,17 +68,17 @@ public void OnPluginStart() {
 
 	CreateConVar("l4d2_dlock_version", PLUGIN_VERSION, "Plugin version", FCVAR_SPONLY|FCVAR_NOTIFY|FCVAR_REPLICATED);
 
-	g_cvAllow =			CreateConVar("l4d2_dlock_allow",		"1",	"0=Plugin off, 1=Plugin on.", CVAR_FLAGS);
-	g_cvModes =			CreateConVar("l4d2_dlock_modes",		"",		"Turn on the plugin in these game modes, separate by commas (no spaces). (Empty = all).", CVAR_FLAGS);
-	g_cvModesOff =		CreateConVar("l4d2_dlock_modes_off",	"",		"Turn off the plugin in these game modes, separate by commas (no spaces). (Empty = none).", CVAR_FLAGS);
-	g_cvModesTog =		CreateConVar("l4d2_dlock_modes_tog",	"0",	"Turn on the plugin in these game modes. 0=All, 1=Coop, 2=Survival, 4=Versus, 8=Scavenge. Add numbers together.", CVAR_FLAGS);
-	g_cvBreakTheDoor =	CreateConVar("l4d2_dlock_weakdoor",		"1",	"Saferoom door will be breaked, once opened.", CVAR_FLAGS);
-	g_cvPrepareTime1r =	CreateConVar("l4d2_dlock_prepare1st",	"7",	"How many seconds plugin will wait after all clients have loaded before starting first round on a map", CVAR_FLAGS);
-	g_cvPrepareTime2r =	CreateConVar("l4d2_dlock_prepare2nd",	"7",	"How many seconds plugin will wait after all clients have loaded before starting second round on a map", CVAR_FLAGS);
-	g_cvClientTimeOut =	CreateConVar("l4d2_dlock_timeout",		"45",	"How many seconds plugin will wait after a map starts before giving up on waiting for a client", CVAR_FLAGS);
-	g_cvDisplayMode =	CreateConVar("l4d2_dlock_displaymode",	"1",	"Set the display mode for the countdown. (0-off,1-hint, 2-center, 3-chat. any other value to hide countdown)", CVAR_FLAGS);
-	g_cvDisplayPanel =	CreateConVar("l4d2_dlock_displaypanel",	"2",	"Display players state panel. 0-disabled, 1-hide failed, 2-full info", CVAR_FLAGS);
-	g_cvFreezeNodoor =	CreateConVar("l4d2_dlock_freezenodoor",	"1",	"Freeze survivors if start saferoom door is absent", CVAR_FLAGS);
+	g_cvAllow =			CreateConVar("l4d2_dlock_allow",		"1",	"0=插件禁用, 1=插件启用.", CVAR_FLAGS);
+	g_cvModes =			CreateConVar("l4d2_dlock_modes",		"",		"在这些游戏模式中启用插件, 用英文逗号分割 (无空格),(无内容=全模式)", CVAR_FLAGS);
+	g_cvModesOff =		CreateConVar("l4d2_dlock_modes_off",	"",		"在这些游戏模式中禁用插件, 用英文逗号分割 (无空格),(无内容=无)", CVAR_FLAGS);
+	g_cvModesTog =		CreateConVar("l4d2_dlock_modes_tog",	"0",	"在这些游戏模式中启用插件. 0=全模式, 1=战役, 2=生还者, 4=对抗, 8=清道夫. 多个模式则设置多个模式值的和", CVAR_FLAGS);
+	g_cvBreakTheDoor =	CreateConVar("l4d2_dlock_weakdoor",		"1",	"如果为1，则安全屋的门开启后将会掉落", CVAR_FLAGS);
+	g_cvPrepareTime1r =	CreateConVar("l4d2_dlock_prepare1st",	"7",	"在所有玩家加载完毕后，插件将等待多少秒，然后开始在地图上进行第一轮游戏(适用于对抗类型的模式)", CVAR_FLAGS);
+	g_cvPrepareTime2r =	CreateConVar("l4d2_dlock_prepare2nd",	"7",	"在所有玩家加载完毕后，插件将等待多少秒，然后开始在地图上进行第二轮游戏(适用于对抗类型的模式)", CVAR_FLAGS);
+	g_cvClientTimeOut =	CreateConVar("l4d2_dlock_timeout",		"45",	"在地图开始后，插件会等待多少秒才会放弃等待连接中的玩家？", CVAR_FLAGS);
+	g_cvDisplayMode =	CreateConVar("l4d2_dlock_displaymode",	"1",	"设置倒计时的显示模式。(0-隐藏,1-游戏提示,2-屏幕中心,3-聊天框.任何其他数值都可以隐藏倒计时)", CVAR_FLAGS);
+	g_cvDisplayPanel =	CreateConVar("l4d2_dlock_displaypanel",	"2",	"玩家状态面板的显示模式,0-不显示，1-隐藏连接失败的玩家，2-完整显示", CVAR_FLAGS);
+	g_cvFreezeNodoor =	CreateConVar("l4d2_dlock_freezenodoor",	"1",	"如果没有启动安全室的门，则冻结生还者", CVAR_FLAGS);
 
 	g_cvSbStop = FindConVar("sb_stop");
 	g_cvNbStop = FindConVar("nb_stop");
