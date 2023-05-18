@@ -10,14 +10,14 @@
 
 				"linux"
 				{
-					"offset"	"2E9h"
+					"offset"	"3E6h"
 					"verify"	"\x75"
 					"patch"		"\xEB"
 				}
 				
 				"windows"
 				{
-					"offset"	"1E5h"
+					"offset"	"1F3h"
 					"verify"	"\x75"
 					"patch"		"\xEB"
 				}
@@ -29,7 +29,7 @@
 
 				"linux"
 				{
-					"offset"	"2DEh"
+					"offset"	"3BEh"
 					"verify"	"\x0F\x84"
 					"patch"		"\x90\xE9"
 				}
