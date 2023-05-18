@@ -64,7 +64,7 @@
 		{
 			"ZoeyUnlock_Offset"
 			{
-				"windows"	"67"
+				"windows"	"103"
 			}
 		}
 
