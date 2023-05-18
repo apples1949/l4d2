@@ -6,7 +6,7 @@
 #define PLUGIN_NAME				"bots(coop)"
 #define PLUGIN_AUTHOR			"DDRKhat, Marcus101RR, Merudo, Lux, Shadowysn, sorallll"
 #define PLUGIN_DESCRIPTION		"coop"
-#define PLUGIN_VERSION			"1.11.5"
+#define PLUGIN_VERSION			"1.11.6"
 #define PLUGIN_URL				"https://forums.alliedmods.net/showthread.php?p=2405322#post2405322"
 
 #define GAMEDATA 				"bots"
