@@ -10,7 +10,7 @@
 #define PLUGIN_NAME				"Survivor Chat Select"
 #define PLUGIN_AUTHOR			"DeatChaos25, Mi123456 & Merudo, Lux, SilverShot"
 #define PLUGIN_DESCRIPTION		"Select a survivor character by typing their name into the chat."
-#define PLUGIN_VERSION			"1.8.2"
+#define PLUGIN_VERSION			"1.8.3"
 #define PLUGIN_URL				"https://forums.alliedmods.net/showthread.php?p=2399163#post2399163"
 
 #define GAMEDATA				"survivor_chat_select"
