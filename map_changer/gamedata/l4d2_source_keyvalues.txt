@@ -14,7 +14,7 @@
 				"windows"
 				{
 					"signature"	"CDirector::OnServerShutdown"
-					"read"		"112"
+					"read"		"274"
 				}
 
 				"read"	"0"
