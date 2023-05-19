@@ -5,7 +5,7 @@
 
 // ====================================================================================================
 // "L4D2 EMS HUD Functions" by "sorallll"
-//	Version: 1.0.7
+//	Version: 1.0.8
 // ====================================================================================================
 
 #include <sdktools>
@@ -72,7 +72,7 @@ stock void HUDSetLayout(int slot, int flags, const char[] dataval, any ...) {
 	static char str[128];
 	VFormat(str, sizeof str, dataval, 4);
 
-	GameRules_SetProp("m_iScriptedHUDFlags", flags, _, slot, true);
+	GameRules_SetProp("m_iScriptedHUDFlags", flags | HUD_FLAG_TEXT, _, slot, true);
 	GameRules_SetPropString("m_szScriptedHUDStringSet", str, true, slot);
 }
 
