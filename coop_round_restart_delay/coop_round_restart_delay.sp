@@ -48,13 +48,13 @@ void GetCvars() {
 }
 
 Action umFade(UserMsg msg_id, BfRead msg, const int[] players, int playersNum, bool reliable, bool init) {
-	if (!g_fRestartDelay && view_as<float>(LoadFromAddress(L4D_GetPointer(POINTER_DIRECTOR) + view_as<Address>(424 + 8), NumberType_Int32)) > 0.0)
+	if (!g_fRestartDelay && view_as<float>(LoadFromAddress(L4D_GetPointer(POINTER_DIRECTOR) + view_as<Address>(616 + 8), NumberType_Int32)) > 0.0)
 		return Plugin_Handled;
 
 	return Plugin_Continue;
 }
 
 void Event_MissionLost(Event event, const char[] name, bool dontBroadcast) {
-	StoreToAddress(L4D_GetPointer(POINTER_DIRECTOR) + view_as<Address>(424 + 4), view_as<int>(g_fRestartDelay), NumberType_Int32);
-	StoreToAddress(L4D_GetPointer(POINTER_DIRECTOR) + view_as<Address>(424 + 8), view_as<int>(GetGameTime() + g_fRestartDelay), NumberType_Int32);
+	StoreToAddress(L4D_GetPointer(POINTER_DIRECTOR) + view_as<Address>(616 + 4), view_as<int>(g_fRestartDelay), NumberType_Int32);
+	StoreToAddress(L4D_GetPointer(POINTER_DIRECTOR) + view_as<Address>(616 + 8), view_as<int>(GetGameTime() + g_fRestartDelay), NumberType_Int32);
 }
