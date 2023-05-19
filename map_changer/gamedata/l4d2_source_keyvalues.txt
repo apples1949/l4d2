@@ -23,6 +23,12 @@
 
 		"Signatures"
 		{
+			"filesystem"
+			{
+				"library"	"server"
+				"linux"		"@filesystem"
+			}
+
 			"KeyValues::GetName"
 			{
 				"library"	"server"
