@@ -23,14 +23,6 @@
 
 		"Addresses"
 		{
-			"ZoeyUnlock"
-			{
-				"windows"
-				{
-					"signature"	"ZoeyUnlock_Sig"
-				}
-			}
-
 			"SavedPlayersCount"
 			{
 				"linux"
@@ -60,24 +52,8 @@
 			}
 		}
 
-		"Offsets"
-		{
-			"ZoeyUnlock_Offset"
-			{
-				"windows"	"103"
-			}
-		}
-
 		"Signatures"
 		{
-			/* SurvivorResponseCachedInfo::Update(void) */
-			"ZoeyUnlock_Sig"
-			{
-				"library"	"server"
-				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x83\x2A\x2A\x83\x2A\x2A\x55\x8B\x2A\x2A\x89\x2A\x2A\x2A\x8B\x2A\x81\xEC\x2A\x2A\x2A\x2A\xA1\x2A\x2A\x2A\x2A\x33\x2A\x89\x2A\x2A\x56\x33"
-				/* ? ? ? ? ? ? 83 ? ? 83 ? ? 55 8B ? ? 89 ? ? ? 8B ? 81 EC ? ? ? ? A1 ? ? ? ? 33 ? 89 ? ? 56 33 */
-			}
-
 			/* CTerrorPlayer::TransitionRestore(CTerrorPlayer *__hidden this) */
 			"CTerrorPlayer::TransitionRestore"
 			{

@@ -1013,22 +1013,6 @@ void InitGameData() {
 	if (!hGameData)
 		SetFailState("Failed to load \"%s.txt\" gamedata.", GAMEDATA);
 
-	//[L4D2] Real Zoey Unlock (1.2) (https://forums.alliedmods.net/showthread.php?p=2598539)
-	int offset = hGameData.GetOffset("ZoeyUnlock_Offset");
-	if (offset != -1) {
-		Address pZoeyUnlock = hGameData.GetAddress("ZoeyUnlock");
-		if (!pZoeyUnlock)
-			SetFailState("Error finding the 'ZoeyUnlock' signature.");
-
-		int byte = LoadFromAddress(pZoeyUnlock + view_as<Address>(offset), NumberType_Int8);
-		if (byte == 0xE8) {
-			for (int i; i < 5; i++)
-				StoreToAddress(pZoeyUnlock + view_as<Address>(offset + i), 0x90, NumberType_Int8);
-		}
-		else if (byte != 0x90)
-			SetFailState("Error: the 'ZoeyUnlock_Offset' is incorrect.");
-	}
-
 	g_pSavedPlayersCount = hGameData.GetAddress("SavedPlayersCount");
 	if (!g_pSavedPlayersCount)
 		SetFailState("Failed to find address: \"SavedPlayersCount\"");
