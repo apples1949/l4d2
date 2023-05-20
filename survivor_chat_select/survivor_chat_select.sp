@@ -10,7 +10,7 @@
 #define PLUGIN_NAME				"Survivor Chat Select"
 #define PLUGIN_AUTHOR			"DeatChaos25, Mi123456 & Merudo, Lux, SilverShot"
 #define PLUGIN_DESCRIPTION		"Select a survivor character by typing their name into the chat."
-#define PLUGIN_VERSION			"1.8.3"
+#define PLUGIN_VERSION			"1.8.4"
 #define PLUGIN_URL				"https://forums.alliedmods.net/showthread.php?p=2399163#post2399163"
 
 #define GAMEDATA				"survivor_chat_select"
@@ -48,19 +48,19 @@ Address
 ConVar
 	g_cAutoModel,
 	g_cTabHUDBar,
-	g_cAdminsOnly,
+	g_cAdminFlags,
 	g_cInTransition,
 	g_cPrecacheAllSur;
 
 int
 	g_iTabHUDBar,
+	g_iAdminFlags,
 	g_iOrignalSet,
 	g_iTransitioning[MAXPLAYERS + 1],
 	g_iSelectedClient[MAXPLAYERS + 1];
 
 bool
 	g_bAutoModel,
-	g_bAdminsOnly,
 	g_bTransition,
 	g_bTransitioned,
 	g_bInTransition,
@@ -144,13 +144,13 @@ public void OnPluginStart() {
 
 	g_cAutoModel =			CreateConVar("l4d_scs_auto_model",		"1",	"开关8人独立模型?", FCVAR_NOTIFY);
 	g_cTabHUDBar =			CreateConVar("l4d_scs_tab_hud_bar",		"1",	"在哪些地图上显示一代人物的TAB状态栏? \n0=默认, 1=一代图, 2=二代图, 3=一代和二代图.", FCVAR_NOTIFY);
-	g_cAdminsOnly =			CreateConVar("l4d_csm_admins_only",		"1",	"只允许管理员使用csm命令?", FCVAR_NOTIFY);
+	g_cAdminFlags =			CreateConVar("l4d_csm_admin_flags",		"z",	"允许哪些玩家使用csm命令(flag参考admin_levels.cfg)? \n留空=所有玩家都能使用, z=仅限root权限的玩家使用.", FCVAR_NOTIFY);
 	g_cInTransition =		CreateConVar("l4d_csm_in_transition",	"1",	"启用8人独立模型后不对正在过渡的玩家设置?", FCVAR_NOTIFY);
 	g_cPrecacheAllSur =		FindConVar("precache_all_survivors");
 
 	g_cAutoModel.AddChangeHook(CvarChanged);
 	g_cTabHUDBar.AddChangeHook(CvarChanged);
-	g_cAdminsOnly.AddChangeHook(CvarChanged);
+	g_cAdminFlags.AddChangeHook(CvarChanged);
 	g_cInTransition.AddChangeHook(CvarChanged);
 
 	AutoExecConfig(true);
@@ -344,7 +344,7 @@ bool CanUse(int client, bool checkAdmin = true) {
 		return false;
 	}
 
-	if (checkAdmin && g_bAdminsOnly && GetUserFlagBits(client) == 0) {
+	if (checkAdmin && !CheckCommandAccess(client, "", g_iAdminFlags)) {
 		ReplyToCommand(client, "只有管理员才能使用该菜单.");
 		return false;
 	}
@@ -558,7 +558,9 @@ void GetCvars() {
 	Toggle(g_bAutoModel);
 
 	g_iTabHUDBar =		g_cTabHUDBar.IntValue;
-	g_bAdminsOnly =		g_cAdminsOnly.BoolValue;
+	char flags[16];
+	g_cAdminFlags.GetString(flags, sizeof flags);
+	g_iAdminFlags = ReadFlagString(flags);
 	g_bInTransition =	g_cInTransition.BoolValue;
 }
 
