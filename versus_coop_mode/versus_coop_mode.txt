@@ -25,13 +25,6 @@
 					"verify"	"\x0F\x85"
 					"patch"		"\x90\x90\x90\x90\x90\x90"
 				}
-
-				"windows"
-				{
-					"offset"	"1DFh"
-					"verify"	"\x74"
-					"patch"		"\xEB"
-				}
 			}
 
 			"SwapTeams::Patch2"
@@ -43,13 +36,6 @@
 					"offset"	"1Ah"
 					"verify"	"\x75"
 					"patch"		"\x90\x90"
-				}
-
-				"windows"
-				{
-					"offset"	"10h"
-					"verify"	"\x74"
-					"patch"		"\xEB"
 				}
 			}
 
@@ -63,13 +49,6 @@
 					"verify"	"\x75"
 					"patch"		"\x90\x90"
 				}
-
-				"windows"
-				{
-					"offset"	"11h"
-					"verify"	"\x74"
-					"patch"		"\xEB"
-				}
 			}
 		}
 
@@ -81,7 +60,7 @@
 			/* CDirector->m_bIsFirstRoundFinished (CDirector::OnEndScenario) */
 			"m_bIsFirstRoundFinished"
 			{
-				"linux"		"1061"
+				"linux"		"1253"
 			}
 
 			/**
@@ -90,7 +69,7 @@
 			/* CDirector->m_bIsSecondRoundFinished (CDirector::OnEndScenario) */
 			"m_bIsSecondRoundFinished"
 			{
-				"linux"		"1062"
+				"linux"		"1254"
 			}
 		}
 
@@ -101,8 +80,8 @@
 			{
 				"library"	"server"
 				"linux"		"@_ZN9CDirector7RestartEv"
-				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\xA1\x2A\x2A\x2A\x2A\x33\x2A\x89\x2A\x2A\x56\x8B\x2A\x83\x2A\x2A\x89"
-				/* ? ? ? ? ? ? A1 ? ? ? ? 33 ? 89 ? ? 56 8B ? 83 ? ? 89 */
+				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\xA1\x2A\x2A\x2A\x2A\x33\x2A\x89\x2A\x2A\xA1\x2A\x2A\x2A\x2A\x8B\x2A\x2A\x53\x56\x57\x8B"
+				/* ? ? ? ? ? ? ? ? ? A1 ? ? ? ? 33 ? 89 ? ? A1 ? ? ? ? 8B ? ? 53 56 57 8B */
 			}
 
 			/* CDirectorVersusMode::RestartVersusLevelOnVote(CDirectorVersusMode *__hidden this) */
@@ -128,7 +107,7 @@
 			{
 				"library"	"server"
 				"linux"		"@_ZN19CDirectorVersusMode13RestartVsModeEv"
-				"windows"	"\x55\x8B\xEC\x83\xEC\x14\x57\x8B\xF9\x80\x7F\x06\x00
+				"windows"	"\x55\x8B\xEC\x83\xEC\x14\x57\x8B\xF9\x80\x7F\x06\x00"
 				/* 55 8B EC 83 EC 14 57 8B F9 80 7F 06 00 */
 			}
 		}

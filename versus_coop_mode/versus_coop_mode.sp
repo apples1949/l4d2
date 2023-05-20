@@ -8,7 +8,7 @@
 #define PLUGIN_NAME						"Versus Coop Mode"
 #define PLUGIN_AUTHOR					"sorallll"
 #define PLUGIN_DESCRIPTION				""
-#define PLUGIN_VERSION					"1.0.3"
+#define PLUGIN_VERSION					"1.0.4"
 #define PLUGIN_URL						""
 
 #define GAMEDATA						"versus_coop_mode"
