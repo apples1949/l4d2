@@ -14,13 +14,6 @@
 					"verify"	"\x75\x0B"
 					"patch"		"\xEB\x0B"
 				}
-				
-				"windows"
-				{
-					"offset"	"7h"
-					"verify"	"\x75\x1E"
-					"patch"		"\xEB\x1E"
-				}
 			}
 
 			"SmokerBehavior::InitialContainedAction::SpecialsShouldAssaultCondition"
@@ -103,8 +96,6 @@
 			{
 				"library"	"server"
 				"linux"		"@_ZNK9CDirector32SpecialsShouldAdvanceOnSurvivorsEv"
-				"windows"	"\xE8\x2A\x2A\x2A\x2A\x84\xC0\x75\x2A\x8B\x86\x80\x05\x00\x00"
-				/* E8 ? ? ? ? 84 C0 75 ? 8B 86 80 05 00 00 */
 			}
 
 			/* SmokerBehavior::InitialContainedAction(SmokerBehavior *__hidden this, Smoker *) */
@@ -112,8 +103,6 @@
 			{
 				"library"	"server"
 				"linux"		"@_ZN14SmokerBehavior22InitialContainedActionEP6Smoker"
-				"windows"	""
-				/*  */
 			}
 
 			/* BoomerBehavior::InitialContainedAction(BoomerBehavior *__hidden this, Boomer *) */
@@ -121,8 +110,6 @@
 			{
 				"library"	"server"
 				"linux"		"@_ZN14BoomerBehavior22InitialContainedActionEP6Boomer"
-				"windows"	""
-				/*  */
 			}
 
 			/* HunterBehavior::InitialContainedAction(HunterBehavior *__hidden this, Hunter *) */
@@ -130,8 +117,6 @@
 			{
 				"library"	"server"
 				"linux"		"@_ZN14HunterBehavior22InitialContainedActionEP6Hunter"
-				"windows"	""
-				/*  */
 			}
 
 			/* SpitterBehavior::InitialContainedAction(SpitterBehavior *__hidden this, Spitter *) */
@@ -139,8 +124,6 @@
 			{
 				"library"	"server"
 				"linux"		"@_ZN15SpitterBehavior22InitialContainedActionEP7Spitter"
-				"windows"	""
-				/*  */
 			}
 
 			/* JockeyBehavior::InitialContainedAction(JockeyBehavior *__hidden this, Jockey *) */
@@ -148,8 +131,6 @@
 			{
 				"library"	"server"
 				"linux"		"@_ZN14JockeyBehavior22InitialContainedActionEP6Jockey"
-				"windows"	""
-				/*  */
 			}
 
 			/* ChargerBehavior::InitialContainedAction(ChargerBehavior *__hidden this, Charger *) */
@@ -157,9 +138,7 @@
 			{
 				"library"	"server"
 				"linux"		"@_ZN15ChargerBehavior22InitialContainedActionEP7Charger"
-				"windows"	""
-				/*  */
 			}
 		}
-    }
+	}
 }
