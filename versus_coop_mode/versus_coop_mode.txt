@@ -80,8 +80,6 @@
 			{
 				"library"	"server"
 				"linux"		"@_ZN9CDirector7RestartEv"
-				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\xA1\x2A\x2A\x2A\x2A\x33\x2A\x89\x2A\x2A\xA1\x2A\x2A\x2A\x2A\x8B\x2A\x2A\x53\x56\x57\x8B"
-				/* ? ? ? ? ? ? ? ? ? A1 ? ? ? ? 33 ? 89 ? ? A1 ? ? ? ? 8B ? ? 53 56 57 8B */
 			}
 
 			/* CDirectorVersusMode::RestartVersusLevelOnVote(CDirectorVersusMode *__hidden this) */
@@ -89,8 +87,6 @@
 			{
 				"library"	"server"
 				"linux"		"@_ZN19CDirectorVersusMode24RestartVersusLevelOnVoteEv"
-				"windows"	"\xC6\x41\x18\x00"
-				/* C6 41 18 00 */
 			}
 
 			/* CTerrorGameRules::CleanUpMap(void)::CTerrorMapEntityFilter::ShouldCreateEntity(int, char *) */
@@ -98,8 +94,6 @@
 			{
 				"library"	"server"
 				"linux"		"@_ZZN16CTerrorGameRules10CleanUpMapEvEN22CTerrorMapEntityFilter18ShouldCreateEntityEPKc"
-				"windows"	"\x55\x8B\xEC\x56\x57\x8B\xF1\xE8\x2A\x2A\x2A\x2A\x8B\x7D\x08\x84\xC0\x74\x2A\xA1\x2A\x2A\x2A\x2A"
-				/* 55 8B EC 56 57 8B F1 E8 ? ? ? ? 8B 7D 08 84 C0 74 ? A1 ? ? ? ? */
 			}
 
 			/* CDirectorVersusMode::RestartVsMode(CDirectorVersusMode *__hidden this) */
@@ -107,8 +101,6 @@
 			{
 				"library"	"server"
 				"linux"		"@_ZN19CDirectorVersusMode13RestartVsModeEv"
-				"windows"	"\x55\x8B\xEC\x83\xEC\x14\x57\x8B\xF9\x80\x7F\x06\x00"
-				/* 55 8B EC 83 EC 14 57 8B F9 80 7F 06 00 */
 			}
 		}
 	}
