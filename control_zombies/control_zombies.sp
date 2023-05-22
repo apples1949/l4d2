@@ -18,7 +18,7 @@
 #define PLUGIN_NAME				"Control Zombies In Co-op"
 #define PLUGIN_AUTHOR			"sorallll"
 #define PLUGIN_DESCRIPTION		""
-#define PLUGIN_VERSION			"3.5.9"
+#define PLUGIN_VERSION			"3.6.0"
 #define PLUGIN_URL				"https://steamcommunity.com/id/sorallll"
 
 #define GAMEDATA 				"control_zombies"
@@ -1306,7 +1306,7 @@ void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast) {
 	switch (event.GetInt("oldteam")) {
 		case 0: {
 			if (team == 3 && (g_iPZChangeTeamTo || g_ePlayer[client].LastTeamID == 2)) {
-				DataPack pack;
+				DataPack pack = new DataPack();
 				RequestFrame(NextFrame_ForceChangeTeam, pack);
 				pack.WriteCell(event.GetInt("userid"));
 				pack.WriteCell(g_ePlayer[client].LastTeamID == 2 ? 2 : g_iPZChangeTeamTo);
