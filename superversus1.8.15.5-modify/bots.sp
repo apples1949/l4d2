@@ -6,7 +6,7 @@
 #define PLUGIN_NAME				"bots(coop)"
 #define PLUGIN_AUTHOR			"DDRKhat, Marcus101RR, Merudo, Lux, Shadowysn, sorallll"
 #define PLUGIN_DESCRIPTION		"coop"
-#define PLUGIN_VERSION			"1.11.6"
+#define PLUGIN_VERSION			"1.11.7"
 #define PLUGIN_URL				"https://forums.alliedmods.net/showthread.php?p=2405322#post2405322"
 
 #define GAMEDATA 				"bots"
@@ -309,7 +309,7 @@ public void OnPluginStart() {
 	g_cSpecNotify =				CreateConVar("bots_spec_notify",		"3",		"完全旁观玩家点击鼠标左键时, 提示加入生还者的方式 \n0=不提示, 1=聊天栏, 2=屏幕中央, 3=弹出菜单.", CVAR_FLAGS);
 	g_eWeapon[0].Flags =		CreateConVar("bots_give_slot0",			"131071",	"主武器给什么. \n0=不给, 131071=所有, 7=微冲, 1560=霰弹, 30720=狙击, 31=Tier1, 32736=Tier2, 98304=Tier0.", CVAR_FLAGS);
 	g_eWeapon[1].Flags =		CreateConVar("bots_give_slot1",			"1064",		"副武器给什么. \n0=不给, 131071=所有.(如果选中了近战且该近战在当前地图上未解锁,则会随机给一把).", CVAR_FLAGS);
-	g_eWeapon[2].Flags = 		CreateConVar("bots_give_slot2",			"0",		"投掷物给什么. \n0=不给, 7=所有.", CVAR_FLAGS);
+	g_eWeapon[2].Flags =		CreateConVar("bots_give_slot2",			"0",		"投掷物给什么. \n0=不给, 7=所有.", CVAR_FLAGS);
 	g_eWeapon[3].Flags =		CreateConVar("bots_give_slot3",			"1",		"医疗品给什么. \n0=不给, 15=所有.", CVAR_FLAGS);
 	g_eWeapon[4].Flags =		CreateConVar("bots_give_slot4",			"3",		"药品给什么. \n0=不给, 3=所有.", CVAR_FLAGS);
 	g_cGiveType =				CreateConVar("bots_give_type",			"2",		"根据什么来给玩家装备. \n0=不给, 1=每个槽位的设置, 2=当前存活生还者的平均装备质量(仅主副武器).", CVAR_FLAGS);
@@ -765,7 +765,7 @@ void CvarChanged_General(ConVar convar, const char[] oldValue, const char[] newV
 }
 
 void GeCvars_General() {
-	g_iJoinLimit = 		g_cJoinLimit.IntValue;
+	g_iJoinLimit =		g_cJoinLimit.IntValue;
 	g_iJoinFlags =		g_cJoinFlags.IntValue;
 	g_bJoinRespawn =	g_cJoinRespawn.BoolValue;
 	g_iSpecNotify =		g_cSpecNotify.IntValue;
@@ -1233,8 +1233,11 @@ void GiveMelee(int client, const char[] meleeName) {
 	char buffer[64];
 	if (g_aMeleeScripts.FindString(meleeName) != -1)
 		strcopy(buffer, sizeof buffer, meleeName);
-	else
-		g_aMeleeScripts.GetString(Math_GetRandomInt(0, g_aMeleeScripts.Length - 1), buffer, sizeof buffer);
+	else {
+		int num = g_aMeleeScripts.Length;
+		if (num)
+			g_aMeleeScripts.GetString(Math_GetRandomInt(0, num - 1), buffer, sizeof buffer);
+	}
 
 	GivePlayerItem(client, buffer);
 }
