@@ -10,7 +10,7 @@
 #define PLUGIN_NAME				"Survivor Chat Select"
 #define PLUGIN_AUTHOR			"DeatChaos25, Mi123456 & Merudo, Lux, SilverShot"
 #define PLUGIN_DESCRIPTION		"Select a survivor character by typing their name into the chat."
-#define PLUGIN_VERSION			"1.8.4"
+#define PLUGIN_VERSION			"1.8.5"
 #define PLUGIN_URL				"https://forums.alliedmods.net/showthread.php?p=2399163#post2399163"
 
 #define GAMEDATA				"survivor_chat_select"
@@ -60,6 +60,7 @@ int
 	g_iSelectedClient[MAXPLAYERS + 1];
 
 bool
+	g_bMapStarted,
 	g_bAutoModel,
 	g_bTransition,
 	g_bTransitioned,
@@ -264,7 +265,7 @@ int Csc_MenuHandler(Menu menu, MenuAction action, int client, int param2) {
 			if (param2 == MenuCancel_ExitBack && g_TopMenu != null)
 				g_TopMenu.Display(client, TopMenuPosition_LastCategory);
 		}
-	
+
 		case MenuAction_End:
 			delete menu;
 	}
@@ -295,7 +296,7 @@ int ShowMenuAdmin_MenuHandler(Menu menu, MenuAction action, int client, int para
 			if (param2 >= 0 && param2 <= 7)
 				SetCharacter(GetClientOfUserId(g_iSelectedClient[client]), param2, param2);
 		}
-	
+
 		case MenuAction_End:
 			delete menu;
 	}
@@ -304,7 +305,7 @@ int ShowMenuAdmin_MenuHandler(Menu menu, MenuAction action, int client, int para
 }
 
 Action cmdCsm(int client, int args) {
-	if (!CanUse(client)) 
+	if (!CanUse(client))
 		return Plugin_Handled;
 
 	Menu menu = new Menu(Csm_MenuHandler);
@@ -469,7 +470,7 @@ Action cmdZoeyUse(int client, int args) {
 Action cmdNickUse(int client, int args) {
 	if (!CanUse(client))
 		return Plugin_Handled;
-	
+
 	SetCharacter(client, NICK);
 	return Plugin_Handled;
 }
@@ -477,7 +478,7 @@ Action cmdNickUse(int client, int args) {
 Action cmdEllisUse(int client, int args) {
 	if (!CanUse(client))
 		return Plugin_Handled;
-	
+
 	SetCharacter(client, ELLIS);
 	return Plugin_Handled;
 }
@@ -485,7 +486,7 @@ Action cmdEllisUse(int client, int args) {
 Action cmdCoachUse(int client, int args) {
 	if (!CanUse(client))
 		return Plugin_Handled;
-	
+
 	SetCharacter(client, COACH);
 	return Plugin_Handled;
 }
@@ -493,7 +494,7 @@ Action cmdCoachUse(int client, int args) {
 Action cmdRochelleUse(int client, int args) {
 	if (!CanUse(client))
 		return Plugin_Handled;
-	
+
 	SetCharacter(client, ROCHELLE);
 	return Plugin_Handled;
 }
@@ -501,7 +502,7 @@ Action cmdRochelleUse(int client, int args) {
 Action cmdBillUse(int client, int args) {
 	if (!CanUse(client))
 		return Plugin_Handled;
-	
+
 	SetCharacter(client, BILL);
 	return Plugin_Handled;
 }
@@ -509,7 +510,7 @@ Action cmdBillUse(int client, int args) {
 Action cmdBikerUse(int client, int args) {
 	if (!CanUse(client))
 		return Plugin_Handled;
-	
+
 	SetCharacter(client, FRANCIS);
 	return Plugin_Handled;
 }
@@ -517,7 +518,7 @@ Action cmdBikerUse(int client, int args) {
 Action cmdLouisUse(int client, int args) {
 	if (!CanUse(client))
 		return Plugin_Handled;
-	
+
 	SetCharacter(client, LOUIS);
 	return Plugin_Handled;
 }
@@ -538,14 +539,20 @@ Action umSayText2(UserMsg msg_id, BfRead msg, const int[] players, int playersNu
 }
 
 public void OnMapStart() {
+	g_bMapStarted = true;
 	g_cPrecacheAllSur.IntValue = 1;
 	for (int i; i < sizeof g_sSurModels; i++)
 		PrecacheModel(g_sSurModels[i], true);
+	RequestFrame(NextFrame_GetSurvivorSetMap);
+}
+
+void NextFrame_GetSurvivorSetMap() {
+	if (g_bMapStarted)
+		g_iOrignalSet = L4D2_GetSurvivorSetMap();
 }
 
 public void OnConfigsExecuted() {
 	GetCvars();
-	g_iOrignalSet = L4D2_GetSurvivorSetMap();
 }
 
 void CvarChanged(ConVar convar, const char[] oldValue, const char[] newValue) {
@@ -585,7 +592,7 @@ void Toggle(bool enable) {
 	}
 	else if (enabled && !enable) {
 		enabled = false;
-		
+
 		UnhookEvent("round_start",			Event_RoundStart,			EventHookMode_PostNoCopy);
 		UnhookEvent("player_bot_replace",	Event_PlayerBotReplace,		EventHookMode_Pre);
 		UnhookEvent("bot_player_replace",	Event_BotPlayerReplace,		EventHookMode_Pre);
@@ -911,7 +918,7 @@ void ReEquipWeapons(int client) {
 		switch (i) {
 			case 0: {
 				GetEntityClassname(weapon, cls, sizeof cls);
-	
+
 				int clip1 = GetEntProp(weapon, Prop_Send, "m_iClip1");
 				int ammo = GetOrSetPlayerAmmo(client, weapon);
 				int upgrade = GetEntProp(weapon, Prop_Send, "m_upgradeBitVec");
@@ -931,7 +938,7 @@ void ReEquipWeapons(int client) {
 
 					if (upgradeAmmo > 0)
 						SetEntProp(weapon, Prop_Send, "m_nUpgradedPrimaryAmmoLoaded", upgradeAmmo);
-			
+
 					if (weaponSkin > 0)
 						SetEntProp(weapon, Prop_Send, "m_nSkin", weaponSkin);
 				}
@@ -978,7 +985,7 @@ void ReEquipWeapons(int client) {
 				if (weapon > MaxClients) {
 					if (clip1 != -1)
 						SetEntProp(weapon, Prop_Send, "m_iClip1", clip1);
-				
+
 					if (weaponSkin > 0)
 						SetEntProp(weapon, Prop_Send, "m_nSkin", weaponSkin);
 				}
@@ -1082,6 +1089,7 @@ public void OnMapEnd() {
 	for (int i; i <= MaxClients; i++)
 		g_iTransitioning[i] = val;
 
+	g_bMapStarted = false;
 	g_bTransition = false;
 	g_bRestoringBots = false;
 }
@@ -1144,7 +1152,7 @@ bool IsTransitioning(int userid) {
 
 		if (SDKCall(g_hSDK_KeyValues_GetInt, ptr, "userID", 0) != userid)
 			continue;
-	
+
 		if (SDKCall(g_hSDK_KeyValues_GetInt, ptr, "teamNumber", 0) != 2)
 			continue;
 
