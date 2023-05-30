@@ -18,7 +18,7 @@ Handle
 	g_hSDK_CDirector_IsInTransition;
 
 ConVar
-	g_cChooseBotData,
+	g_cvChooseBotData,
 	g_cvPrecacheAllSur;
 
 ArrayList
@@ -60,10 +60,10 @@ public void OnPluginStart() {
 	g_aBotData = new ArrayList();
 
 	CreateConVar("transition_restore_fix_version", PLUGIN_VERSION, "Transition Restore Fix plugin version.", FCVAR_NOTIFY|FCVAR_DONTRECORD);
-	g_cChooseBotData =		CreateConVar("choose_bot_data", "0", "What to choose bot data according to after restart? (0=Model Name, otherwise=Character)", FCVAR_NOTIFY);
+	g_cvChooseBotData =		CreateConVar("choose_bot_data", "0", "What to choose bot data according to after restart? (0=Model Name, otherwise=Character)", FCVAR_NOTIFY);
 	g_cvPrecacheAllSur =	FindConVar("precache_all_survivors");
 
-	g_cChooseBotData.AddChangeHook(CvarChanged);
+	g_cvChooseBotData.AddChangeHook(CvarChanged);
 	AutoExecConfig(true);
 }
 
@@ -81,7 +81,7 @@ void CvarChanged(ConVar convar, const char[] oldValue, const char[] newValue) {
 }
 
 void GetCvars() {
-	g_bChooseBotData = g_cChooseBotData.BoolValue;
+	g_bChooseBotData = g_cvChooseBotData.BoolValue;
 }
 
 public void OnMapStart() {
@@ -165,7 +165,7 @@ void SetupDetours(GameData hGameData = null) {
 
 	if (!dDetour.Enable(Hook_Pre, DD_CDirector_Restart_Pre))
 		SetFailState("Failed to detour pre: \"DD::CDirector::Restart\"");
-		
+
 	if (!dDetour.Enable(Hook_Post, DD_CDirector_Restart_Post))
 		SetFailState("Failed to detour post: \"DD::CDirector::Restart\"");
 
