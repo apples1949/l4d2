@@ -3,14 +3,13 @@
 #include <sourcemod>
 #include <adminmenu>
 #include <dhooks>
-//#include <sdkhooks>
-#include <left4dhooks>
+#include <sdkhooks>
 
 #define PLUGIN_PREFIX			"\x01[\x04SCS\x01]"
 #define PLUGIN_NAME				"Survivor Chat Select"
 #define PLUGIN_AUTHOR			"DeatChaos25, Mi123456 & Merudo, Lux, SilverShot"
 #define PLUGIN_DESCRIPTION		"Select a survivor character by typing their name into the chat."
-#define PLUGIN_VERSION			"1.8.5"
+#define PLUGIN_VERSION			"1.8.5a"
 #define PLUGIN_URL				"https://forums.alliedmods.net/showthread.php?p=2399163#post2399163"
 
 #define GAMEDATA				"survivor_chat_select"
@@ -27,6 +26,7 @@
 #define	 LOUIS					7, 7
 
 Handle
+	g_hSDK_CTerrorGameRules_GetMissionInfo,
 	g_hSDK_CDirector_IsInTransition,
 	g_hSDK_KeyValues_GetInt;
 
@@ -60,7 +60,6 @@ int
 	g_iSelectedClient[MAXPLAYERS + 1];
 
 bool
-	g_bMapStarted,
 	g_bAutoModel,
 	g_bTransition,
 	g_bTransitioned,
@@ -162,10 +161,6 @@ public void OnPluginStart() {
 
 	for (int i; i < sizeof g_sSurModels; i++)
 		g_smSurModels.SetValue(g_sSurModels[i], i);
-}
-
-public void OnAllPluginsLoaded() {
-	g_pDirector = L4D_GetPointer(POINTER_DIRECTOR);
 }
 
 public void OnAdminMenuReady(Handle topmenu) {
@@ -373,6 +368,39 @@ bool CanUse(int client, bool checkAdmin = true) {
 	return true;
 }
 
+/**
+ * @brief Checks if a Survivor is currently staggering
+ *
+ * @param client			Client ID of the player to affect
+ *
+ * @return Returns true if player is staggering, false otherwise
+ */
+stock bool L4D_IsPlayerStaggering(int client)
+{
+	static int m_iQueuedStaggerType = -1;
+	if( m_iQueuedStaggerType == -1 )
+	m_iQueuedStaggerType = FindSendPropInfo("CTerrorPlayer", "m_staggerDist") + 4;
+
+	if( GetEntData(client, m_iQueuedStaggerType, 4) == -1 )
+	{
+		if( GetGameTime() >= GetEntPropFloat(client, Prop_Send, "m_staggerTimer", 1) )
+		{
+			return false;
+		}
+
+		static float vStgDist[3], vOrigin[3];
+		GetEntPropVector(client, Prop_Send, "m_staggerStart", vStgDist);
+		GetEntPropVector(client, Prop_Send, "m_vecOrigin", vOrigin);
+
+		static float fStgDist2;
+		fStgDist2 = GetEntPropFloat(client, Prop_Send, "m_staggerDist");
+
+		return GetVectorDistance(vStgDist, vOrigin) <= fStgDist2;
+	}
+
+	return true;
+}
+
 // L4D2_Adrenaline_Recovery (https://github.com/LuxLuma/L4D2_Adrenaline_Recovery/blob/ac3f62eebe95d80fcf610fb6c7c1ed56bf4b31d2/%5BL4D2%5DAdrenaline_Recovery.sp#L96-L177)
 bool IsGettingUp(int client) {
 	char model[31];
@@ -539,16 +567,12 @@ Action umSayText2(UserMsg msg_id, BfRead msg, const int[] players, int playersNu
 }
 
 public void OnMapStart() {
-	g_bMapStarted = true;
 	g_cPrecacheAllSur.IntValue = 1;
 	for (int i; i < sizeof g_sSurModels; i++)
 		PrecacheModel(g_sSurModels[i], true);
-	RequestFrame(NextFrame_GetSurvivorSetMap);
-}
-
-void NextFrame_GetSurvivorSetMap() {
-	if (g_bMapStarted)
-		g_iOrignalSet = L4D2_GetSurvivorSetMap();
+	Address pMissionInfo = SDKCall(g_hSDK_CTerrorGameRules_GetMissionInfo);
+	if (pMissionInfo)
+		g_iOrignalSet = SDKCall(g_hSDK_KeyValues_GetInt, pMissionInfo, "survivor_set", 2);
 }
 
 public void OnConfigsExecuted() {
@@ -1022,6 +1046,10 @@ void InitGameData() {
 	if (!hGameData)
 		SetFailState("Failed to load \"%s.txt\" gamedata.", GAMEDATA);
 
+	g_pDirector = hGameData.GetAddress("CDirector");
+	if (!g_pDirector)
+		SetFailState("Failed to find address: \"CDirector\"");
+
 	g_pSavedPlayersCount = hGameData.GetAddress("SavedPlayersCount");
 	if (!g_pSavedPlayersCount)
 		SetFailState("Failed to find address: \"SavedPlayersCount\"");
@@ -1029,6 +1057,13 @@ void InitGameData() {
 	g_pSavedSurvivorBotsCount = hGameData.GetAddress("SavedSurvivorBotsCount");
 	if (!g_pSavedSurvivorBotsCount)
 		SetFailState("Failed to find address: \"SavedSurvivorBotsCount\"");
+
+	StartPrepSDKCall(SDKCall_Static);
+	if (!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CTerrorGameRules::GetMissionInfo"))
+		SetFailState("Failed to find signature: \"CTerrorGameRules::GetMissionInfo\"");
+	PrepSDKCall_SetReturnInfo(SDKType_PlainOldData, SDKPass_Plain);
+	if (!(g_hSDK_CTerrorGameRules_GetMissionInfo = EndPrepSDKCall()))
+		SetFailState("Failed to create SDKCall: \"CTerrorGameRules::GetMissionInfo\"");
 
 	StartPrepSDKCall(SDKCall_Raw);
 	if (!PrepSDKCall_SetFromConf(hGameData, SDKConf_Signature, "CDirector::IsInTransition"))
@@ -1089,7 +1124,6 @@ public void OnMapEnd() {
 	for (int i; i <= MaxClients; i++)
 		g_iTransitioning[i] = val;
 
-	g_bMapStarted = false;
 	g_bTransition = false;
 	g_bRestoringBots = false;
 }

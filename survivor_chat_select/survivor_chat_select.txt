@@ -23,6 +23,20 @@
 
 		"Addresses"
 		{
+			"CDirector"
+			{
+				"linux"
+				{
+					"signature"	"TheDirector"
+				}
+				"windows"
+				{
+					"signature"	"CDirectorMusicBanks::OnRoundStart"
+					"read"		"12"
+				}
+				"read"	"0"
+			}
+
 			"SavedPlayersCount"
 			{
 				"linux"
@@ -54,6 +68,29 @@
 
 		"Signatures"
 		{
+			"TheDirector"
+			{
+				"library"	"server"
+				"linux"		"@TheDirector"
+			}
+
+			/* CDirectorMusicBanks::OnRoundStart(CDirectorMusicBanks *__hidden this) */
+			"CDirectorMusicBanks::OnRoundStart"
+			{
+				"library"	"server"
+				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x56\x57\x8B\x2A\x8B\x0D\x2A\x2A\x2A\x2A\xE8\x2A\x2A\x2A\x2A\x84\x2A\x0F"
+				/* ? ? ? ? ? ? 56 57 8B ? 8B 0D ? ? ? ? E8 ? ? ? ? 84 ? 0F */
+			}
+
+			/* CTerrorGameRules::GetMissionInfo(CTerrorGameRules *__hidden this) */
+			"CTerrorGameRules::GetMissionInfo"
+			{
+				"library"	"server"
+				"linux"		"@_ZN16CTerrorGameRules14GetMissionInfoEv"
+				"windows"	"\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x2A\x8B\x2A\x8B\x2A\x2A\x56\xFF\x2A\x8B\x2A\x8B\x2A\x8B\x2A\x2A\x6A\x2A\xFF\x2A\x8B\x2A\x85\x2A\x75\x2A\x5E"
+				/* ? ? ? ? ? ? ? ? ? ? 8B ? 8B ? ? 56 FF ? 8B ? 8B ? 8B ? ? 6A ? FF ? 8B ? 85 ? 75 ? 5E */
+			}
+
 			/* CTerrorPlayer::TransitionRestore(CTerrorPlayer *__hidden this) */
 			"CTerrorPlayer::TransitionRestore"
 			{
