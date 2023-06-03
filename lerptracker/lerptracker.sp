@@ -76,7 +76,7 @@ void GetCvars() {
 	g_fMaxInterpRatio = g_hMaxInterpRatio.FloatValue;
 }
 
-public void OnClientDisconnect_Post(int client) {
+public void OnClientPutInServer(int client) {
 	g_fCurrentLerps[client] = -1.0;
 }
 
