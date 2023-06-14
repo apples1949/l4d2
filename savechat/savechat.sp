@@ -4,7 +4,7 @@
 #include <sdktools>
 #include <geoip>
 
-#define PLUGIN_VERSION "1.3"
+#define PLUGIN_VERSION "1.4"
 
 StringMap
 	g_aCommands;
@@ -49,6 +49,7 @@ public void OnPluginStart() {
 
 	HookEvent("round_end",			Event_RoundEnd,			EventHookMode_PostNoCopy);
 	HookEvent("round_start",		Event_RoundStart,		EventHookMode_PostNoCopy);
+	HookEvent("player_connect",		Event_PlayerConnect,	EventHookMode_Pre);
 	HookEvent("player_disconnect",	Event_PlayerDisconnect,	EventHookMode_Pre);
 
 	AddCommandListener(CommandListener, "");
@@ -70,7 +71,7 @@ Action CommandListener(int client, char[] command, int argc) {
 		if (!g_aCommands.GetValue(command, value))
 			return Plugin_Continue;
 	}
-	
+
 	static char time[16];
 	static char team[12];
 	FormatTime(time, sizeof time, "%H:%M:%S", -1);
@@ -122,25 +123,6 @@ public void OnMapStart() {
 	LogTo("[%s] \"%s\"", time, g_sMap);
 }
 
-public void OnClientPostAdminCheck(int client) {
-	if (IsFakeClient(client))
-		return;
-
-	char ip[32];
-	char time[16];
-	char ccode[3];
-
-	if (!GetClientIP(client, ip, sizeof ip, true)) 
-		strcopy(ccode, sizeof ccode, "  ");
-	else {
-		if (!GeoipCode2(ip, ccode)) 
-			strcopy(ccode, sizeof ccode, "  ");
-	}
-
-	FormatTime(time, sizeof time, "%H:%M:%S", -1);
-	LogTo("[%s] [%s] %L 加入游戏 (%s)", time, ccode, client, ip);
-}
-
 void Event_RoundEnd(Event event, const char[] name, bool dontBroadcast) {
 	char time[32];
 	FormatTime(time, sizeof time, "%d/%m/%Y %H:%M:%S", -1);
@@ -155,15 +137,38 @@ void Event_RoundStart(Event event, const char[] name, bool dontBroadcast) {
 	LogTo("[%s] 第 %d 回合开始", time, g_iRoundCount);
 }
 
+void Event_PlayerConnect(Event event, const char[] name, bool dontBroadcast) {
+	static char networkid[MAX_AUTHID_LENGTH];
+	event.GetString("networkid", networkid, sizeof networkid);
+	if (strcmp(networkid, "BOT") == 0)
+		return;
+
+	char ip[64];
+	char time[16];
+	char code[3];
+	char _name[MAX_NAME_LENGTH];
+
+	event.GetString("address", ip, sizeof ip);
+	if (!GeoipCode2(ip, code))
+		strcopy(code, sizeof code, " ");
+
+	FormatTime(time, sizeof time, "%H:%M:%S", -1);
+	event.GetString("name", _name, sizeof _name);
+	LogTo("[%s] [%s] %s 加入游戏 (%s|%s)", time, code, _name, ip, networkid);
+}
+
 void Event_PlayerDisconnect(Event event, const char[] name, bool dontBroadcast) {
-	int client = GetClientOfUserId(event.GetInt("userid"));
-	if (!client || IsFakeClient(client))
+	static char networkid[MAX_AUTHID_LENGTH];
+	event.GetString("networkid", networkid, sizeof networkid);
+	if (strcmp(networkid, "BOT") == 0)
 		return;
 
 	char time[16];
+	char _name[MAX_NAME_LENGTH];
 	FormatTime(time, sizeof time, "%H:%M:%S", -1);
+	event.GetString("name", _name, sizeof _name);
 	event.GetString("reason", g_sMsg, sizeof g_sMsg);
-	LogTo("[%s] %L 离开游戏 (reason: %s)", time, client, g_sMsg);
+	LogTo("[%s] %s 离开游戏 (reason: %s) (%s)", time, _name, g_sMsg, networkid);
 }
 
 void LogTo(const char[] format, any ...) {

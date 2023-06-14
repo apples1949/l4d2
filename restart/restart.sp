@@ -44,8 +44,12 @@ Action cmdRestart(int client, int args) {
 
 void Event_PlayerDisconnect(Event event, const char[] name, bool dontBroadcast) {
 	int client = GetClientOfUserId(event.GetInt("userid"));
-	if ((!client || !IsFakeClient(client)) && IsServerEmpty(client))
-		RestartServer();
+	if (!client || !IsFakeClient(client)) {
+		char networkid[5];
+		event.GetString("networkid", networkid, sizeof networkid);
+		if (strcmp(networkid, "BOT") && IsServerEmpty(client))
+			RestartServer();
+	}
 }
 
 bool IsServerEmpty(int exclude = 0) {
