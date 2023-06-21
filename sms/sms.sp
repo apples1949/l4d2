@@ -207,9 +207,9 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 }
 
 public void OnPluginStart() {
-	HookEvent("revive_success",	Event_ReviveSuccess);
-	HookEvent("heal_success",	Event_HealSuccess);
-	HookEvent("player_spawn",	Event_PlayerSpawn);
+	HookEvent("revive_success",		Event_ReviveSuccess);
+	HookEvent("heal_success",		Event_HealSuccess);
+	HookEvent("player_spawn",		Event_PlayerSpawn);
 	HookEvent("witch_harasser_set",	Event_WitchHarasserSet);
 	HookEvent("server_cvar",		Event_ServerCvar,		EventHookMode_Pre);
 	HookEvent("player_connect",		Event_PlayerConnect,	EventHookMode_Pre);
