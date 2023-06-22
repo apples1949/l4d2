@@ -9,7 +9,7 @@
 #define PLUGIN_NAME				"Survivor Chat Select"
 #define PLUGIN_AUTHOR			"DeatChaos25, Mi123456 & Merudo, Lux, SilverShot"
 #define PLUGIN_DESCRIPTION		"Select a survivor character by typing their name into the chat."
-#define PLUGIN_VERSION			"1.8.5a"
+#define PLUGIN_VERSION			"1.8.6"
 #define PLUGIN_URL				"https://forums.alliedmods.net/showthread.php?p=2399163#post2399163"
 
 #define GAMEDATA				"survivor_chat_select"
@@ -567,12 +567,16 @@ Action umSayText2(UserMsg msg_id, BfRead msg, const int[] players, int playersNu
 }
 
 public void OnMapStart() {
+	GetSurvivorSetMap();
 	g_cPrecacheAllSur.IntValue = 1;
 	for (int i; i < sizeof g_sSurModels; i++)
 		PrecacheModel(g_sSurModels[i], true);
+}
+
+int GetSurvivorSetMap() {
 	Address pMissionInfo = SDKCall(g_hSDK_CTerrorGameRules_GetMissionInfo);
-	if (pMissionInfo)
-		g_iOrignalSet = SDKCall(g_hSDK_KeyValues_GetInt, pMissionInfo, "survivor_set", 2);
+	g_iOrignalSet = pMissionInfo ? SDKCall(g_hSDK_KeyValues_GetInt, pMissionInfo, "survivor_set", 2) : 0;
+	return g_iOrignalSet;
 }
 
 public void OnConfigsExecuted() {
@@ -849,7 +853,7 @@ int GetLeastCharacter(int client) {
 			least[buf]++;
 	}
 
-	switch (g_iOrignalSet) {
+	switch ((g_iOrignalSet > 0 || GetSurvivorSetMap() > 0) ? g_iOrignalSet : 2) {
 		case 1: {
 			buf = 7;
 			int tempChar = least[7];
@@ -877,7 +881,7 @@ int GetLeastCharacter(int client) {
 }
 
 void SetCharacterInfo(int client, int character, int modelIndex) {
-	if (g_iTabHUDBar && g_iTabHUDBar & g_iOrignalSet)
+	if (g_iTabHUDBar && g_iTabHUDBar & ((g_iOrignalSet > 0 || GetSurvivorSetMap() > 0) ? g_iOrignalSet : 2))
 		character = ConvertToInternalCharacter(character);
 
 	#if DEBUG
