@@ -290,8 +290,7 @@ public void OnClientPostAdminCheck(int client) {
 
 	char sSteamID[32];
 	GetClientAuthId(client, AuthId_Steam2, sSteamID, sizeof sSteamID);
-	bool allow;
-	if (!g_smSteamIDs.GetValue(sSteamID, allow))
+	if (!g_smSteamIDs.ContainsKey(sSteamID))
 		KickClient(client, "服务器调试中...");
 }
 

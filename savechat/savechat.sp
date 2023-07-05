@@ -7,7 +7,7 @@
 #define PLUGIN_VERSION "1.4"
 
 StringMap
-	g_aCommands;
+	g_smCommands;
 
 ConVar
 	g_cvHostport;
@@ -49,16 +49,16 @@ public void OnPluginStart() {
 
 	HookEvent("round_end",			Event_RoundEnd,			EventHookMode_PostNoCopy);
 	HookEvent("round_start",		Event_RoundStart,		EventHookMode_PostNoCopy);
-	HookEvent("player_connect",		Event_PlayerConnect,	EventHookMode_Pre);
+	HookEvent("player_connect",		Event_PlayerConnect);
 	HookEvent("player_disconnect",	Event_PlayerDisconnect,	EventHookMode_Pre);
 
 	AddCommandListener(CommandListener, "");
 }
 
 void InitCommands() {
-	g_aCommands = new StringMap();
-	for(int i; i < sizeof g_sCommands; i++)
-		g_aCommands.SetValue(g_sCommands[i], i);
+	g_smCommands = new StringMap();
+	for (int i; i < sizeof g_sCommands; i++)
+		g_smCommands.SetValue(g_sCommands[i], i);
 }
 
 Action CommandListener(int client, char[] command, int argc) {
@@ -66,9 +66,8 @@ Action CommandListener(int client, char[] command, int argc) {
 		return Plugin_Continue;
 
 	if (strncmp(command, "sm", 2) != 0) {
-		static int value;
 		StringToLowerCase(command);
-		if (!g_aCommands.GetValue(command, value))
+		if (!g_smCommands.ContainsKey(command))
 			return Plugin_Continue;
 	}
 

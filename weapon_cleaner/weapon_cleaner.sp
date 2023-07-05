@@ -921,10 +921,8 @@ bool IsItemToClean(int item) {
 	static char name[64];
 	GetEntityClassname(item, name, sizeof name);
 	if ((IsWeapon(name) && IsClassEnable(name)) || (g_bPhisics && IsPropPhysic(name))) {
-		bool exclude;
 		GetItemName(item, name, sizeof name);//weapon_first_aid_kit_spawn
-		g_smWhiteList.GetValue(name, exclude);
-		if (exclude)
+		if (g_smWhiteList.ContainsKey(name))
 			return false;
 
 		if (strcmp(name, "weapon_gascan") != 0 && strcmp(name, "prop_physics") != 0 && strcmp(name, "physics_prop") != 0)

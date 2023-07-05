@@ -151,7 +151,7 @@ public void OnPhrasesReady() {
 	SourceKeyValues kvMissions = SDKCall(g_hSDK_GetAllMissions, g_pMatchExtL4D);
 	for (kvMissions = kvMissions.GetFirstTrueSubKey(); !kvMissions.IsNull(); kvMissions = kvMissions.GetNextTrueSubKey()) {
 		kvMissions.GetName(phrase, sizeof phrase);
-		if (g_smExclude.GetValue(phrase, value))
+		if (g_smExclude.ContainsKey(phrase))
 			continue;
 
 		kvModes = kvMissions.FindKey("modes");
@@ -378,11 +378,11 @@ public void OnConfigsExecuted() {
 	GetCvars();
 	GetCvars_Mode();
 
-	static bool shit;
-	if (shit)
+	static bool val;
+	if (val)
 		return;
 
-	shit = true;
+	val = true;
 	SetFirstMapString();
 }
 
@@ -480,7 +480,6 @@ int MapNext_MenuHandler(Menu menu, MenuAction action, int client, int param2) {
 }
 
 void ShowNextMap(int client) {
-	int shit;
 	char title[64];
 	char buffer[64];
 	Menu menu = new Menu(ShowNextMap_MenuHandler);
@@ -489,19 +488,20 @@ void ShowNextMap(int client) {
 	SourceKeyValues kvMissions = SDKCall(g_hSDK_GetAllMissions, g_pMatchExtL4D);
 	for (SourceKeyValues kvSub = kvMissions.GetFirstTrueSubKey(); !kvSub.IsNull(); kvSub = kvSub.GetNextTrueSubKey()) {
 		kvSub.GetName(title, sizeof title);
-		if (g_smExclude.GetValue(title, shit))
+		if (g_smExclude.ContainsKey(title))
 			continue;
 
 		FormatEx(buffer, sizeof buffer, "modes/%s", g_sMode);
 		if (kvSub.FindKey(buffer).IsNull())
 			continue;
 
-		shit = kvSub.GetInt("builtin");
-		if (shit && g_iType[client] == 0) {
+		int val;
+		val = kvSub.GetInt("builtin");
+		if (val && g_iType[client] == 0) {
 			fmt_Translate(title, buffer, sizeof buffer, client, title);
 			menu.AddItem(title, buffer);
 		}
-		else if (!shit && g_iType[client] == 1) {
+		else if (!val && g_iType[client] == 1) {
 			fmt_Translate(title, buffer, sizeof buffer, client, title);
 			menu.AddItem(title, buffer);
 		}
@@ -665,7 +665,6 @@ int MapVote_MenuHandler(Menu menu, MenuAction action, int client, int param2) {
 }
 
 void ShowVoteMap(int client) {
-	int shit;
 	char title[64];
 	char buffer[64];
 	Menu menu = new Menu(ShowVoteMap_MenuHandler);
@@ -674,19 +673,20 @@ void ShowVoteMap(int client) {
 	SourceKeyValues kvMissions = SDKCall(g_hSDK_GetAllMissions, g_pMatchExtL4D);
 	for (SourceKeyValues kvSub = kvMissions.GetFirstTrueSubKey(); !kvSub.IsNull(); kvSub = kvSub.GetNextTrueSubKey()) {
 		kvSub.GetName(title, sizeof title);
-		if (g_smExclude.GetValue(title, shit))
+		if (g_smExclude.ContainsKey(title))
 			continue;
 
 		FormatEx(buffer, sizeof buffer, "modes/%s", g_sMode);
 		if (kvSub.FindKey(buffer).IsNull())
 			continue;
-
-		shit = kvSub.GetInt("builtin");
-		if (shit && g_iType[client] == 0) {
+		
+		int val;
+		val = kvSub.GetInt("builtin");
+		if (val && g_iType[client] == 0) {
 			fmt_Translate(title, buffer, sizeof buffer, client, title);
 			menu.AddItem(title, buffer);
 		}
-		else if (!shit && g_iType[client] == 1) {
+		else if (!val && g_iType[client] == 1) {
 			fmt_Translate(title, buffer, sizeof buffer, client, title);
 			menu.AddItem(title, buffer);
 		}

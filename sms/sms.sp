@@ -212,22 +212,22 @@ public void OnPluginStart() {
 	HookEvent("player_spawn",		Event_PlayerSpawn);
 	HookEvent("witch_harasser_set",	Event_WitchHarasserSet);
 	HookEvent("server_cvar",		Event_ServerCvar,		EventHookMode_Pre);
-	HookEvent("player_connect",		Event_PlayerConnect,	EventHookMode_Pre);
+	HookEvent("player_connect",		Event_PlayerConnect);
 	HookEvent("player_disconnect",	Event_PlayerDisconnect, EventHookMode_Pre);
 
 	AddCommandListener(Listener_give, "give");
 	HookUserMessage(GetUserMessageId("TextMsg"), umTextMsg, true);
 
-	g_cvBlackWhite = CreateConVar("sms_bw_notify", "1", "黑白提示.");
-	g_cvConnected = CreateConVar("sms_connected_notify", "1", "连接退出提示.");
-	g_cvPlayerDeath = CreateConVar("sms_playerdeath_notify", "1", "死亡提示.");
-	g_cvWitchstartled = CreateConVar("sms_witchstartled_notify", "1", "Witch惊扰提示.");
-	g_cvGameIdle = CreateConVar("sms_game_idle_notify_block", "1", "屏蔽游戏自带的玩家闲置提示.");
-	g_cvCvarChange = CreateConVar("sms_cvar_change_notify_block", "1", "屏蔽游戏自带的ConVar更改提示.");
-	g_cvSMNotity = CreateConVar("sms_sourcemod_sm_notify_admin", "1", "屏蔽sourcemod平台自带的SM提示？(1-只向管理员显示,0-对所有人屏蔽).");
-	g_cvGameDisconnect = CreateConVar("sms_game_disconnect_notify_block", "1", "屏蔽游戏自带的玩家离开提示.");
+	g_cvBlackWhite =		CreateConVar("sms_bw_notify",						"1",	"黑白提示.");
+	g_cvConnected =			CreateConVar("sms_connected_notify",				"1",	"连接退出提示.");
+	g_cvPlayerDeath =		CreateConVar("sms_playerdeath_notify",				"1",	"死亡提示.");
+	g_cvWitchstartled =		CreateConVar("sms_witchstartled_notify",			"1",	"Witch惊扰提示.");
+	g_cvGameIdle =			CreateConVar("sms_game_idle_notify_block",			"1",	"屏蔽游戏自带的玩家闲置提示.");
+	g_cvCvarChange =		CreateConVar("sms_cvar_change_notify_block",		"1",	"屏蔽游戏自带的ConVar更改提示.");
+	g_cvSMNotity =			CreateConVar("sms_sourcemod_sm_notify_admin",		"1",	"屏蔽sourcemod平台自带的SM提示?(1-只向管理员显示,0-对所有人屏蔽).");
+	g_cvGameDisconnect =	CreateConVar("sms_game_disconnect_notify_block",	"1",	"屏蔽游戏自带的玩家离开提示.");
 
-	//AutoExecConfig(true, "sms");
+	AutoExecConfig(true, "sms");
 
 	g_cvFallSpeedSafe = FindConVar("fall_speed_safe");
 	g_cvFallSpeedFatal = FindConVar("fall_speed_fatal");
@@ -262,17 +262,17 @@ void CvarChanged(ConVar convar, const char[] oldValue, const char[] newValue) {
 }
 
 void GetCvars() {
-	g_bBlackWhite = g_cvBlackWhite.BoolValue;
-	g_bConnected = g_cvConnected.BoolValue;
-	g_bPlayerDeath = g_cvPlayerDeath.BoolValue;
-	g_bWitchstartled = g_cvWitchstartled.BoolValue;
-	g_bGameIdle = g_cvGameIdle.BoolValue;
-	g_bCvarChange = g_cvCvarChange.BoolValue;
-	g_bSMNotity = g_cvSMNotity.BoolValue;
-	g_bGameDisconnect = g_cvGameDisconnect.BoolValue;
-	g_fFallSpeedSafe = g_cvFallSpeedSafe.FloatValue;
-	g_fFallSpeedFatal = g_cvFallSpeedFatal.FloatValue;
-	g_iSurvivorMaxInc = g_cvSurvivorMaxInc.IntValue;
+	g_bBlackWhite =		g_cvBlackWhite.BoolValue;
+	g_bConnected =		g_cvConnected.BoolValue;
+	g_bPlayerDeath =	g_cvPlayerDeath.BoolValue;
+	g_bWitchstartled =	g_cvWitchstartled.BoolValue;
+	g_bGameIdle =		g_cvGameIdle.BoolValue;
+	g_bCvarChange =		g_cvCvarChange.BoolValue;
+	g_bSMNotity =		g_cvSMNotity.BoolValue;
+	g_bGameDisconnect =	g_cvGameDisconnect.BoolValue;
+	g_fFallSpeedSafe =	g_cvFallSpeedSafe.FloatValue;
+	g_fFallSpeedFatal =	g_cvFallSpeedFatal.FloatValue;
+	g_iSurvivorMaxInc =	g_cvSurvivorMaxInc.IntValue;
 }
 
 Action Listener_give(int client, const char[] command, int argc) {

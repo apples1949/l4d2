@@ -601,13 +601,11 @@ int Native_SetWitchPercent(Handle plugin, int numParams) {
 // ======================================
 
 bool IsStaticTankMap(const char[] map) {
-	bool dummy;
-	return g_smStaticTankMaps.GetValue(map, dummy);
+	return g_smStaticTankMaps.ContainsKey(map);
 }
 
 bool IsStaticWitchMap(const char[] map) {
-	bool dummy;
-	return g_smStaticWitchMaps.GetValue(map, dummy);
+	return g_smStaticWitchMaps.ContainsKey(map);
 }
 
 bool IsTankPercentValid(int flow) {
