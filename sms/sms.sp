@@ -7,7 +7,7 @@
 #define PLUGIN_NAME				"Server Message System"
 #define PLUGIN_AUTHOR			"sorallll"
 #define PLUGIN_DESCRIPTION		""
-#define PLUGIN_VERSION			"1.0.1"
+#define PLUGIN_VERSION			"1.0.2"
 #define PLUGIN_URL				""
 
 /*****************************************************************************************************/
@@ -373,8 +373,8 @@ void Event_PlayerConnect(Event event, const char[] name, bool dontBroadcast) {
 	if (maxplayers < 1)
 		return;
 
-	int players = GetRealPlayers(-1);
-	if (players < 1)
+	int players = GetRealPlayers(GetClientOfUserId(event.GetInt("userid")));
+	if (++players < 2)
 		return;
 
 	PlaySound(SOUND_CONNECT);
@@ -393,15 +393,16 @@ void Event_PlayerDisconnect(Event event, const char[] name, bool dontBroadcast) 
 	if (!g_bConnected)
 		return;
 
-	int client = GetClientOfUserId(event.GetInt("userid"));
-	if (!client || IsFakeClient(client))
+	char networkid[5];
+	event.GetString("networkid", networkid, sizeof networkid);
+	if (strcmp(networkid, "BOT") == 0)
 		return;
 
 	int maxplayers = GetMaxPlayers();
 	if (maxplayers < 1)
 		return;
 
-	int players = GetRealPlayers(client);
+	int players = GetRealPlayers(GetClientOfUserId(event.GetInt("userid")));
 	if (players < 1)
 		return;
 
