@@ -239,7 +239,13 @@
 		"#format"	"{1:N},{2:d}"
 		"chi"		"{1} 将你的点数设置为 {2}"
 	}
-	
+
+	"Points Limit"
+	{
+		"#format"	"{1:d}"
+		"chi"		"达到点数上限 {1}"
+	}
+
 	"Traitor Limit"
 	{
 		"chi"		"达到特感玩家限制"

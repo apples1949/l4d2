@@ -234,7 +234,13 @@
 		"#format"	"{1:N},{2:d}"
 		"en"		"{1} set your points to {2}"
 	}
-	
+
+	"Points Limit"
+	{
+		"#format"	"{1:d}"
+		"chi"		"Reached the upper limit of {1} points!"
+	}
+
 	"Traitor Limit"
 	{
 		"en"		"Infected Player Limit Reached!"
