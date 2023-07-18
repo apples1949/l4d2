@@ -1087,7 +1087,7 @@ void AddPoints(int client, int points, const char[] message) {
 		int maxPoints = g_eGeneral.cSettings[SettingMaxPoints].IntValue;
 		if (maxPoints > g_eGeneral.cSettings[SettingStartPoints].IntValue > 0 && curPoints > maxPoints) {
 			g_ePlayer[client].PlayerPoints = maxPoints;
-			PrintToChat(client, "%s %T", MSGTAG, "Points Limit", client);
+			PrintToChat(client, "%s %T", MSGTAG, "Points Limit", client, maxPoints);
 		}
 		else {
 			g_ePlayer[client].PlayerPoints = curPoints;
