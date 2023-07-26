@@ -8,7 +8,7 @@ DEFAULT_MAP="c2m1_highway"
 DEFAULT_MODE="coop"
 DEFAULT_CFG="server.cfg"
 DEFAULT_TICK="66"
-START_PARAMETERS="-strictportbind -nobreakpad -nominidumps -ip ${DEFAULT_IP} -port ${DEFAULT_PORT} +map ${DEFAULT_MAP} +mp_gamemode ${DEFAULT_MODE} +exec ${DEFAULT_CFG} -tickrate ${DEFAULT_TICK}"
+START_PARAMETERS="-strictportbind -nobreakpad -noassert -ip ${DEFAULT_IP} -port ${DEFAULT_PORT} +map ${DEFAULT_MAP} +mp_gamemode ${DEFAULT_MODE} +exec ${DEFAULT_CFG} -tickrate ${DEFAULT_TICK}"
 STEAMCMD_URL="https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz"
 PLUGIN_VERSION=(-s -d -n)
 
