@@ -5,7 +5,7 @@
 #define PLUGIN_NAME				"Restart Server/Map"
 #define PLUGIN_AUTHOR			"sorallll"
 #define PLUGIN_DESCRIPTION		""
-#define PLUGIN_VERSION			"1.0.0"
+#define PLUGIN_VERSION			"1.0.1"
 #define PLUGIN_URL				""
 
 ConVar
@@ -47,8 +47,11 @@ void Event_PlayerDisconnect(Event event, const char[] name, bool dontBroadcast) 
 	if (!client || !IsFakeClient(client)) {
 		char networkid[5];
 		event.GetString("networkid", networkid, sizeof networkid);
-		if (strcmp(networkid, "BOT") && IsServerEmpty(client))
-			RestartServer();
+		if (strcmp(networkid, "BOT") && IsServerEmpty(client)) {
+			g_cvSbAllBotGame.IntValue = 1;
+			g_cvSvHibernateWhe.IntValue = 0;
+			CreateTimer(0.1, tmrRestartServer);
+		}
 	}
 }
 
@@ -60,21 +63,19 @@ bool IsServerEmpty(int exclude = 0) {
 	return true;
 }
 
-void RestartServer() {
-	g_cvSbAllBotGame.IntValue = 1;
-	g_cvSvHibernateWhe.IntValue = 0;
-	CreateTimer(0.1, tmrCrashServer);
-}
-
-Action tmrCrashServer(Handle timer) {
+Action tmrRestartServer(Handle timer) {
 	if (!IsServerEmpty())
 		return Plugin_Stop;
 
+	RestartServer();
+	return Plugin_Continue;
+}
+
+void RestartServer() {
 	UnloadAccelerator();
 	LogTo("服务器重启...");
 	SetCommandFlags("crash", GetCommandFlags("crash") & ~FCVAR_CHEAT);
 	ServerCommand("crash");
-	return Plugin_Continue;
 }
 
 void UnloadAccelerator() {
