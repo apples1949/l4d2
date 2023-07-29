@@ -18,7 +18,7 @@
 #define PLUGIN_NAME				"Control Zombies In Co-op"
 #define PLUGIN_AUTHOR			"sorallll"
 #define PLUGIN_DESCRIPTION		""
-#define PLUGIN_VERSION			"3.6.0"
+#define PLUGIN_VERSION			"3.6.1"
 #define PLUGIN_URL				"https://steamcommunity.com/id/sorallll"
 
 #define GAMEDATA 				"control_zombies"
@@ -1616,6 +1616,9 @@ void Event_PlayerBotReplace(Event event, const char[] name, bool dontBroadcast) 
 			g_ePlayer[bot].TankBot = 1; // 防卡功能中踢出FakeClient后, 第二次触发Tank产生并替换原有的Tank(BOT替换BOT)
 		else
 			g_ePlayer[bot].TankBot = 2; // 主动或被动放弃Tank控制权(BOT替换玩家)
+
+		SetEntProp(bot, Prop_Data, "m_iHealth", GetEntProp(player, Prop_Data, "m_iHealth"));
+		SetEntProp(bot, Prop_Data, "m_iMaxHealth", GetEntProp(player, Prop_Data, "m_iMaxHealth"));
 	}
 }
 
