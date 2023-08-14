@@ -6,7 +6,7 @@
 #define PLUGIN_NAME				"bots(coop)"
 #define PLUGIN_AUTHOR			"DDRKhat, Marcus101RR, Merudo, Lux, Shadowysn, sorallll"
 #define PLUGIN_DESCRIPTION		"coop"
-#define PLUGIN_VERSION			"1.11.7"
+#define PLUGIN_VERSION			"1.11.8"
 #define PLUGIN_URL				"https://forums.alliedmods.net/showthread.php?p=2405322#post2405322"
 
 #define GAMEDATA 				"bots"
@@ -55,6 +55,7 @@ int
 	g_iBotLimit,
 	g_iJoinLimit,
 	g_iJoinFlags,
+	g_iJoinRespawn,
 	g_iSpecNotify,
 	m_hWeaponHandle,
 	m_iRestoreAmmo,
@@ -65,7 +66,6 @@ int
 
 bool
 	g_bLateLoad,
-	g_bJoinRespawn,
 	g_bGiveType,
 	g_bGiveTime,
 	g_bInSpawnTime,
@@ -304,8 +304,8 @@ public void OnPluginStart() {
 
 	g_cBotLimit =				CreateConVar("bots_limit",				"4",		"开局Bot的数量", CVAR_FLAGS, true, 1.0, true, float(MaxClients));
 	g_cJoinLimit =				CreateConVar("bots_join_limit",			"-1",		"生还者玩家数量达到该值后将禁用sm_join命令和本插件的自动加入功能(不会影响游戏原有的加入功能). \n-1=插件不进行处理.", CVAR_FLAGS, true, -1.0, true, float(MaxClients));
-	g_cJoinFlags =				CreateConVar("bots_join_flags",			"3",		"额外玩家加入生还者的方法. \n0=插件不进行处理, 1=输入!join手动加入, 2=进服后插件自动加入, 3=手动+自动", CVAR_FLAGS);
-	g_cJoinRespawn =			CreateConVar("bots_join_respawn",		"1",		"玩家第一次进服时如果没有存活的Bot可以接管是否复活. \n0=否, 1=是.", CVAR_FLAGS);
+	g_cJoinFlags =				CreateConVar("bots_join_flags",			"3",		"额外玩家加入生还者的方法. \n0=插件不进行处理, 1=输入!join手动加入, 2=进服后插件自动加入, 3=手动+自动.", CVAR_FLAGS);
+	g_cJoinRespawn =			CreateConVar("bots_join_respawn",		"1",		"玩家加入生还者时如果没有存活的Bot可以接管是否复活. \n0=否, 1=是, -1=总是复活(该值为-1时将允许玩家通过切换队伍/退出重进刷复活).", CVAR_FLAGS);
 	g_cSpecNotify =				CreateConVar("bots_spec_notify",		"3",		"完全旁观玩家点击鼠标左键时, 提示加入生还者的方式 \n0=不提示, 1=聊天栏, 2=屏幕中央, 3=弹出菜单.", CVAR_FLAGS);
 	g_eWeapon[0].Flags =		CreateConVar("bots_give_slot0",			"131071",	"主武器给什么. \n0=不给, 131071=所有, 7=微冲, 1560=霰弹, 30720=狙击, 31=Tier1, 32736=Tier2, 98304=Tier0.", CVAR_FLAGS);
 	g_eWeapon[1].Flags =		CreateConVar("bots_give_slot1",			"1064",		"副武器给什么. \n0=不给, 131071=所有.(如果选中了近战且该近战在当前地图上未解锁,则会随机给一把).", CVAR_FLAGS);
@@ -436,7 +436,7 @@ Action cmdJoinTeam2(int client, int args) {
 
 bool JoinSurTeam(int client) {
 	int bot = GetClientOfUserId(g_ePlayer[client].Bot);
-	bool canRespawn = g_bJoinRespawn && IsFirstTime(client);
+	bool canRespawn = g_iJoinRespawn == -1 || (g_iJoinRespawn && IsFirstTime(client));
 	if (!bot || !IsValidSurBot(bot))
 		bot = FindUselessSurBot(canRespawn);
 
@@ -767,7 +767,7 @@ void CvarChanged_General(ConVar convar, const char[] oldValue, const char[] newV
 void GeCvars_General() {
 	g_iJoinLimit =		g_cJoinLimit.IntValue;
 	g_iJoinFlags =		g_cJoinFlags.IntValue;
-	g_bJoinRespawn =	g_cJoinRespawn.BoolValue;
+	g_iJoinRespawn =	g_cJoinRespawn.IntValue;
 	g_iSpecNotify =		g_cSpecNotify.IntValue;
 }
 
@@ -1026,7 +1026,7 @@ void Event_FinaleVehicleLeaving(Event event, const char[] name, bool dontBroadca
 			iEnt = CreateEntityByName("info_survivor_position");
 			if (iEnt != -1) {
 				DispatchKeyValue(iEnt, "Order", Order[loop % 4]);
-				TeleportEntity(iEnt, vPos, NULL_VECTOR, NULL_VECTOR);
+				TeleportEntity(iEnt, vPos);
 				DispatchSpawn(iEnt);
 			}
 		}
@@ -1183,7 +1183,7 @@ int TeleportPlayer(int client) {
 
 		float vPos[3];
 		GetClientAbsOrigin(target, vPos);
-		TeleportEntity(client, vPos, NULL_VECTOR, NULL_VECTOR);
+		TeleportEntity(client, vPos);
 		return target;
 	}
 
