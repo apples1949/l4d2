@@ -7,7 +7,7 @@
 #define PLUGIN_NAME				"Server Info Hud"
 #define PLUGIN_AUTHOR			"sorallll"
 #define PLUGIN_DESCRIPTION		""
-#define PLUGIN_VERSION			"1.0.5"
+#define PLUGIN_VERSION			"1.0.6"
 #define PLUGIN_URL				""
 
 enum struct KillData {
@@ -33,8 +33,7 @@ bool
 	g_bLateLoad;
 
 float
-	g_fVsBossBuff,
-	g_fMapMaxFlow;
+	g_fVsBossBuff;
 
 int
 	g_iMaxChapters,
@@ -72,7 +71,6 @@ public void OnConfigsExecuted() {
 
 	g_iMaxChapters = L4D_GetMaxChapters();
 	g_iCurrentChapter = L4D_GetCurrentChapter();
-	g_fMapMaxFlow = L4D2Direct_GetMapMaxFlowDistance();
 }
 
 void CvarChanged(ConVar convar, const char[] oldValue, const char[] newValue) {
@@ -103,10 +101,12 @@ void Event_RoundStart(Event event, const char[] name, bool dontBroadcast) {
 
 Action tmrUpdate(Handle timer) {
 	static int client;
+	static float maxFlow;
 	static float highestFlow;
+	maxFlow = L4D2Direct_GetMapMaxFlowDistance();
 	highestFlow = (client = L4D_GetHighestFlowSurvivor()) != -1 ? L4D2Direct_GetFlowDistance(client) : L4D2_GetFurthestSurvivorFlow();
 	if (highestFlow)
-		highestFlow = highestFlow / g_fMapMaxFlow * 100;
+		highestFlow = highestFlow / maxFlow * 100;
 
 	static char buffer[128];
 	FormatEx(buffer, sizeof buffer, "➣路程: %d％", RoundToCeil(highestFlow));
@@ -118,7 +118,7 @@ Action tmrUpdate(Handle timer) {
 	if (L4D2Direct_GetVSTankToSpawnThisRound(roundNumber)) {
 		flow = RoundToCeil(L4D2Direct_GetVSTankFlowPercent(roundNumber) * 100.0);
 		if (flow > 0) {
-			flow -= RoundToFloor(g_fVsBossBuff / g_fMapMaxFlow * 100);
+			flow -= RoundToFloor(g_fVsBossBuff / maxFlow * 100);
 			length = strlen(buffer);
 			Format(buffer[length], sizeof buffer - length, " Tank#%d％", flow < 0 ? 0 : flow);
 		}
@@ -127,7 +127,7 @@ Action tmrUpdate(Handle timer) {
 	if (L4D2Direct_GetVSWitchToSpawnThisRound(roundNumber)) {
 		flow = RoundToCeil(L4D2Direct_GetVSWitchFlowPercent(roundNumber) * 100.0);
 		if (flow > 0) {
-			flow -= RoundToFloor(g_fVsBossBuff / g_fMapMaxFlow * 100);
+			flow -= RoundToFloor(g_fVsBossBuff / maxFlow * 100);
 			length = strlen(buffer);
 			Format(buffer[length], sizeof buffer - length, " Witch#%d％", flow < 0 ? 0 : flow);
 		}

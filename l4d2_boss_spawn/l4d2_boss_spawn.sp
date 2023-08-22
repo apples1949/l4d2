@@ -87,7 +87,6 @@ float
 	g_fInterval;
 
 float
-	g_fFlowMaxMap,
 	g_fFurthestSurvivorFlow,
 	g_fFlowRangeMinTank,
 	g_fFlowRangeMinWitch,
@@ -336,17 +335,17 @@ Action tmrStartCheckFlow(Handle timer){
 	g_iWitchCounter = 0;
 	g_fFlowSpawnTank = 0.0;
 	g_fFlowSpawnWitch = 0.0;
-	g_fFlowMaxMap = L4D2Direct_GetMapMaxFlowDistance();
 	g_iMaxTanks = !g_iTotalTanksRandom ? g_iTotalTanks : GetRandomInt(g_iTotalTanks, g_iTotalTanksRandom);
 	g_iMaxWitches = !g_iTotalWitchesRandom ? g_iTotalWitches : GetRandomInt(g_iTotalWitches, g_iTotalWitchesRandom);
-	
-	g_fFlowRangeMinTank = g_fFlowMaxMap * g_fFlowPercentMinTank / 100.0;
-	g_fFlowRangeMaxTank = g_fFlowMaxMap * g_fFlowPercentMaxTank / 100.0;
+
+	float fMapMaxFlow = L4D2Direct_GetMapMaxFlowDistance();
+	g_fFlowRangeMinTank = fMapMaxFlow * g_fFlowPercentMinTank / 100.0;
+	g_fFlowRangeMaxTank = fMapMaxFlow * g_fFlowPercentMaxTank / 100.0;
 	g_fFlowRangeSpawnTank = (g_fFlowRangeMaxTank-g_fFlowRangeMinTank)/float(g_iMaxTanks);
 	g_fFlowCanSpawnTank = g_fFlowRangeMinTank;
 	
-	g_fFlowRangeMinWitch = g_fFlowMaxMap * g_fFlowPercentMinWitch / 100.0;
-	g_fFlowRangeMaxWitch = g_fFlowMaxMap * g_fFlowPercentMaxWitch / 100.0;
+	g_fFlowRangeMinWitch = fMapMaxFlow * g_fFlowPercentMinWitch / 100.0;
+	g_fFlowRangeMaxWitch = fMapMaxFlow * g_fFlowPercentMaxWitch / 100.0;
 	g_fFlowRangeSpawnWitch = (g_fFlowRangeMaxWitch-g_fFlowRangeMinWitch) / float(g_iMaxWitches);
 	g_fFlowCanSpawnWitch = g_fFlowRangeMinWitch;
 	

@@ -6,7 +6,7 @@
 #define PLUGIN_NAME				"L4D2 中文服务器名"
 #define PLUGIN_AUTHOR			"sorallll"
 #define PLUGIN_DESCRIPTION		""
-#define PLUGIN_VERSION			"1.0.2"
+#define PLUGIN_VERSION			"1.0.3"
 #define PLUGIN_URL				""
 
 #define FILE_HOSTNAME "configs/hostname/hostname.txt"
@@ -16,9 +16,6 @@ Handle
 
 ConVar
 	g_hHostName;
-
-float
-	g_fMapMaxFlow;
 
 int
 	g_iFailures,
@@ -46,7 +43,6 @@ public void OnPluginStart() {
 public void OnConfigsExecuted() {
 	g_iMaxChapters = L4D_GetMaxChapters();
 	g_iCurrentChapter = L4D_GetCurrentChapter();
-	g_fMapMaxFlow = L4D2Direct_GetMapMaxFlowDistance();
 
 	SetHostName();
 
@@ -70,7 +66,7 @@ Action tmrUpdateHostName(Handle timer) {
 	static float fHighestFlow;
 	fHighestFlow = (client = L4D_GetHighestFlowSurvivor()) != -1 ? L4D2Direct_GetFlowDistance(client) : L4D2_GetFurthestSurvivorFlow();
 	if (fHighestFlow)
-		fHighestFlow = fHighestFlow / g_fMapMaxFlow * 100;
+		fHighestFlow = fHighestFlow / L4D2Direct_GetMapMaxFlowDistance() * 100;
 
 	static char buf[PLATFORM_MAX_PATH];
 	FormatEx(buf, sizeof buf, "%s [路程:%d%%][地图:%d/%d][重启:%d][运行:%dm]", g_sHostName, RoundToNearest(fHighestFlow), g_iCurrentChapter, g_iMaxChapters, g_iFailures, GetEntProp(GetPlayerResourceEntity(), Prop_Send, "m_missionDuration") / 60);
