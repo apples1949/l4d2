@@ -62,7 +62,8 @@ ConVar
 	g_cFirstSpawnTime,
 	g_cSpawnRange,
 	g_cDiscardRange,
-	g_cSafeSpawnRange;
+	g_cSafeSpawnRange,
+	g_cDirectorNoSpecials;
 
 float
 	g_fSpawnTimeMin,
@@ -190,6 +191,7 @@ public void OnPluginStart() {
 	g_cSpawnRange =					FindConVar("z_spawn_range");
 	g_cDiscardRange =				FindConVar("z_discard_range");
 	g_cSafeSpawnRange =				FindConVar("z_safe_spawn_range");
+	g_cDirectorNoSpecials =			FindConVar("director_no_specials");
 
 	g_cSpawnSize.AddChangeHook(CvarChanged_Limits);
 	for (int i; i < SI_MAX_SIZE; i++) {
@@ -245,51 +247,16 @@ public void OnPluginEnd() {
 
 void TweakSettings(bool restore) {
 	if (!restore) {
-		FindConVar("z_max_player_zombies").SetBounds(ConVarBound_Upper, true, float(MaxClients));
-		FindConVar("z_max_player_zombies").SetFloat(float(MaxClients));
-		FindConVar("z_minion_limit").SetInt(MaxClients);
-		FindConVar("survival_max_specials").SetInt(MaxClients);
-
-		FindConVar("z_smoker_limit").SetInt(0);
-		FindConVar("z_boomer_limit").SetInt(0);
-		FindConVar("z_hunter_limit").SetInt(0);
-		FindConVar("z_spitter_limit").SetInt(0);
-		FindConVar("z_jockey_limit").SetInt(0);
-		FindConVar("z_charger_limit").SetInt(0);
-
-		FindConVar("survival_max_smokers").SetInt(0);
-		FindConVar("survival_max_boomers").SetInt(0);
-		FindConVar("survival_max_hunters").SetInt(0);
-		FindConVar("survival_max_spitters").SetInt(0);
-		FindConVar("survival_max_jockeys").SetInt(0);
-		FindConVar("survival_max_chargers").SetInt(0);
-
 		g_cSpawnRange.SetInt(g_cSpawnRangeMax.IntValue);
 		g_cDiscardRange.SetInt(g_cSpawnRange.IntValue + 500);
 		g_cSafeSpawnRange.SetInt(g_cSpawnRangeMin.IntValue);
+		g_cDirectorNoSpecials.SetInt(1);
 	}
 	else {
-		//FindConVar("z_max_player_zombies").RestoreDefault();
-		FindConVar("z_minion_limit").RestoreDefault();
-		FindConVar("survival_max_specials").RestoreDefault();
-
-		FindConVar("z_smoker_limit").RestoreDefault();
-		FindConVar("z_boomer_limit").RestoreDefault();
-		FindConVar("z_hunter_limit").RestoreDefault();
-		FindConVar("z_spitter_limit").RestoreDefault();
-		FindConVar("z_jockey_limit").RestoreDefault();
-		FindConVar("z_charger_limit").RestoreDefault();
-
-		FindConVar("survival_max_smokers").RestoreDefault();
-		FindConVar("survival_max_boomers").RestoreDefault();
-		FindConVar("survival_max_hunters").RestoreDefault();
-		FindConVar("survival_max_spitters").RestoreDefault();
-		FindConVar("survival_max_jockeys").RestoreDefault();
-		FindConVar("survival_max_chargers").RestoreDefault();
-
 		g_cSpawnRange.RestoreDefault();
 		g_cDiscardRange.RestoreDefault();
 		g_cSafeSpawnRange.RestoreDefault();
+		g_cDirectorNoSpecials.RestoreDefault();
 	}
 }
 
@@ -355,25 +322,25 @@ Action tmrForceSuicide(Handle timer) {
 		victim = GetSurVictim(i, class);
 		if (victim > 0) {
 			if (GetEntProp(victim, Prop_Send, "m_isIncapacitated"))
-				KillInactiveSI(i);
+				KillInactiveSI(i, class);
 			else
 				g_fActionTimes[i] = time;
 		}
 		else if (time - g_fActionTimes[i] > g_fSuicideTime)
-			KillInactiveSI(i);
+			KillInactiveSI(i, class);
 	}
 
 	return Plugin_Continue;
 }
 
-void KillInactiveSI(int client) {
+void KillInactiveSI(int client, int class) {
 	#if DEBUG
 	PrintToServer("[SS] Kill inactive SI -> %N", client);
 	#endif
 	ForcePlayerSuicide(client);
 
 	if (!g_hRetryTimer)
-		CreateTimer(1.0, tmrRetrySpawn, true);
+		ExecuteSpawnQueue(GetTotalSI(), true, class - 1);
 }
 
 int GetSurVictim(int client, int class) {
@@ -984,7 +951,7 @@ Action tmrSpawnSpecial(Handle timer) {
 	return Plugin_Continue;
 }
 
-void ExecuteSpawnQueue(int totalSI, bool retry) {
+void ExecuteSpawnQueue(int totalSI, bool retry, int index = -1) {
 	if (totalSI >= g_iSILimit)
 		return;
 
@@ -993,21 +960,25 @@ void ExecuteSpawnQueue(int totalSI, bool retry) {
 	g_profiler.Start();
 	#endif
 
-	int allowedSI = g_iSILimit - totalSI;
-	int spawnSize = g_iSpawnSize > allowedSI ? allowedSI : g_iSpawnSize;
-
-	GetSITypeCount();
-
 	int i;
-	int index;
+	int spawnSize;
 	ArrayList aQueue = new ArrayList();
-	for (; i < spawnSize; i++) {
-		index = GenerateIndex();
-		if (index == -1)
-			break;
-
+	if (index != -1) {
 		aQueue.Push(index);
 		g_iSpawnCounts[index]++;
+	}
+	else {
+		int allowedSI = g_iSILimit - totalSI;
+		spawnSize = g_iSpawnSize > allowedSI ? allowedSI : g_iSpawnSize;
+		GetSITypeCount();
+		for (; i < spawnSize; i++) {
+			index = GenerateIndex();
+			if (index == -1)
+				break;
+
+			aQueue.Push(index);
+			g_iSpawnCounts[index]++;
+		}
 	}
 
 	spawnSize = aQueue.Length;
@@ -1112,7 +1083,7 @@ int GetTotalSI() {
 			if (1 <= GetEntProp(i, Prop_Send, "m_zombieClass") <= 6)
 				count++;
 		}
-		else if (IsFakeClient(i))
+		else if (IsFakeClient(i) && GetEntProp(i, Prop_Send, "m_zombieClass") != 4)
 			KickClient(i);
 	}
 	return count;
