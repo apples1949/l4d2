@@ -1009,7 +1009,7 @@ void ExecuteSpawnQueue(int totalSI, bool retry, int index = -1) {
 	int client = aList.Get(0, 1);
 	flow = aList.Get(0, 0);
 	float lastFlow = aList.Get(count - 1, 0);
-	if (flow - lastFlow > g_fRushDistance) {
+	if (count == 1 || flow - lastFlow > g_fRushDistance) {
 		#if DEBUG
 		PrintToServer("[SS] Rusher -> %N", client);
 		#endif
