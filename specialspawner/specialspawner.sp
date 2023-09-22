@@ -62,8 +62,7 @@ ConVar
 	g_cFirstSpawnTime,
 	g_cSpawnRange,
 	g_cDiscardRange,
-	g_cSafeSpawnRange,
-	g_cDirectorNoSpecials;
+	g_cSafeSpawnRange;
 
 float
 	g_fSpawnTimeMin,
@@ -191,7 +190,6 @@ public void OnPluginStart() {
 	g_cSpawnRange =					FindConVar("z_spawn_range");
 	g_cDiscardRange =				FindConVar("z_discard_range");
 	g_cSafeSpawnRange =				FindConVar("z_safe_spawn_range");
-	g_cDirectorNoSpecials =			FindConVar("director_no_specials");
 
 	g_cSpawnSize.AddChangeHook(CvarChanged_Limits);
 	for (int i; i < SI_MAX_SIZE; i++) {
@@ -250,13 +248,11 @@ void TweakSettings(bool restore) {
 		g_cSpawnRange.SetInt(g_cSpawnRangeMax.IntValue);
 		g_cDiscardRange.SetInt(g_cSpawnRange.IntValue + 500);
 		g_cSafeSpawnRange.SetInt(g_cSpawnRangeMin.IntValue);
-		g_cDirectorNoSpecials.SetInt(1);
 	}
 	else {
 		g_cSpawnRange.RestoreDefault();
 		g_cDiscardRange.RestoreDefault();
 		g_cSafeSpawnRange.RestoreDefault();
-		g_cDirectorNoSpecials.RestoreDefault();
 	}
 }
 
@@ -265,16 +261,19 @@ void OnFinaleStart(const char[] output, int caller, int activator, float delay) 
 }
 
 public Action L4D_OnGetScriptValueInt(const char[] key, int &retVal) {
-	if (!g_bInSpawnTime)
-		return Plugin_Continue;	
+	if (g_bInSpawnTime) {
+		if (!strcmp(key, "PreferredSpecialDirection", false)) {
+			retVal = g_iDirection;
+			return Plugin_Handled;
+		}
 
-	if (!strcmp(key, "PreferredSpecialDirection", false)) {
-		retVal = g_iDirection;
-		return Plugin_Handled;
+		if (!strcmp(key, "MaxSpecials", false) || !strcmp(key, "cm_MaxSpecials", false)) {
+			retVal = g_iSILimit;
+			return Plugin_Handled;
+		}
 	}
-
-	if (!strcmp(key, "MaxSpecials", false) || !strcmp(key, "cm_MaxSpecials", false)) {
-		retVal = g_iSILimit;
+	else if (!strcmp(key, "MaxSpecials", false) || !strcmp(key, "cm_MaxSpecials", false)) {
+		retVal = 0;
 		return Plugin_Handled;
 	}
 
