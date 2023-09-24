@@ -143,7 +143,7 @@ public Plugin myinfo = {
 	name = "Special Spawner",
 	author = "Tordecybombo, breezy",
 	description = "Provides customisable special infected spawing beyond vanilla coop limits",
-	version = "1.3.6",
+	version = "1.3.7",
 };
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max) {
@@ -261,19 +261,18 @@ void OnFinaleStart(const char[] output, int caller, int activator, float delay) 
 }
 
 public Action L4D_OnGetScriptValueInt(const char[] key, int &retVal) {
-	if (g_bInSpawnTime) {
-		if (!strcmp(key, "PreferredSpecialDirection", false)) {
-			retVal = g_iDirection;
-			return Plugin_Handled;
-		}
-
+	if (!g_bInSpawnTime) {
 		if (!strcmp(key, "MaxSpecials", false) || !strcmp(key, "cm_MaxSpecials", false)) {
-			retVal = g_iSILimit;
+			retVal = 0;
 			return Plugin_Handled;
 		}
 	}
+	else if (!strcmp(key, "PreferredSpecialDirection", false)) {
+		retVal = g_iDirection;
+		return Plugin_Handled;
+	}
 	else if (!strcmp(key, "MaxSpecials", false) || !strcmp(key, "cm_MaxSpecials", false)) {
-		retVal = 0;
+		retVal = g_iSILimit;
 		return Plugin_Handled;
 	}
 
