@@ -37,7 +37,7 @@ function debian() {
 		9|10)
 			sudo apt -y install lib32gcc1 lib32stdc++6 lib32z1-dev curl screen zip unzip
 		;;
-		11)
+		11|12)
 			sudo apt -y install lib32gcc-s1 lib32stdc++6 lib32z1-dev curl screen zip unzip
 		;;
 		*)
