@@ -1,6 +1,5 @@
 #!/bin/bash
 
-DEFAULT_CORE="0"
 DEFAULT_DIR="l4d2"
 DEFAULT_IP="0.0.0.0"
 DEFAULT_PORT="27015"
@@ -42,7 +41,7 @@ function install_server() {
 function start_server() {
 	stop_server
 	ln_lib32
-	screen -dmS "${DEFAULT_DIR}" taskset -c ${DEFAULT_CORE} "${HOME}/steamcmd/${DEFAULT_DIR}/srcds_run" -game left4dead2 ${START_PARAMETERS}
+	screen -dmS "${DEFAULT_DIR}" "${HOME}/steamcmd/${DEFAULT_DIR}/srcds_run" -game left4dead2 ${START_PARAMETERS}
 	sleep 1s
 	screen -wipe > /dev/null 2>&1
 	if ! screen -ls | grep -E "[0-9]+\.${DEFAULT_DIR}" > /dev/null 2>&1; then
